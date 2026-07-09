@@ -1,0 +1,5 @@
+"""Natural-language analytics over the performance planning Teradata tables."""
+
+from performance_planning_qa.pipeline import NL2SQLPipeline, PipelineResult
+
+__all__ = ["NL2SQLPipeline", "PipelineResult"]

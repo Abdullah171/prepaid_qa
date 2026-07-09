@@ -1,7 +1,19 @@
 [project]
 name = "performance-planning-qa"
 version = "0.1.0"
-description = "Add your description here"
+description = "Natural-language to Teradata SQL and analytical Q&A for performance planning tables"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "httpx",
+    "openai",
+    "python-dotenv",
+    "teradataml",
+]
+
+[project.scripts]
+performance-planning-qa = "performance_planning_qa.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
