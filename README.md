@@ -18,6 +18,10 @@ For each user question it:
 3. Executes the SQL through `teradataml`.
 4. Sends the query result back to MiniMax to produce a concise analytical answer.
 
+The FastAPI app also supports persisted chat sessions backed by local PostgreSQL. Session
+history is passed back into the SQL and answer prompts so follow-up questions can refer to
+the prior conversation.
+
 ## Environment
 
 Expected `.env` keys:
@@ -32,6 +36,16 @@ TERADATA_USER="..."
 TERADATA_PASSWORD="..."
 ```
 
+Local chat memory uses the PostgreSQL credentials in `.env`:
+
+```env
+Host="localhost"
+Port=5433
+Database="pkgbench"
+Username="pkgbench"
+Password="pkgbench"
+```
+
 Optional keys:
 
 ```env
@@ -44,6 +58,8 @@ TERADATA_LOGMECH="LDAP"
 SQL_REPAIR_ATTEMPTS=1
 LLM_PROMPT_LOG_ENABLED=false
 LLM_PROMPT_LOG_DIR="logs/llm_prompts"
+CHAT_DB_SCHEMA_PATH="sql/chat_memory_schema.sql"
+PPQA_API_BASE_URL="http://127.0.0.1:8000"
 ```
 
 ## Install
@@ -89,6 +105,43 @@ curl http://127.0.0.1:8000/health
 ```
 
 API docs are available at `http://127.0.0.1:8000/docs`.
+
+## Streamlit Frontend
+
+Start the API, then run:
+
+```bash
+uv run streamlit run frontend/app.py
+```
+
+Open `http://127.0.0.1:8501`. The sidebar can create, select, and delete chat
+sessions. Deleting a session removes it from PostgreSQL through the FastAPI API.
+
+## Chat Memory Schema
+
+The chat tables are defined in `sql/chat_memory_schema.sql`:
+
+- `public.ppqa_chat_sessions`: session title and timestamps.
+- `public.ppqa_chat_messages`: user and assistant messages, dry-run flag, and JSONB
+  metadata containing SQL/result details for assistant responses.
+
+Apply the schema manually when needed:
+
+```bash
+PGPASSWORD=pkgbench psql -h localhost -p 5433 -U pkgbench -d pkgbench \
+  -f sql/chat_memory_schema.sql
+```
+
+The API also runs this schema file at startup with `CREATE TABLE IF NOT EXISTS`.
+
+## Session API
+
+- `GET /sessions`: list chat sessions.
+- `POST /sessions`: create a chat session.
+- `GET /sessions/{session_id}`: fetch a session with messages.
+- `PATCH /sessions/{session_id}`: rename a session.
+- `DELETE /sessions/{session_id}`: delete a session and its messages.
+- `POST /sessions/{session_id}/ask`: ask within a persisted chat session.
 
 The original CLI remains available through the package script. Generate SQL and execute it:
 

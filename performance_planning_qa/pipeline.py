@@ -12,6 +12,7 @@ from performance_planning_qa.database import DatabaseQueryError, QueryResult, Te
 from performance_planning_qa.llm import MiniMaxClient
 from performance_planning_qa.prompt_logger import PromptLogger
 from performance_planning_qa.prompts import (
+    ChatTurn,
     build_answer_messages,
     build_sql_messages,
     build_sql_repair_messages,
@@ -92,22 +93,35 @@ class NL2SQLPipeline:
         self.db = db_client or TeradataClient(settings.teradata)
         self.prompt_logger = PromptLogger(settings.prompt_log, settings.llm)
         self._current_prompt_logs: list[Path] = []
+        self._current_chat_history: list[ChatTurn] = []
 
     @classmethod
     def from_env(cls) -> NL2SQLPipeline:
         return cls(load_settings())
 
-    def generate_sql(self, question: str) -> GeneratedSQL:
+    def generate_sql(
+        self,
+        question: str,
+        *,
+        chat_history: list[ChatTurn] | None = None,
+    ) -> GeneratedSQL:
         payload = self._complete_json(
-            build_sql_messages(question, self.context),
+            build_sql_messages(question, self.context, chat_history=chat_history),
             phase="sql_generation",
             temperature=self.settings.llm.sql_temperature,
         )
         return _generated_sql_from_payload(payload)
 
-    def ask(self, question: str, *, dry_run: bool = False) -> PipelineResult:
+    def ask(
+        self,
+        question: str,
+        *,
+        dry_run: bool = False,
+        chat_history: list[ChatTurn] | None = None,
+    ) -> PipelineResult:
         self._current_prompt_logs = []
-        generated = self.generate_sql(question)
+        self._current_chat_history = chat_history or []
+        generated = self.generate_sql(question, chat_history=self._current_chat_history)
         direct_result = self._direct_generated_result(
             question=question,
             generated=generated,
@@ -336,6 +350,7 @@ class NL2SQLPipeline:
                 context=self.context,
                 bad_sql=generated.sql or "",
                 error=error,
+                chat_history=self._current_chat_history,
             ),
             phase="sql_repair",
             temperature=self.settings.llm.sql_temperature,
@@ -346,7 +361,12 @@ class NL2SQLPipeline:
     def _answer_from_result(self, question: str, sql: str, result: QueryResult) -> dict[str, Any]:
         payload = result.to_payload()
         return self._complete_json(
-            build_answer_messages(question=question, sql=sql, result_payload=payload),
+            build_answer_messages(
+                question=question,
+                sql=sql,
+                result_payload=payload,
+                chat_history=self._current_chat_history,
+            ),
             phase="answer_generation",
             temperature=self.settings.llm.answer_temperature,
         )

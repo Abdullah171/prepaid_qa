@@ -132,12 +132,39 @@ class PromptLogSettings:
 
 
 @dataclass(frozen=True)
+class ChatStorageSettings:
+    host: str
+    port: int
+    database: str
+    username: str
+    password: str
+    sslmode: str
+    schema_path: Path
+
+    def validate(self) -> None:
+        missing = []
+        if not self.host:
+            missing.append("CHAT_DB_HOST or Host")
+        if not self.database:
+            missing.append("CHAT_DB_NAME or Database")
+        if not self.username:
+            missing.append("CHAT_DB_USER or Username")
+        if not self.password:
+            missing.append("CHAT_DB_PASSWORD or Password")
+        if missing:
+            raise ValueError(f"Missing chat storage configuration: {', '.join(missing)}")
+        if not self.schema_path.exists():
+            raise ValueError(f"Chat memory schema file does not exist: {self.schema_path}")
+
+
+@dataclass(frozen=True)
 class AppSettings:
     project_root: Path
     schema_path: Path
     sample_data_dir: Path
     llm: LLMSettings
     teradata: TeradataSettings
+    chat_storage: ChatStorageSettings
     sql_repair_attempts: int
     prompt_log: PromptLogSettings
 
@@ -171,6 +198,26 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
         temp_database_name=_get_any("TERADATA_TEMP_DATABASE", "TERADATA_TEMP_DATABASE_NAME"),
     )
 
+    chat_schema_path = Path(
+        _get_any("CHAT_DB_SCHEMA_PATH", default=str(root / "sql" / "chat_memory_schema.sql")) or ""
+    )
+    if not chat_schema_path.is_absolute():
+        chat_schema_path = root / chat_schema_path
+
+    chat_storage = ChatStorageSettings(
+        host=_get_any("CHAT_DB_HOST", "POSTGRES_HOST", "PGHOST", "Host", default="localhost")
+        or "",
+        port=_get_int(_first_existing_env("CHAT_DB_PORT", "POSTGRES_PORT", "PGPORT", "Port"), 5432),
+        database=_get_any("CHAT_DB_NAME", "POSTGRES_DB", "PGDATABASE", "Database", default="")
+        or "",
+        username=_get_any("CHAT_DB_USER", "POSTGRES_USER", "PGUSER", "Username", default="")
+        or "",
+        password=_get_any("CHAT_DB_PASSWORD", "POSTGRES_PASSWORD", "PGPASSWORD", "Password", default="")
+        or "",
+        sslmode=_get_any("CHAT_DB_SSLMODE", "PGSSLMODE", default="disable") or "disable",
+        schema_path=chat_schema_path,
+    )
+
     prompt_log_dir = Path(
         _get_any("LLM_PROMPT_LOG_DIR", default=str(root / "logs" / "llm_prompts")) or ""
     )
@@ -183,9 +230,17 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
         sample_data_dir=sample_dir,
         llm=llm,
         teradata=teradata,
+        chat_storage=chat_storage,
         sql_repair_attempts=_get_int("SQL_REPAIR_ATTEMPTS", default=1),
         prompt_log=PromptLogSettings(
             enabled=_get_bool("LLM_PROMPT_LOG_ENABLED", default=False),
             directory=prompt_log_dir,
         ),
     )
+
+
+def _first_existing_env(*names: str) -> str:
+    for name in names:
+        if os.getenv(name) is not None:
+            return name
+    return names[0]

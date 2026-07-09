@@ -8,9 +8,12 @@ dependencies = [
     "fastapi",
     "httpx",
     "openai",
+    "psycopg[binary]",
     "python-dotenv",
+    "streamlit",
     "teradataml",
     "uvicorn[standard]",
+    "watchdogs>=1.9.9",
 ]
 
 [project.scripts]

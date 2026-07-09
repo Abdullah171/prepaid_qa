@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 from typing import Any
 
 from performance_planning_qa.context_loader import PromptContext
+
+
+@dataclass(frozen=True)
+class ChatTurn:
+    role: str
+    content: str
 
 
 SQL_SYSTEM_PROMPT = """You are a senior Teradata SQL analyst and scoped assistant for STC performance planning.
@@ -21,6 +28,8 @@ Rules:
   1. Identify the requested business metric or entity, target table, aggregation, grouping grain, filters, and time column.
   2. Decide whether the question has enough bounded scope to avoid scanning years of data or returning an uncontrolled row set.
   3. If any required metric, dimension, filter, categorical value, customer/account/line/package identifier, grouping grain, or time period is missing or ambiguous, ask for clarification instead of generating SQL.
+- When recent conversation is supplied, use it only to resolve references in the current question, such as "that", "same period", "break it down", or "compare with previous". The current question is still the task to answer.
+- If the current question is a follow-up, carry forward only details that were explicit in the recent conversation. Do not invent missing filters, time periods, metrics, or dimensions.
 - When asking for clarification, set needs_clarification to true, clarifying_question to one concise question that lists all missing or ambiguous inputs, and direct_answer and sql to null.
 - Do not silently assume a date range, current month, current year, latest period, all history, all customers, all accounts, all lines, all packages, or a default top N unless the user explicitly asks for it.
 - Time guardrail: if the question is about sales, churn, revenue, active base, subscriptions, counts, totals, averages, movements, comparisons, trends, growth, seasonality, or any metric that can vary over time, require an explicit bounded date, month, year, date range, or clear relative period before generating SQL.
@@ -56,7 +65,7 @@ JSON shape:
 
 ANSWER_SYSTEM_PROMPT = """You are a concise telecom analytics assistant.
 
-Answer the user's question directly using only the SQL result supplied by the application. Do not invent numbers or categories not present in the result. If the result is empty, say directly that no rows were returned. If the question cannot be answered from the SQL result, say that directly. If more input is required from the user, ask for that input directly.
+Answer the user's current question directly using only the recent conversation and SQL result supplied by the application. Do not invent numbers or categories not present in the result. If the result is empty, say directly that no rows were returned. If the question cannot be answered from the SQL result, say that directly. If more input is required from the user, ask for that input directly.
 
 Return JSON only:
 {
@@ -71,6 +80,7 @@ Given the original question, schema/sample context, the invalid SQL, and the val
 
 Rules:
 - If the SQL can be repaired confidently from the supplied schema, return the corrected read-only Teradata SELECT query with needs_clarification false, clarifying_question null, and direct_answer null.
+- When recent conversation is supplied, use it only to resolve explicit follow-up references in the current question.
 - If the error shows that required user scope is missing, such as the exact metric, dimension, filter, date, month, year, or date range, do not guess. Return needs_clarification true, a concise clarifying_question, direct_answer null, and sql null.
 - Apply the same preflight and time guardrails as the SQL generation prompt. If repair would require assuming a date range, latest period, broad history window, ranking metric, grouping grain, categorical value, or selective filter, ask the user to clarify instead of repairing the SQL.
 - If the query cannot be repaired from the provided schema, return a direct_answer saying it cannot be answered from the provided database context, with needs_clarification false and sql null.
@@ -78,9 +88,15 @@ Rules:
 """
 
 
-def build_sql_messages(question: str, context: PromptContext) -> list[dict[str, str]]:
+def build_sql_messages(
+    question: str,
+    context: PromptContext,
+    chat_history: list[ChatTurn] | None = None,
+) -> list[dict[str, str]]:
     user_prompt = f"""Raw schema and sample context:
 {context.render_raw()}
+
+{_render_recent_conversation(chat_history)}
 
 User question:
 {question}
@@ -97,9 +113,12 @@ def build_sql_repair_messages(
     context: PromptContext,
     bad_sql: str,
     error: str,
+    chat_history: list[ChatTurn] | None = None,
 ) -> list[dict[str, str]]:
     user_prompt = f"""Raw schema and sample context:
 {context.render_raw()}
+
+{_render_recent_conversation(chat_history)}
 
 Original user question:
 {question}
@@ -121,9 +140,12 @@ def build_answer_messages(
     question: str,
     sql: str,
     result_payload: dict[str, Any],
+    chat_history: list[ChatTurn] | None = None,
 ) -> list[dict[str, str]]:
     user_prompt = f"""User question:
 {question}
+
+{_render_recent_conversation(chat_history)}
 
 SQL executed:
 {sql}
@@ -135,3 +157,30 @@ SQL result payload:
         {"role": "system", "content": ANSWER_SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt},
     ]
+
+
+def _render_recent_conversation(chat_history: list[ChatTurn] | None) -> str:
+    if not chat_history:
+        return "Recent conversation: none"
+
+    rendered_turns = []
+    for turn in chat_history[-20:]:
+        role = turn.role.strip().lower()
+        if role not in {"user", "assistant"}:
+            continue
+        content = _compact_text(turn.content)
+        if not content:
+            continue
+        rendered_turns.append(f"{role}: {content}")
+
+    if not rendered_turns:
+        return "Recent conversation: none"
+
+    return "Recent conversation for resolving follow-up references:\n" + "\n".join(rendered_turns)
+
+
+def _compact_text(value: str, *, max_chars: int = 4000) -> str:
+    text = " ".join(value.strip().split())
+    if len(text) <= max_chars:
+        return text
+    return f"{text[: max_chars - 3].rstrip()}..."
