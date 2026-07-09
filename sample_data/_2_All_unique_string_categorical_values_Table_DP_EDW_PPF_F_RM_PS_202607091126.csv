@@ -1,0 +1,895 @@
+"table_name","column_name","column_value"
+F_RM_PSD_SALES,COMPANY_NME,Al-Taknia
+F_RM_PSD_SALES,COMPANY_NME,Bazi
+F_RM_PSD_SALES,COMPANY_NME,Bright Fibers
+F_RM_PSD_SALES,COMPANY_NME,CTC
+F_RM_PSD_SALES,COMPANY_NME,Eurostar
+F_RM_PSD_SALES,COMPANY_NME,Premier
+F_RM_PSD_SALES,COMPANY_NME,Sale CO
+F_RM_PSD_SALES,COMPANY_NME,STC
+F_RM_PSD_SALES,CUST_GENDER_CD,FEMALE
+F_RM_PSD_SALES,CUST_GENDER_CD,MALE
+F_RM_PSD_SALES,CUST_GENDER_CD,SMBB-NA
+F_RM_PSD_SALES,CUST_GENDER_CD,UNKNOWN
+F_RM_PSD_SALES,CUST_NAT_CD,"131"
+F_RM_PSD_SALES,CUST_NAT_CD,Afghanistan
+F_RM_PSD_SALES,CUST_NAT_CD,African contries - Other
+F_RM_PSD_SALES,CUST_NAT_CD,Alaska
+F_RM_PSD_SALES,CUST_NAT_CD,Albania
+F_RM_PSD_SALES,CUST_NAT_CD,Algeria
+F_RM_PSD_SALES,CUST_NAT_CD,Alien  KSA Passprt
+F_RM_PSD_SALES,CUST_NAT_CD,Alien KSA Passprt
+F_RM_PSD_SALES,CUST_NAT_CD,American Virgin Islands
+F_RM_PSD_SALES,CUST_NAT_CD,Andorra
+F_RM_PSD_SALES,CUST_NAT_CD,Angola
+F_RM_PSD_SALES,CUST_NAT_CD,Anguilla
+F_RM_PSD_SALES,CUST_NAT_CD,Antigua
+F_RM_PSD_SALES,CUST_NAT_CD,Argentina
+F_RM_PSD_SALES,CUST_NAT_CD,Armenia
+F_RM_PSD_SALES,CUST_NAT_CD,Aruba
+F_RM_PSD_SALES,CUST_NAT_CD,Australia
+F_RM_PSD_SALES,CUST_NAT_CD,Austria
+F_RM_PSD_SALES,CUST_NAT_CD,Azerbaijan
+F_RM_PSD_SALES,CUST_NAT_CD,Bahamas
+F_RM_PSD_SALES,CUST_NAT_CD,Bahrain
+F_RM_PSD_SALES,CUST_NAT_CD,Balearic Islands
+F_RM_PSD_SALES,CUST_NAT_CD,Baloushi
+F_RM_PSD_SALES,CUST_NAT_CD,Baluchistan
+F_RM_PSD_SALES,CUST_NAT_CD,Bangladesh
+F_RM_PSD_SALES,CUST_NAT_CD,Barbados
+F_RM_PSD_SALES,CUST_NAT_CD,Barbuda
+F_RM_PSD_SALES,CUST_NAT_CD,Belarus
+F_RM_PSD_SALES,CUST_NAT_CD,Belgium
+F_RM_PSD_SALES,CUST_NAT_CD,Belize
+F_RM_PSD_SALES,CUST_NAT_CD,Benin
+F_RM_PSD_SALES,CUST_NAT_CD,Bermuda
+F_RM_PSD_SALES,CUST_NAT_CD,Bhutan
+F_RM_PSD_SALES,CUST_NAT_CD,Bolivia
+F_RM_PSD_SALES,CUST_NAT_CD,Bosnia and Herzegovina
+F_RM_PSD_SALES,CUST_NAT_CD,Botswana
+F_RM_PSD_SALES,CUST_NAT_CD,Brazil
+F_RM_PSD_SALES,CUST_NAT_CD,British Virgin Islands
+F_RM_PSD_SALES,CUST_NAT_CD,Brunei
+F_RM_PSD_SALES,CUST_NAT_CD,Bulgaria
+F_RM_PSD_SALES,CUST_NAT_CD,Burkina Faso
+F_RM_PSD_SALES,CUST_NAT_CD,Burundi
+F_RM_PSD_SALES,CUST_NAT_CD,Cambodia
+F_RM_PSD_SALES,CUST_NAT_CD,Cameroon
+F_RM_PSD_SALES,CUST_NAT_CD,Canada
+F_RM_PSD_SALES,CUST_NAT_CD,Central African Republic
+F_RM_PSD_SALES,CUST_NAT_CD,Chad
+F_RM_PSD_SALES,CUST_NAT_CD,Chile
+F_RM_PSD_SALES,CUST_NAT_CD,China
+F_RM_PSD_SALES,CUST_NAT_CD,Christmas Island
+F_RM_PSD_SALES,CUST_NAT_CD,Colombia
+F_RM_PSD_SALES,CUST_NAT_CD,Comoros
+F_RM_PSD_SALES,CUST_NAT_CD,Comoros Islands
+F_RM_PSD_SALES,CUST_NAT_CD,Congo
+F_RM_PSD_SALES,CUST_NAT_CD,Costa Rica
+F_RM_PSD_SALES,CUST_NAT_CD,Cote De Voire
+F_RM_PSD_SALES,CUST_NAT_CD,Croatia
+F_RM_PSD_SALES,CUST_NAT_CD,Cuba
+F_RM_PSD_SALES,CUST_NAT_CD,Cyprus
+F_RM_PSD_SALES,CUST_NAT_CD,Czech Republic
+F_RM_PSD_SALES,CUST_NAT_CD,Dagestan
+F_RM_PSD_SALES,CUST_NAT_CD,Denmark
+F_RM_PSD_SALES,CUST_NAT_CD,Diego Garcia
+F_RM_PSD_SALES,CUST_NAT_CD,Djibouti
+F_RM_PSD_SALES,CUST_NAT_CD,Dominica
+F_RM_PSD_SALES,CUST_NAT_CD,Dominican Republic
+F_RM_PSD_SALES,CUST_NAT_CD,East Timor
+F_RM_PSD_SALES,CUST_NAT_CD,Ecuador
+F_RM_PSD_SALES,CUST_NAT_CD,Egypt
+F_RM_PSD_SALES,CUST_NAT_CD,El Salvador
+F_RM_PSD_SALES,CUST_NAT_CD,Equatorial Guinea
+F_RM_PSD_SALES,CUST_NAT_CD,Eritrea
+F_RM_PSD_SALES,CUST_NAT_CD,Estonia
+F_RM_PSD_SALES,CUST_NAT_CD,Ethiopia
+F_RM_PSD_SALES,CUST_NAT_CD,Fiji
+F_RM_PSD_SALES,CUST_NAT_CD,Finland
+F_RM_PSD_SALES,CUST_NAT_CD,France
+F_RM_PSD_SALES,CUST_NAT_CD,French Guiana
+F_RM_PSD_SALES,CUST_NAT_CD,French Polynesia
+F_RM_PSD_SALES,CUST_NAT_CD,Gabon
+F_RM_PSD_SALES,CUST_NAT_CD,Gambia
+F_RM_PSD_SALES,CUST_NAT_CD,Georgia
+F_RM_PSD_SALES,CUST_NAT_CD,Germany
+F_RM_PSD_SALES,CUST_NAT_CD,Ghana
+F_RM_PSD_SALES,CUST_NAT_CD,Greece
+F_RM_PSD_SALES,CUST_NAT_CD,Greenland
+F_RM_PSD_SALES,CUST_NAT_CD,Grenada
+F_RM_PSD_SALES,CUST_NAT_CD,Guadeloupe
+F_RM_PSD_SALES,CUST_NAT_CD,Guam
+F_RM_PSD_SALES,CUST_NAT_CD,Guatemala
+F_RM_PSD_SALES,CUST_NAT_CD,Guinea
+F_RM_PSD_SALES,CUST_NAT_CD,Guinea Bissau
+F_RM_PSD_SALES,CUST_NAT_CD,Holland
+F_RM_PSD_SALES,CUST_NAT_CD,Honduras
+F_RM_PSD_SALES,CUST_NAT_CD,Hong Kong
+F_RM_PSD_SALES,CUST_NAT_CD,Hungary
+F_RM_PSD_SALES,CUST_NAT_CD,Iceland
+F_RM_PSD_SALES,CUST_NAT_CD,India
+F_RM_PSD_SALES,CUST_NAT_CD,Indian
+F_RM_PSD_SALES,CUST_NAT_CD,Indonesia
+F_RM_PSD_SALES,CUST_NAT_CD,Iran
+F_RM_PSD_SALES,CUST_NAT_CD,Iraq
+F_RM_PSD_SALES,CUST_NAT_CD,Ireland
+F_RM_PSD_SALES,CUST_NAT_CD,Italy
+F_RM_PSD_SALES,CUST_NAT_CD,Jamaica
+F_RM_PSD_SALES,CUST_NAT_CD,Japan
+F_RM_PSD_SALES,CUST_NAT_CD,Joanna
+F_RM_PSD_SALES,CUST_NAT_CD,Jordan
+F_RM_PSD_SALES,CUST_NAT_CD,Kazakhstan
+F_RM_PSD_SALES,CUST_NAT_CD,Kenya
+F_RM_PSD_SALES,CUST_NAT_CD,Kosovo
+F_RM_PSD_SALES,CUST_NAT_CD,Kuwait
+F_RM_PSD_SALES,CUST_NAT_CD,Kuwait - without
+F_RM_PSD_SALES,CUST_NAT_CD,Kyrgyzstan
+F_RM_PSD_SALES,CUST_NAT_CD,Laos
+F_RM_PSD_SALES,CUST_NAT_CD,Latvia
+F_RM_PSD_SALES,CUST_NAT_CD,Lebanon
+F_RM_PSD_SALES,CUST_NAT_CD,Liberia
+F_RM_PSD_SALES,CUST_NAT_CD,Libya
+F_RM_PSD_SALES,CUST_NAT_CD,Lithuania
+F_RM_PSD_SALES,CUST_NAT_CD,Luxembourg
+F_RM_PSD_SALES,CUST_NAT_CD,Macau
+F_RM_PSD_SALES,CUST_NAT_CD,Macedonia
+F_RM_PSD_SALES,CUST_NAT_CD,Madagascar
+F_RM_PSD_SALES,CUST_NAT_CD,Malawi
+F_RM_PSD_SALES,CUST_NAT_CD,Malaysia
+F_RM_PSD_SALES,CUST_NAT_CD,Maldives islands
+F_RM_PSD_SALES,CUST_NAT_CD,Mali
+F_RM_PSD_SALES,CUST_NAT_CD,Malta
+F_RM_PSD_SALES,CUST_NAT_CD,Mauritania
+F_RM_PSD_SALES,CUST_NAT_CD,Mauritius
+F_RM_PSD_SALES,CUST_NAT_CD,Member of the tribes
+F_RM_PSD_SALES,CUST_NAT_CD,Mexico
+F_RM_PSD_SALES,CUST_NAT_CD,Moldova
+F_RM_PSD_SALES,CUST_NAT_CD,Mongolia
+F_RM_PSD_SALES,CUST_NAT_CD,Montenegro
+F_RM_PSD_SALES,CUST_NAT_CD,Montserrat
+F_RM_PSD_SALES,CUST_NAT_CD,Morocco
+F_RM_PSD_SALES,CUST_NAT_CD,Mozambique
+F_RM_PSD_SALES,CUST_NAT_CD,Myanmar
+F_RM_PSD_SALES,CUST_NAT_CD,Myanmar Bangladesh Passport
+F_RM_PSD_SALES,CUST_NAT_CD,Myanmar Pakistan Passport
+F_RM_PSD_SALES,CUST_NAT_CD,Myanmar Resident
+F_RM_PSD_SALES,CUST_NAT_CD,Namibia
+F_RM_PSD_SALES,CUST_NAT_CD,Nepal
+F_RM_PSD_SALES,CUST_NAT_CD,Netherlands
+F_RM_PSD_SALES,CUST_NAT_CD,Netherlands Antilles islands
+F_RM_PSD_SALES,CUST_NAT_CD,New Zealand
+F_RM_PSD_SALES,CUST_NAT_CD,Nicaragua
+F_RM_PSD_SALES,CUST_NAT_CD,Niger
+F_RM_PSD_SALES,CUST_NAT_CD,Nigeria
+F_RM_PSD_SALES,CUST_NAT_CD,Niue Islands
+F_RM_PSD_SALES,CUST_NAT_CD,North Korea
+F_RM_PSD_SALES,CUST_NAT_CD,Norway
+F_RM_PSD_SALES,CUST_NAT_CD,Oman
+F_RM_PSD_SALES,CUST_NAT_CD,Other
+F_RM_PSD_SALES,CUST_NAT_CD,Pakistan
+F_RM_PSD_SALES,CUST_NAT_CD,Palau
+F_RM_PSD_SALES,CUST_NAT_CD,Palestine
+F_RM_PSD_SALES,CUST_NAT_CD,Palestinian Egyptian
+F_RM_PSD_SALES,CUST_NAT_CD,Palestinian Iraqi
+F_RM_PSD_SALES,CUST_NAT_CD,Palestinian Jordan
+F_RM_PSD_SALES,CUST_NAT_CD,Palestinian Lebanese
+F_RM_PSD_SALES,CUST_NAT_CD,Palestinian Syria
+F_RM_PSD_SALES,CUST_NAT_CD,Panama
+F_RM_PSD_SALES,CUST_NAT_CD,Paragauy
+F_RM_PSD_SALES,CUST_NAT_CD,Paraguay
+F_RM_PSD_SALES,CUST_NAT_CD,Peru
+F_RM_PSD_SALES,CUST_NAT_CD,Philippines
+F_RM_PSD_SALES,CUST_NAT_CD,Poland
+F_RM_PSD_SALES,CUST_NAT_CD,Portugal
+F_RM_PSD_SALES,CUST_NAT_CD,Qatar
+F_RM_PSD_SALES,CUST_NAT_CD,Resident
+F_RM_PSD_SALES,CUST_NAT_CD,Resident Born
+F_RM_PSD_SALES,CUST_NAT_CD,Resident Migration
+F_RM_PSD_SALES,CUST_NAT_CD,Resident No Id
+F_RM_PSD_SALES,CUST_NAT_CD,Resident Tribes
+F_RM_PSD_SALES,CUST_NAT_CD,Resident Unknown
+F_RM_PSD_SALES,CUST_NAT_CD,ResidentRequesting Nationality
+F_RM_PSD_SALES,CUST_NAT_CD,Residents of Bahrain
+F_RM_PSD_SALES,CUST_NAT_CD,Restriction D 1
+F_RM_PSD_SALES,CUST_NAT_CD,Restriction H 1
+F_RM_PSD_SALES,CUST_NAT_CD,Restriction J 1
+F_RM_PSD_SALES,CUST_NAT_CD,Restriction J 2
+F_RM_PSD_SALES,CUST_NAT_CD,Restriction J 3
+F_RM_PSD_SALES,CUST_NAT_CD,Restriction N 1
+F_RM_PSD_SALES,CUST_NAT_CD,Restriction SH 1
+F_RM_PSD_SALES,CUST_NAT_CD,Restriction Y 1
+F_RM_PSD_SALES,CUST_NAT_CD,Romania
+F_RM_PSD_SALES,CUST_NAT_CD,Russia Federal
+F_RM_PSD_SALES,CUST_NAT_CD,Russian
+F_RM_PSD_SALES,CUST_NAT_CD,Rwanda
+F_RM_PSD_SALES,CUST_NAT_CD,Saba
+F_RM_PSD_SALES,CUST_NAT_CD,Saint Kitts and Nevis
+F_RM_PSD_SALES,CUST_NAT_CD,Saint Lucia
+F_RM_PSD_SALES,CUST_NAT_CD,San Cristovernivz
+F_RM_PSD_SALES,CUST_NAT_CD,Saudi Arabia
+F_RM_PSD_SALES,CUST_NAT_CD,Saudi Citizen
+F_RM_PSD_SALES,CUST_NAT_CD,Saudi Citizen_bkp
+F_RM_PSD_SALES,CUST_NAT_CD,Senegal
+F_RM_PSD_SALES,CUST_NAT_CD,Serbia
+F_RM_PSD_SALES,CUST_NAT_CD,Seychelles Islands
+F_RM_PSD_SALES,CUST_NAT_CD,Sierra Leone
+F_RM_PSD_SALES,CUST_NAT_CD,Singapore
+F_RM_PSD_SALES,CUST_NAT_CD,Slovakia
+F_RM_PSD_SALES,CUST_NAT_CD,Slovenia
+F_RM_PSD_SALES,CUST_NAT_CD,SMBB-NA
+F_RM_PSD_SALES,CUST_NAT_CD,Somalia
+F_RM_PSD_SALES,CUST_NAT_CD,South Africa
+F_RM_PSD_SALES,CUST_NAT_CD,South Korea
+F_RM_PSD_SALES,CUST_NAT_CD,South Sudan
+F_RM_PSD_SALES,CUST_NAT_CD,Southern Yemen
+F_RM_PSD_SALES,CUST_NAT_CD,Spain
+F_RM_PSD_SALES,CUST_NAT_CD,Sri Lanka
+F_RM_PSD_SALES,CUST_NAT_CD,Sudan
+F_RM_PSD_SALES,CUST_NAT_CD,Suriname
+F_RM_PSD_SALES,CUST_NAT_CD,Swaziland
+F_RM_PSD_SALES,CUST_NAT_CD,Sweden
+F_RM_PSD_SALES,CUST_NAT_CD,Switzerland
+F_RM_PSD_SALES,CUST_NAT_CD,Syria
+F_RM_PSD_SALES,CUST_NAT_CD,Taiwan
+F_RM_PSD_SALES,CUST_NAT_CD,Taiwan China
+F_RM_PSD_SALES,CUST_NAT_CD,Tajikistan
+F_RM_PSD_SALES,CUST_NAT_CD,Tanzania
+F_RM_PSD_SALES,CUST_NAT_CD,Thailand
+F_RM_PSD_SALES,CUST_NAT_CD,Togo
+F_RM_PSD_SALES,CUST_NAT_CD,Tribes emigrated
+F_RM_PSD_SALES,CUST_NAT_CD,Tribes Migration AlHalifah
+F_RM_PSD_SALES,CUST_NAT_CD,Tribes Migration Kuwait
+F_RM_PSD_SALES,CUST_NAT_CD,Trinidad and Tobago
+F_RM_PSD_SALES,CUST_NAT_CD,Tunisia
+F_RM_PSD_SALES,CUST_NAT_CD,Turkey
+F_RM_PSD_SALES,CUST_NAT_CD,Turkistan
+F_RM_PSD_SALES,CUST_NAT_CD,Turkistani Resident
+F_RM_PSD_SALES,CUST_NAT_CD,Turkmenistan
+F_RM_PSD_SALES,CUST_NAT_CD,U.A.E.
+F_RM_PSD_SALES,CUST_NAT_CD,Uganda
+F_RM_PSD_SALES,CUST_NAT_CD,Ukraine
+F_RM_PSD_SALES,CUST_NAT_CD,United Arab Emirates
+F_RM_PSD_SALES,CUST_NAT_CD,United Kingdom
+F_RM_PSD_SALES,CUST_NAT_CD,United Nations
+F_RM_PSD_SALES,CUST_NAT_CD,United States Of America
+F_RM_PSD_SALES,CUST_NAT_CD,UNKNOWN
+F_RM_PSD_SALES,CUST_NAT_CD,Uruguay
+F_RM_PSD_SALES,CUST_NAT_CD,Uzbekistan
+F_RM_PSD_SALES,CUST_NAT_CD,Vanuoto
+F_RM_PSD_SALES,CUST_NAT_CD,Venezuela
+F_RM_PSD_SALES,CUST_NAT_CD,Vietnam
+F_RM_PSD_SALES,CUST_NAT_CD,Wallis and Futuna
+F_RM_PSD_SALES,CUST_NAT_CD,Yemen
+F_RM_PSD_SALES,CUST_NAT_CD,Yemen - pilgrimage
+F_RM_PSD_SALES,CUST_NAT_CD,Yemeni the sultans
+F_RM_PSD_SALES,CUST_NAT_CD,Yugoslavia
+F_RM_PSD_SALES,CUST_NAT_CD,Zaire
+F_RM_PSD_SALES,CUST_NAT_CD,Zambia
+F_RM_PSD_SALES,CUST_NAT_CD,Zimbabwe
+F_RM_PSD_SALES,CUST_TAMAYUZ_MMBRSHP_TYP,Base Tier
+F_RM_PSD_SALES,CUST_TAMAYUZ_MMBRSHP_TYP,Diamond
+F_RM_PSD_SALES,CUST_TAMAYUZ_MMBRSHP_TYP,Elite
+F_RM_PSD_SALES,CUST_TAMAYUZ_MMBRSHP_TYP,Gold
+F_RM_PSD_SALES,CUST_TAMAYUZ_MMBRSHP_TYP,Platinum
+F_RM_PSD_SALES,CUST_TAMAYUZ_MMBRSHP_TYP,Qitaf - Classic
+F_RM_PSD_SALES,CUST_TAMAYUZ_MMBRSHP_TYP,Qitaf - Tamayouz Diamond
+F_RM_PSD_SALES,CUST_TAMAYUZ_MMBRSHP_TYP,Qitaf - Tamayouz Gold
+F_RM_PSD_SALES,CUST_TAMAYUZ_MMBRSHP_TYP,Qitaf - Tamayouz Platinum
+F_RM_PSD_SALES,CUST_TAMAYUZ_MMBRSHP_TYP,Silver
+F_RM_PSD_SALES,CUST_TAMAYUZ_MMBRSHP_TYP,SMBB-NA
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,AGENT_PORTAL
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,Auction Portal
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,B2B CRM
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,B2C CRM
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,BAKALA-MSISDN
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,Bulk Order
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,CWS
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,DigitalSalesApp
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,eDealer
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,eDealer App
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,eSales
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,KIOSK
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,MySTC
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,MySTC Android
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,MySTC App
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,MySTC iPhone
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,MySTC Kiosk
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,MySTC Portal
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,Siebel
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,STC Website
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,STC Website (AEM)
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,TeleSales
+F_RM_PSD_SALES,ORDER_CHANNEL_NME,TeleSales Console
+F_RM_PSD_SALES,ORDER_CLS_NM,LINE_SALE
+F_RM_PSD_SALES,ORDER_CLS_NM,LINE_SALE_MIG
+F_RM_PSD_SALES,ORDER_CLS_NM,TRANSFER
+F_RM_PSD_SALES,ORDER_SUBTYP_NME,FlexToPostpaid
+F_RM_PSD_SALES,ORDER_SUBTYP_NME,MNPPortIn
+F_RM_PSD_SALES,ORDER_SUBTYP_NME,New
+F_RM_PSD_SALES,ORDER_SUBTYP_NME,Ownership Across BU
+F_RM_PSD_SALES,ORDER_SUBTYP_NME,PrepaidFlexToPostpaid
+F_RM_PSD_SALES,ORDER_SUBTYP_NME,PrepaidtoPostpaid
+F_RM_PSD_SALES,ORDER_SUBTYP_NME,Reconnect
+F_RM_PSD_SALES,ORDER_SUBTYP_NME,Transfer
+F_RM_PSD_SALES,ORDER_SUBTYP_NME,Transfer Across BU
+F_RM_PSD_SALES,ORDER_TYP_NME,Migrate
+F_RM_PSD_SALES,ORDER_TYP_NME,New
+F_RM_PSD_SALES,ORDER_TYP_NME,Transfer
+F_RM_PSD_SALES,PROD_DESC,    + G4   - QN UNL +4G MyFI
+F_RM_PSD_SALES,PROD_DESC,    + G5   - QN UNL +5G MyFI
+F_RM_PSD_SALES,PROD_DESC,  100  + G4    - QN 100GB +4G MyFI
+F_RM_PSD_SALES,PROD_DESC,  100  + G5    - QN 100GB +5G MyFI
+F_RM_PSD_SALES,PROD_DESC,  150  + G4    - QN 150GB +4G MyFI
+F_RM_PSD_SALES,PROD_DESC,"1 GB Data Plan -   1 "
+F_RM_PSD_SALES,PROD_DESC,"1 GB internet package for one month-  1   "
+F_RM_PSD_SALES,PROD_DESC,"10 GB Data Plan -   10 "
+F_RM_PSD_SALES,PROD_DESC,"10 GB internet package for one month-  10   "
+F_RM_PSD_SALES,PROD_DESC,"100 GB +20 GB additional-  100 +20  "
+F_RM_PSD_SALES,PROD_DESC,"100 GB Data Plan -   100 "
+F_RM_PSD_SALES,PROD_DESC,"100+20 GB Data Plan -   100+20 "
+F_RM_PSD_SALES,PROD_DESC,"100GB + 100GB Streaming - 100  + 100 "
+F_RM_PSD_SALES,PROD_DESC,"100GB + 4G MiFi - 100  +    "
+F_RM_PSD_SALES,PROD_DESC,"100GB Gaming + 50GB-100   + 50 "
+F_RM_PSD_SALES,PROD_DESC,"100GB STC TV + Shahid streaming package - 100      + "
+F_RM_PSD_SALES,PROD_DESC,"150GB entertainment apps+ 25GB -    25+150   "
+F_RM_PSD_SALES,PROD_DESC,"150GB Streaming-150  "
+F_RM_PSD_SALES,PROD_DESC,"1GBQuicKnetPostpaidPlan    1  "
+F_RM_PSD_SALES,PROD_DESC,"25GB + 25GB Streaming - 25  + 25 "
+F_RM_PSD_SALES,PROD_DESC,"4G 150GB+MyFi 12M  150+4G 12"
+F_RM_PSD_SALES,PROD_DESC,"4G Data SIM 100 GB +4G My-fi 12M"
+F_RM_PSD_SALES,PROD_DESC,"4G Data SIM 100 GB +4G My-fi 12M-  100  + 4G   12 "
+F_RM_PSD_SALES,PROD_DESC,"4G DATA SIM 150 GB+4G My-fi 18M"
+F_RM_PSD_SALES,PROD_DESC,"4G Quicknet Unlimited Data Plan+4G My-fi 12M"
+F_RM_PSD_SALES,PROD_DESC,"4G Quicknet Unlimited Data Plan+4G My-fi 12M-    + 4G   12 "
+F_RM_PSD_SALES,PROD_DESC,"5 GB internet package for one month-  5   "
+F_RM_PSD_SALES,PROD_DESC,"50 GB Data Plan -   50 "
+F_RM_PSD_SALES,PROD_DESC,"50+10 GB Data Plan -   50+10 "
+F_RM_PSD_SALES,PROD_DESC,"50+10 GB data plan additional-  50+10  "
+F_RM_PSD_SALES,PROD_DESC,"50GB + 50GB Streaming - 50  + 50 "
+F_RM_PSD_SALES,PROD_DESC,"50GB Gaming+5GB-50  +5"
+F_RM_PSD_SALES,PROD_DESC,"50GB Huawei MatePad SE 32GB -   5G 50     32 "
+F_RM_PSD_SALES,PROD_DESC,"50GB Huawei MatePad SE 64GB -   5G 50     64 "
+F_RM_PSD_SALES,PROD_DESC,"5G 100GB+5G MyFi  5G  +100"
+F_RM_PSD_SALES,PROD_DESC,"5G Business Quicknet UL - 5G     "
+F_RM_PSD_SALES,PROD_DESC,"5G QN Postpaid 100GB-5G    100 "
+F_RM_PSD_SALES,PROD_DESC,"5G QN Postpaid 250GB-5G    250 "
+F_RM_PSD_SALES,PROD_DESC,"5G QuickNet Post-paid Unlimited + 5G MyFi 18M"
+F_RM_PSD_SALES,PROD_DESC,"5G QuickNet Post-paid Unlimited -       5G"
+F_RM_PSD_SALES,PROD_DESC,"5G QuickNet Postpaid Package"
+F_RM_PSD_SALES,PROD_DESC,"5GBQuicKnetPostpaidPlan    5  "
+F_RM_PSD_SALES,PROD_DESC,Aljawal 25 -  25
+F_RM_PSD_SALES,PROD_DESC,Aljawal 35 -  35
+F_RM_PSD_SALES,PROD_DESC,Baity  5G  Entertainment -  5G 
+F_RM_PSD_SALES,PROD_DESC,Baity 4G 100GB - 100GB  4
+F_RM_PSD_SALES,PROD_DESC,Baity 4G 150GB - 150GB  4
+F_RM_PSD_SALES,PROD_DESC,Baity 4G 50Mbps - 50Mbps 4G 
+F_RM_PSD_SALES,PROD_DESC,Baity 4G 70GB - 70GB  4
+F_RM_PSD_SALES,PROD_DESC,Baity 4G UL -  4  
+F_RM_PSD_SALES,PROD_DESC,Baity 4G Unlimited -  4G 
+F_RM_PSD_SALES,PROD_DESC,Baity 5G 100GB -  100GB 5G
+F_RM_PSD_SALES,PROD_DESC,Baity 5G 100GB - 100GB 5G 
+F_RM_PSD_SALES,PROD_DESC,Baity 5G 100Mbps -  5G 100 Mbps
+F_RM_PSD_SALES,PROD_DESC,Baity 5G 100Mbps -  5G 100Mbps
+F_RM_PSD_SALES,PROD_DESC,Baity 5G 200Mbps -  5 200 
+F_RM_PSD_SALES,PROD_DESC,Baity 5G 200Mbps - 200Mbps 5G 
+F_RM_PSD_SALES,PROD_DESC,Baity 5G basic -  5G 
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Basic - 5G  
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Basic eSIM -  5G ( )
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Basic Lite -  5G  
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Basic-Testing - - 5G  
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Entertainment -  5G 
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Entertainment - 5G  
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Entertainment eSIM -  5G  ( )
+F_RM_PSD_SALES,PROD_DESC,Baity 5G EntertainmentESIM -  5G   ( )
+F_RM_PSD_SALES,PROD_DESC,Baity 5G max -  5G 
+F_RM_PSD_SALES,PROD_DESC,Baity 5G max eSIM -  5G   
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Stream - 5G  
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Stream E sim -  5G   
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Stream E sim - 5G   ( )
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Stream e-SIM-Testing - 5G   ( ) -
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Stream-Testing - - 5G  
+F_RM_PSD_SALES,PROD_DESC,Baity 5G UL + -  5G  +
+F_RM_PSD_SALES,PROD_DESC,Baity 5G UL + eSIM -  5G  +  
+F_RM_PSD_SALES,PROD_DESC,Baity 5G UL Prime eSIM- 5G   ( )
+F_RM_PSD_SALES,PROD_DESC,Baity 5G UL Prime- 5G  
+F_RM_PSD_SALES,PROD_DESC,Baity 5G UL Pro eSIM- 5G   ( )
+F_RM_PSD_SALES,PROD_DESC,Baity 5G UL Pro- 5G  
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Unlimited -  5   
+F_RM_PSD_SALES,PROD_DESC,Baity 5G unlimited -  5G  
+F_RM_PSD_SALES,PROD_DESC,Baity 5G unlimited e-sim -  5G     
+F_RM_PSD_SALES,PROD_DESC,Baity 5G Unlimited eSIM -  5G   
+F_RM_PSD_SALES,PROD_DESC,Business Advance -  
+F_RM_PSD_SALES,PROD_DESC,Business Advance+ -  +
+F_RM_PSD_SALES,PROD_DESC,Business Basic -  
+F_RM_PSD_SALES,PROD_DESC,Business Basic+ -  +
+F_RM_PSD_SALES,PROD_DESC,Business Internet Plan -   
+F_RM_PSD_SALES,PROD_DESC,Business Network 1000 Plus -    1000 
+F_RM_PSD_SALES,PROD_DESC,Business Network 20 -  20 (IN)
+F_RM_PSD_SALES,PROD_DESC,Business Premium -  
+F_RM_PSD_SALES,PROD_DESC,Business QUICKnet Package 10 GB -       10 
+F_RM_PSD_SALES,PROD_DESC,Business QUICKnet Package 2 GB -     2 
+F_RM_PSD_SALES,PROD_DESC,Business QUICKnet Package Unlimited -     
+F_RM_PSD_SALES,PROD_DESC,COW Rate Plan -     
+F_RM_PSD_SALES,PROD_DESC,Data SIM 10 GB -   10  
+F_RM_PSD_SALES,PROD_DESC,Data SIM 100GB -   100 
+F_RM_PSD_SALES,PROD_DESC,Data SIM 100GB additional data -   100  
+F_RM_PSD_SALES,PROD_DESC,Data SIM 10GB -   10 
+F_RM_PSD_SALES,PROD_DESC,Data SIM 150GB -   150 
+F_RM_PSD_SALES,PROD_DESC,Data SIM 150GB additional data -   150  
+F_RM_PSD_SALES,PROD_DESC,Data SIM 20GB -   20  
+F_RM_PSD_SALES,PROD_DESC,Data SIM 50GB -   50 
+F_RM_PSD_SALES,PROD_DESC,Data SIM Unlimited -   
+F_RM_PSD_SALES,PROD_DESC,DataSIM Unlimited No Fair Usage-      
+F_RM_PSD_SALES,PROD_DESC,Family package- 
+F_RM_PSD_SALES,PROD_DESC,iPhone Business Premium 24 package -      24  (IN)
+F_RM_PSD_SALES,PROD_DESC,Jawal EASY -  
+F_RM_PSD_SALES,PROD_DESC,Jawal Light -    (IN)
+F_RM_PSD_SALES,PROD_DESC,Jawal Premium -     (IN)
+F_RM_PSD_SALES,PROD_DESC,Jawal Regular -     (IN)
+F_RM_PSD_SALES,PROD_DESC,M100 package -   100
+F_RM_PSD_SALES,PROD_DESC,M170 package -   170
+F_RM_PSD_SALES,PROD_DESC,M280 package -   280
+F_RM_PSD_SALES,PROD_DESC,M2M data - 40 GB -  M2M -  
+F_RM_PSD_SALES,PROD_DESC,M2M data with voice  40 GB -    M2M   
+F_RM_PSD_SALES,PROD_DESC,Maktabi 5G 200Mbps - IUC -  5G 200  - IUC
+F_RM_PSD_SALES,PROD_DESC,Maktabi 5G Unlimited - IUC -  5G   - IUC
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 115 -   115
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 2 -  
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 2 Extra- 2 
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 2 Lite- 2 
+F_RM_PSD_SALES,PROD_DESC,mofawtar 2 package-  2
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 2 Plus - 2 
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 2+ -  2+
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 3 -  
+F_RM_PSD_SALES,PROD_DESC,mofawtar 3 package-  3
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 3 Plus - 3 
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 350- 350
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 4 -  
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 4 Extra- 4 
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 4 Plus - 4 
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 4 with 5GB GCC -  4  5  
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 5 -  
+F_RM_PSD_SALES,PROD_DESC,Mofawtar 5 plus- 5 
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Basic -  
+F_RM_PSD_SALES,PROD_DESC,mofawtar basic package-  
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Basic Plus-  
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Control- 
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Family package -   
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Flex- 
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Max -  
+F_RM_PSD_SALES,PROD_DESC,Mofawtar MAX Family -   
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Prime 1-  1
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Prime 2-  2
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Prime 3-  3
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Prime 4-  4
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Prime 5-  5
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Pro 1   1
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Pro 2   2
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Pro 3   3
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Pro 4   4
+F_RM_PSD_SALES,PROD_DESC,Mofawtar Pro 5   5
+F_RM_PSD_SALES,PROD_DESC,mofawtar2 package-  2
+F_RM_PSD_SALES,PROD_DESC,mofawtar3 package-  3
+F_RM_PSD_SALES,PROD_DESC,Motorna 1 GB plan -   1 
+F_RM_PSD_SALES,PROD_DESC,New Business 20 -    20 
+F_RM_PSD_SALES,PROD_DESC,New Business Advance -    
+F_RM_PSD_SALES,PROD_DESC,Postpaid 100 -  100
+F_RM_PSD_SALES,PROD_DESC,postpaid 1000 package-  1000
+F_RM_PSD_SALES,PROD_DESC,Postpaid 200 -  200
+F_RM_PSD_SALES,PROD_DESC,postpaid 200 package-  200
+F_RM_PSD_SALES,PROD_DESC,Postpaid 30 -  30
+F_RM_PSD_SALES,PROD_DESC,Postpaid 400 -  400
+F_RM_PSD_SALES,PROD_DESC,postpaid 400 package-  400
+F_RM_PSD_SALES,PROD_DESC,Postpaid 400 Plus -  400 
+F_RM_PSD_SALES,PROD_DESC,postpaid 400+ package-  400+
+F_RM_PSD_SALES,PROD_DESC,Postpaid 50 1GB internet -   50 1 
+F_RM_PSD_SALES,PROD_DESC,Postpaid 5G QuickNet Unlimited -     -  
+F_RM_PSD_SALES,PROD_DESC,Postpaid 800 -  800
+F_RM_PSD_SALES,PROD_DESC,Postpaid QuickNet 120GB-  120 
+F_RM_PSD_SALES,PROD_DESC,Postpaid Quicknet 150 GB/     150 
+F_RM_PSD_SALES,PROD_DESC,Postpaid VIP 1000 -   1000
+F_RM_PSD_SALES,PROD_DESC,PS 200GB 5G300Mbps-   200 
+F_RM_PSD_SALES,PROD_DESC,PS UNL 5G450Mbps-     
+F_RM_PSD_SALES,PROD_DESC,QN 100GB +4G MyFI-  100  + G4  
+F_RM_PSD_SALES,PROD_DESC,QN 100GB +5G MyFI-  100  + G5  
+F_RM_PSD_SALES,PROD_DESC,QN 10GB BlackVue DASHCAM Front and interior  -   10       
+F_RM_PSD_SALES,PROD_DESC,QN 10GB BlackVue DASHCAM Front and Rear -   10       
+F_RM_PSD_SALES,PROD_DESC,QN 150GB +4G MyFI-  150  + G4  
+F_RM_PSD_SALES,PROD_DESC,QN 50GB with App Unlimited Streaming-   50       
+F_RM_PSD_SALES,PROD_DESC,QN e-sim 50GB iPad Air 11-inch 512GB 2024-  50    iPad Air 11-inch 512GB 2024
+F_RM_PSD_SALES,PROD_DESC,QN e-sim 50GB iPad Air 13-inch 512GB 2024-  50    iPad Air 13-inch 512GB 2024
+F_RM_PSD_SALES,PROD_DESC,QN e-sim 50GB iPad pro 11-inch 1TB 2024-  50    iPad pro 11-inch 1TB 2024
+F_RM_PSD_SALES,PROD_DESC,QN e-sim 50GB iPad pro 11-inch 512GB 2024-  50    iPad pro 11-inch 512GB 2024
+F_RM_PSD_SALES,PROD_DESC,QN e-sim 50GB iPad pro 13-inch 1TB 2024-  50    iPad pro 13-inch 1TB 2024
+F_RM_PSD_SALES,PROD_DESC,QN e-sim 50GB iPad pro 13-inch 512GB 2024-  50   iPad pro 13-inch 512GB 2024
+F_RM_PSD_SALES,PROD_DESC,QN e-sim 55GB iPad pro 11-inch 1TB 2024-  55    iPad pro 11-inch 1TB 2024
+F_RM_PSD_SALES,PROD_DESC,QN e-sim 55GB iPad pro 11-inch 512GB 2024-  55    iPad pro 11-inch 512GB 2024
+F_RM_PSD_SALES,PROD_DESC,QN e-sim 55GB iPad pro 13-inch 1TB 2024-  55    iPad pro 13-inch 1TB 2024
+F_RM_PSD_SALES,PROD_DESC,QN e-sim 55GB iPad pro 13-inch 512GB 2024-  55   iPad pro 13-inch 512GB 2024
+F_RM_PSD_SALES,PROD_DESC,QN esim 50GB iPad Air 11-inch 256GB 2024-  50     iPad Air 11-inch 256GB 2024
+F_RM_PSD_SALES,PROD_DESC,QN esim 50GB iPad Air 13-inch 128GB 2025-  50     iPad Air 13-inch 128GB 2025
+F_RM_PSD_SALES,PROD_DESC,QN esim 50GB iPad Air 13-inch 256GB 2024-  50     iPad Air 13-inch 256GB 2024
+F_RM_PSD_SALES,PROD_DESC,QN esim 50GB iPad Air 13-inch 256GB 2025-  50    iPad Air 13-inch 256GB 2025
+F_RM_PSD_SALES,PROD_DESC,QN esim 50GB iPad Air 13-inch 512GB 2025-  50    iPad Air 13-inch 512GB 2025
+F_RM_PSD_SALES,PROD_DESC,QN esim 50GB iPad pro 11-inch 256GB 2024-  50     iPad pro 11-inch 256GB 2024
+F_RM_PSD_SALES,PROD_DESC,QN esim 50GB iPad pro 13-inch 256GB 2024-  50     iPad pro 13-inch 256GB 2024
+F_RM_PSD_SALES,PROD_DESC,QN esim 50GB+5GB Youtube iPad pro 11inch 1TB-  50  + 5   iPad pro 11inch 1TB
+F_RM_PSD_SALES,PROD_DESC,QN esim 50GB+5GB Youtube iPad pro 11inch 256GB-  50  + 5   iPad pro 11inch 256GB
+F_RM_PSD_SALES,PROD_DESC,QN esim 50GB+5GB Youtube iPad pro 11inch 512GB-  50  + 5   iPad pro 11inch 512GB
+F_RM_PSD_SALES,PROD_DESC,QN esim 50GB+5GB Youtube iPad pro 13inch 1TB-  50  + 5   iPad pro 13inch 1TB
+F_RM_PSD_SALES,PROD_DESC,QN esim 50GB+5GB Youtube iPad pro 13inch 256GB-  50  + 5   iPad pro 13inch 256GB
+F_RM_PSD_SALES,PROD_DESC,QN esim 50GB+5GB Youtube iPad pro 13inch 512GB-  50  + 5   iPad pro 13inch 512GB
+F_RM_PSD_SALES,PROD_DESC,QN esim 55GB iPad pro 11-inch 256GB 2024-  55     iPad pro 11-inch 256GB 2024
+F_RM_PSD_SALES,PROD_DESC,QN esim 55GB iPad pro 13-inch 256GB 2024-  55     iPad pro 13-inch 256GB 2024
+F_RM_PSD_SALES,PROD_DESC,QN UNL +5G MyFI-    + G5  
+F_RM_PSD_SALES,PROD_DESC,QN unlimited with roaming data -       
+F_RM_PSD_SALES,PROD_DESC,Quick Net Hybrid -   
+F_RM_PSD_SALES,PROD_DESC,QuickNet  - DataSIM 100GB-    100 
+F_RM_PSD_SALES,PROD_DESC,QuickNet  - DATASIM 150GB-    150 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 100GB + 100GB streaming with Myfi    100  + 100     
+F_RM_PSD_SALES,PROD_DESC,QuickNet 100GB + 50GB roaming -   100 + 50  
+F_RM_PSD_SALES,PROD_DESC,Quicknet 100GB 5G iPad 256GB -   5G 100   256 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 100GB 5G iPad 64GB -   5G 100   64 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 100GB+50GB gaming with myfi    50  + 100     
+F_RM_PSD_SALES,PROD_DESC,QuickNet 100GB-  100 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 100GB-   100
+F_RM_PSD_SALES,PROD_DESC,QUICKNET 10GB Dashcam-  10   
+F_RM_PSD_SALES,PROD_DESC,Quicknet 10GB-  10 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 120GB- 120 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 150GB- 150 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 150GB-  150 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 15GB  DASHCAM JIMI 3 CHANNEL 4G -   15     4G 3 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 15GB + Dashcam DDPAI F&R-  15     DDPAI   
+F_RM_PSD_SALES,PROD_DESC,Quicknet 15GB + Dashcam Hikvision-  15     Hikvision 4G
+F_RM_PSD_SALES,PROD_DESC,Quicknet 15GB Dashcam BLACKVUE 64GB-   15      64  
+F_RM_PSD_SALES,PROD_DESC,Quicknet 15GB Dashcam Jimi 4G-_   15     4G   
+F_RM_PSD_SALES,PROD_DESC,Quicknet 15GB EasyFi   15  
+F_RM_PSD_SALES,PROD_DESC,Quicknet 15GB-  15 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 16GB -  16 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 16GB- 16 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 1GB -   1 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 1GB-  1 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 20GB Dashcam DDPAI Z60   20     DDPAI Z60
+F_RM_PSD_SALES,PROD_DESC,Quicknet 20GB Dashcam SIM-   20   
+F_RM_PSD_SALES,PROD_DESC,QUICKNET 20GB SMART CAMERA -   20   
+F_RM_PSD_SALES,PROD_DESC,Quicknet 20GB-  20 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 25GB-  25 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 2GB -  2 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 2GB-  2 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 2GB/Month -  2 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 400 Unlimited Bundle -     400 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 4G 10GB+10GB/Month-  410+10\
+F_RM_PSD_SALES,PROD_DESC,QuickNet 4G 1GB+1GB/Month-  4 1+1 \
+F_RM_PSD_SALES,PROD_DESC,QuickNet 4G 50GB+50GB/Month-  450+50\
+F_RM_PSD_SALES,PROD_DESC,QuickNet 4G 5GB+5GB/Month-  4 5+5\
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB 5G iPad 256GB -   5G 50   256 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB Galaxy Tab S11 Ultra-  50     S11 Ultra
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB iPad Air 2022 256GB-  50  iPad Air 2022 256GB
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB iPad Air 2022 64GB-  50  iPad Air 2022 64GB
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB iPad mini 256GB-  50  iPad mini 256GB
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB iPad mini 64GB-  50  iPad mini 64GB
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB Samsung Tab s10 Plus 256GB-  50  Samsung Tab s10 Plus 256GB
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB Samsung Tab s10 Plus 512GB-  50  Samsung Tab s10 Plus 512GB
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB Samsung Tab s10 Ultra 1TB-  50  Samsung Tab s10 Ultra 1TB
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB Samsung Tab s10 Ultra 256GB-  50  Samsung Tab s10 Ultra 256GB
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB with iPad pro 11-inch 256GB-  50     256  11 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB with iPad pro 11-inch 512GB-  50     512  11 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB with iPad pro 13-inch 256GB-  50     256  13 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GB with iPad pro 13-inch 512GB-  50     512  13 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 50GB-  50 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 50GGB 5G iPad 64GB  -   5G 50   64 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 55GB Galaxy Tab S11 Ultra-  55     S11 Ultra
+F_RM_PSD_SALES,PROD_DESC,Quicknet 55GB Galaxy Tab S11-  55     S11
+F_RM_PSD_SALES,PROD_DESC,Quicknet 5G 100GB + 100 Straming-  5G100  + 100 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 5G 100GB + 100GB Social -   5G 100  + 100  
+F_RM_PSD_SALES,PROD_DESC,Quicknet 5G 50GB + 100 Gaming-  5G50  + 100 
+F_RM_PSD_SALES,PROD_DESC,Quicknet 5G 50GB + 50GB Social -   5G 50  + 50  
+F_RM_PSD_SALES,PROD_DESC,QuickNet 5G 50GB Huawei MatePad Kids -   5G 50    
+F_RM_PSD_SALES,PROD_DESC,QuickNet 5G 50GB MatePad 11-  5G 50    11
+F_RM_PSD_SALES,PROD_DESC,Quicknet 5G Unlimited-  5G  
+F_RM_PSD_SALES,PROD_DESC,Quicknet 5GB Car tracker Device 4G -   5     4G
+F_RM_PSD_SALES,PROD_DESC,QuickNet 5GB-  5 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 80GB- 80 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 8GB- 8 
+F_RM_PSD_SALES,PROD_DESC,QuickNet 8GB-  8 
+F_RM_PSD_SALES,PROD_DESC,Quicknet Dashcam 30GB SIM       30 
+F_RM_PSD_SALES,PROD_DESC,Quicknet Drive 55GB SIM     55 
+F_RM_PSD_SALES,PROD_DESC,Quicknet esim 50GB ipad mini 128GB 2024-  50     ipad mini 128GB 2024
+F_RM_PSD_SALES,PROD_DESC,Quicknet esim 50GB ipad mini 256GB 2024-  50     ipad mini 256GB 2024
+F_RM_PSD_SALES,PROD_DESC,Quicknet esim 50GB ipad mini 512GB 2024-  50     ipad mini 512GB 2024
+F_RM_PSD_SALES,PROD_DESC,Quicknet new 100GB-  100  
+F_RM_PSD_SALES,PROD_DESC,QuickNet PS 50GB -   50 
+F_RM_PSD_SALES,PROD_DESC,QuickNet Unlimited 400-    400
+F_RM_PSD_SALES,PROD_DESC,Quicknet Unlimited 5G iPad 256GB -   5G    256 
+F_RM_PSD_SALES,PROD_DESC,Quicknet Unlimited 5G iPad 64GB -   5G    64 
+F_RM_PSD_SALES,PROD_DESC,QuickNet Unlimited cashback-     
+F_RM_PSD_SALES,PROD_DESC,Quicknet Unlimited Postpaid 400 -     400  
+F_RM_PSD_SALES,PROD_DESC,QuickNet Unlimited-   
+F_RM_PSD_SALES,PROD_DESC,UNL&Roaming+4GMyFI - ++  4
+F_RM_PSD_SALES,PROD_DESC,Unlimited Social-  
+F_RM_PSD_SALES,PROD_DESC,Unlimited YouTube + 10GB-  + 10 
+F_RM_PSD_SALES,PROD_NME,"100 GB + 100 Streaming with Myfi"
+F_RM_PSD_SALES,PROD_NME,"100GB + 100GB Streaming PS"
+F_RM_PSD_SALES,PROD_NME,"100GB + 4G MiFi"
+F_RM_PSD_SALES,PROD_NME,"100GB Gaming + 35GB"
+F_RM_PSD_SALES,PROD_NME,"150GB entertainment apps+ 25GB"
+F_RM_PSD_SALES,PROD_NME,"150GB Streaming"
+F_RM_PSD_SALES,PROD_NME,"15GB"
+F_RM_PSD_SALES,PROD_NME,"1GB QuicKnet Postpaid plan"
+F_RM_PSD_SALES,PROD_NME,"20GB"
+F_RM_PSD_SALES,PROD_NME,"25GB"
+F_RM_PSD_SALES,PROD_NME,"25GB + 25GB Streaming PS"
+F_RM_PSD_SALES,PROD_NME,"4G Data SIM 100 GB +4G My-fi 12M"
+F_RM_PSD_SALES,PROD_NME,"4G DATA SIM 150 GB+4G My-fi 18M"
+F_RM_PSD_SALES,PROD_NME,"4G DATA SIM 150 GB+4G Myfi 12M"
+F_RM_PSD_SALES,PROD_NME,"4G Quicknet Unlimited Data Plan + 4G My-fi 24M"
+F_RM_PSD_SALES,PROD_NME,"4G Quicknet Unlimited Data Plan+4G My-fi 12M"
+F_RM_PSD_SALES,PROD_NME,"50 GB + 100 Gaming with Myfi"
+F_RM_PSD_SALES,PROD_NME,"50GB + 50GB Streaming PS"
+F_RM_PSD_SALES,PROD_NME,"50GB Huawei MatePad 11"
+F_RM_PSD_SALES,PROD_NME,"50GB Huawei MatePad SE 32GB"
+F_RM_PSD_SALES,PROD_NME,"50GB Huawei MatePad SE 64GB"
+F_RM_PSD_SALES,PROD_NME,"50GB MatePad SE Kids"
+F_RM_PSD_SALES,PROD_NME,"5G 100GB+5G MyFi"
+F_RM_PSD_SALES,PROD_NME,"5G 100GB+5G MyFi 12M"
+F_RM_PSD_SALES,PROD_NME,"5G Business Quicknet UL"
+F_RM_PSD_SALES,PROD_NME,"5G QuickNet 2GB"
+F_RM_PSD_SALES,PROD_NME,"5G QuickNet Post-paid 100 GB"
+F_RM_PSD_SALES,PROD_NME,"5G QuickNet Post-paid 250 GB"
+F_RM_PSD_SALES,PROD_NME,"5G QuickNet Post-paid Unlimited"
+F_RM_PSD_SALES,PROD_NME,"5G QuickNet Post-paid Unlimited + 5G MyFi 18M"
+F_RM_PSD_SALES,PROD_NME,"5G QuickNet Postpaid 300Mbps"
+F_RM_PSD_SALES,PROD_NME,"5G QuickNet PS 450 Mbps UL"
+F_RM_PSD_SALES,PROD_NME,"5GB QuicKnet Postpaid plan"
+F_RM_PSD_SALES,PROD_NME,Aljawal 25
+F_RM_PSD_SALES,PROD_NME,Aljawal 35
+F_RM_PSD_SALES,PROD_NME,Baity 4G 50Mbps
+F_RM_PSD_SALES,PROD_NME,Baity 4G 70GB
+F_RM_PSD_SALES,PROD_NME,Baity 5G 100GB
+F_RM_PSD_SALES,PROD_NME,Baity 5G 100Mbps
+F_RM_PSD_SALES,PROD_NME,Baity 5G 100Mbps Revamped
+F_RM_PSD_SALES,PROD_NME,Baity 5G 200Mpbs
+F_RM_PSD_SALES,PROD_NME,Baity 5G Basic
+F_RM_PSD_SALES,PROD_NME,Baity 5G Basic eSIM
+F_RM_PSD_SALES,PROD_NME,Baity 5G basic lite 50Mbps
+F_RM_PSD_SALES,PROD_NME,Baity 5G Basic-Testing
+F_RM_PSD_SALES,PROD_NME,Baity 5G Entertainment
+F_RM_PSD_SALES,PROD_NME,Baity 5G Entertainment eSIM
+F_RM_PSD_SALES,PROD_NME,Baity 5G Entertainment Revamped
+F_RM_PSD_SALES,PROD_NME,Baity 5G MAX
+F_RM_PSD_SALES,PROD_NME,Baity 5G MAX Esim
+F_RM_PSD_SALES,PROD_NME,Baity 5G Stream
+F_RM_PSD_SALES,PROD_NME,Baity 5G Stream e-SIM
+F_RM_PSD_SALES,PROD_NME,Baity 5G Stream e-SIM-Testing
+F_RM_PSD_SALES,PROD_NME,Baity 5G Stream-Testing
+F_RM_PSD_SALES,PROD_NME,Baity 5G Unlimited
+F_RM_PSD_SALES,PROD_NME,Baity 5G Unlimited eSIM
+F_RM_PSD_SALES,PROD_NME,Baity 5G Unlimited Plus
+F_RM_PSD_SALES,PROD_NME,Baity 5G Unlimited Plus Esim
+F_RM_PSD_SALES,PROD_NME,Baity5GEnterainmenteSIM
+F_RM_PSD_SALES,PROD_NME,Basic
+F_RM_PSD_SALES,PROD_NME,Basic Entry Plan
+F_RM_PSD_SALES,PROD_NME,Business Future Plus 20
+F_RM_PSD_SALES,PROD_NME,Business Future Plus 200
+F_RM_PSD_SALES,PROD_NME,Business Internet Plan
+F_RM_PSD_SALES,PROD_NME,Business Jawal Light New
+F_RM_PSD_SALES,PROD_NME,Business Jawal Network 1000
+F_RM_PSD_SALES,PROD_NME,Business Jawal Network 20
+F_RM_PSD_SALES,PROD_NME,Business Jawal Network 200
+F_RM_PSD_SALES,PROD_NME,Business Jawal Network 40
+F_RM_PSD_SALES,PROD_NME,Business Jawal Network 400
+F_RM_PSD_SALES,PROD_NME,Business Jawal Network 80
+F_RM_PSD_SALES,PROD_NME,Business Jawal Premium New
+F_RM_PSD_SALES,PROD_NME,Business Jawal Regular New
+F_RM_PSD_SALES,PROD_NME,Business Network 1000 Plus
+F_RM_PSD_SALES,PROD_NME,Business QUICKnet Package 10 GB_NEW
+F_RM_PSD_SALES,PROD_NME,Business QUICKnet Package 2 GB
+F_RM_PSD_SALES,PROD_NME,Business QUICKnet Package Unlimited
+F_RM_PSD_SALES,PROD_NME,COW Rate Plan
+F_RM_PSD_SALES,PROD_NME,Data SIM 1 GB
+F_RM_PSD_SALES,PROD_NME,Data SIM 10 GB
+F_RM_PSD_SALES,PROD_NME,Data SIM 100 GB
+F_RM_PSD_SALES,PROD_NME,Data SIM 100GB
+F_RM_PSD_SALES,PROD_NME,Data SIM 10GB
+F_RM_PSD_SALES,PROD_NME,DATA SIM 150 GB
+F_RM_PSD_SALES,PROD_NME,Data SIM 20GB
+F_RM_PSD_SALES,PROD_NME,DATA SIM 50 GB
+F_RM_PSD_SALES,PROD_NME,Data SIM Unlimited
+F_RM_PSD_SALES,PROD_NME,DataSIM 100GB
+F_RM_PSD_SALES,PROD_NME,DataSIM 10GB
+F_RM_PSD_SALES,PROD_NME,EQUICKnet 40 GB
+F_RM_PSD_SALES,PROD_NME,Hybrid Data SIM
+F_RM_PSD_SALES,PROD_NME,iPhone Business Premium 24
+F_RM_PSD_SALES,PROD_NME,M100 package
+F_RM_PSD_SALES,PROD_NME,M170 package
+F_RM_PSD_SALES,PROD_NME,M2+
+F_RM_PSD_SALES,PROD_NME,M280 package
+F_RM_PSD_SALES,PROD_NME,Maktabi 5G 200Mbps - IUC
+F_RM_PSD_SALES,PROD_NME,Maktabi 5G Unlimited - IUC
+F_RM_PSD_SALES,PROD_NME,Medium use Plan
+F_RM_PSD_SALES,PROD_NME,Mofawtar 115
+F_RM_PSD_SALES,PROD_NME,Mofawtar 2 Extra
+F_RM_PSD_SALES,PROD_NME,Mofawtar 2 Lite
+F_RM_PSD_SALES,PROD_NME,Mofawtar 2 Plus
+F_RM_PSD_SALES,PROD_NME,Mofawtar 3 Plus
+F_RM_PSD_SALES,PROD_NME,Mofawtar 350
+F_RM_PSD_SALES,PROD_NME,Mofawtar 370
+F_RM_PSD_SALES,PROD_NME,Mofawtar 4 Extra
+F_RM_PSD_SALES,PROD_NME,Mofawtar 4 Family
+F_RM_PSD_SALES,PROD_NME,Mofawtar 4 Plus
+F_RM_PSD_SALES,PROD_NME,Mofawtar 600
+F_RM_PSD_SALES,PROD_NME,Mofawtar 90
+F_RM_PSD_SALES,PROD_NME,Mofawtar MAX Family
+F_RM_PSD_SALES,PROD_NME,Mofawtar Super 1
+F_RM_PSD_SALES,PROD_NME,Mofawtar Super 2
+F_RM_PSD_SALES,PROD_NME,Mofawtar Super 3
+F_RM_PSD_SALES,PROD_NME,Mofawtar Super 4
+F_RM_PSD_SALES,PROD_NME,Mofawtar Super 5
+F_RM_PSD_SALES,PROD_NME,PAYG Plan
+F_RM_PSD_SALES,PROD_NME,Postpaid 1000
+F_RM_PSD_SALES,PROD_NME,Postpaid 100GB
+F_RM_PSD_SALES,PROD_NME,Postpaid 150GB
+F_RM_PSD_SALES,PROD_NME,Postpaid 400 Plus
+F_RM_PSD_SALES,PROD_NME,Postpaid 50
+F_RM_PSD_SALES,PROD_NME,Postpaid 5G QuickNet Unlimited
+F_RM_PSD_SALES,PROD_NME,Postpaid 800
+F_RM_PSD_SALES,PROD_NME,Postpaid Hybrid
+F_RM_PSD_SALES,PROD_NME,Postpaid L
+F_RM_PSD_SALES,PROD_NME,Postpaid M
+F_RM_PSD_SALES,PROD_NME,Postpaid M4
+F_RM_PSD_SALES,PROD_NME,Postpaid S
+F_RM_PSD_SALES,PROD_NME,Postpaid UL
+F_RM_PSD_SALES,PROD_NME,Postpaid XL
+F_RM_PSD_SALES,PROD_NME,Postpaid XS
+F_RM_PSD_SALES,PROD_NME,Premium Plan
+F_RM_PSD_SALES,PROD_NME,QN 100GB 5G iPad 256GB
+F_RM_PSD_SALES,PROD_NME,QN 100GB 5G iPad 64GB
+F_RM_PSD_SALES,PROD_NME,QN 10GB DASHCAM Front and Rear
+F_RM_PSD_SALES,PROD_NME,QN 10GB DASHCAM Front interior
+F_RM_PSD_SALES,PROD_NME,QN 15GB Dashcam Blackvue
+F_RM_PSD_SALES,PROD_NME,QN 15GB Dashcam Jimi 4G
+F_RM_PSD_SALES,PROD_NME,QN 15GB Dashcam Jimi3
+F_RM_PSD_SALES,PROD_NME,QN 50GB 5G iPad 256GB
+F_RM_PSD_SALES,PROD_NME,QN 50GB Galaxy Tab S11
+F_RM_PSD_SALES,PROD_NME,QN 50GB Galaxy Tab S11 Ultra
+F_RM_PSD_SALES,PROD_NME,QN 50GB iPad pro 11 M5 256GB
+F_RM_PSD_SALES,PROD_NME,QN 50GB iPad pro 11 M5 512GB
+F_RM_PSD_SALES,PROD_NME,QN 50GB iPad pro 13 M5 256GB
+F_RM_PSD_SALES,PROD_NME,QN 50GB iPad pro 13 M5 512GB
+F_RM_PSD_SALES,PROD_NME,QN 50GB SamTab s10Plus 256GB
+F_RM_PSD_SALES,PROD_NME,QN 50GB SamTab s10Plus 512GB
+F_RM_PSD_SALES,PROD_NME,QN 50GB SamTab s10Ultra 1TB
+F_RM_PSD_SALES,PROD_NME,QN 50GB SamTab s10Ultra 256GB
+F_RM_PSD_SALES,PROD_NME,QN 50GB with App Unlimited Streaming
+F_RM_PSD_SALES,PROD_NME,QN 50GGB 5G iPad 64GB
+F_RM_PSD_SALES,PROD_NME,QN Dashcam 15GB DDPAI Z60
+F_RM_PSD_SALES,PROD_NME,QN Dashcam 15GB Hikvision V6 4G
+F_RM_PSD_SALES,PROD_NME,QN ESIM 50GB iPad Air 11 256GB
+F_RM_PSD_SALES,PROD_NME,QN ESIM 50GB iPad Air 11 512GB
+F_RM_PSD_SALES,PROD_NME,QN ESIM 50GB iPad Air 13 256GB
+F_RM_PSD_SALES,PROD_NME,QN ESIM 50GB iPad Air 13 512GB
+F_RM_PSD_SALES,PROD_NME,QN eSIM 50GB ipad mini 128GB
+F_RM_PSD_SALES,PROD_NME,QN eSIM 50GB ipad mini 256GB
+F_RM_PSD_SALES,PROD_NME,QN eSIM 50GB ipad mini 512GB
+F_RM_PSD_SALES,PROD_NME,QN ESIM 50GB iPad pro 11 1TB
+F_RM_PSD_SALES,PROD_NME,QN ESIM 50GB iPad pro 11 256GB
+F_RM_PSD_SALES,PROD_NME,QN ESIM 50GB iPad pro 11 512GB
+F_RM_PSD_SALES,PROD_NME,QN eSIM 50GB iPadA13 128GB
+F_RM_PSD_SALES,PROD_NME,QN eSIM 50GB iPadA13 256GB
+F_RM_PSD_SALES,PROD_NME,QN eSIM 50GB iPadA13 512GB
+F_RM_PSD_SALES,PROD_NME,QN esim 50GBYT iPadpro11 1TB
+F_RM_PSD_SALES,PROD_NME,QN esim 50GBYT iPadpro11 256GB
+F_RM_PSD_SALES,PROD_NME,QN esim 50GBYT iPadpro11 512GB
+F_RM_PSD_SALES,PROD_NME,QN esim 50GBYT iPadpro13 1TB
+F_RM_PSD_SALES,PROD_NME,QN esim 50GBYT iPadpro13 256GB
+F_RM_PSD_SALES,PROD_NME,QN esim 50GBYT iPadpro13 512GB
+F_RM_PSD_SALES,PROD_NME,QN esim iPadAir11 128GB 2025
+F_RM_PSD_SALES,PROD_NME,QN esim iPadAir11 256GB 2025
+F_RM_PSD_SALES,PROD_NME,QN esim iPadAir11 512GB 2025
+F_RM_PSD_SALES,PROD_NME,QN Unlimited 5G iPad 256GB
+F_RM_PSD_SALES,PROD_NME,QN Unlimited 5G iPad 64GB
+F_RM_PSD_SALES,PROD_NME,QN unlimited with roaming data
+F_RM_PSD_SALES,PROD_NME,Quicknet 100GB + 100GB social 5G MiFi
+F_RM_PSD_SALES,PROD_NME,QuickNet 100GB + 50GB roaming
+F_RM_PSD_SALES,PROD_NME,QUICKNET 10GB Dashcam
+F_RM_PSD_SALES,PROD_NME,Quicknet 15GB EasyFi
+F_RM_PSD_SALES,PROD_NME,QUICKNET 20GB SMART CAMERA
+F_RM_PSD_SALES,PROD_NME,Quicknet 30GB SIM
+F_RM_PSD_SALES,PROD_NME,Quicknet 50GB + 50GB social 5G MiFi
+F_RM_PSD_SALES,PROD_NME,Quicknet 50GB 5G MyFi
+F_RM_PSD_SALES,PROD_NME,Quicknet 50GB iPad mini 256GB
+F_RM_PSD_SALES,PROD_NME,Quicknet 50GB iPad mini 64GB
+F_RM_PSD_SALES,PROD_NME,Quicknet 50GBiPadAir 2022 64GB
+F_RM_PSD_SALES,PROD_NME,Quicknet 50GBiPadAir2022 256GB
+F_RM_PSD_SALES,PROD_NME,Quicknet 55GB SIM
+F_RM_PSD_SALES,PROD_NME,Quicknet 5G 10GB
+F_RM_PSD_SALES,PROD_NME,Quicknet 5G 20GB
+F_RM_PSD_SALES,PROD_NME,Quicknet 5G 2GB
+F_RM_PSD_SALES,PROD_NME,Quicknet 5G Unlimited
+F_RM_PSD_SALES,PROD_NME,Quicknet 5GB Car tracker 4G
+F_RM_PSD_SALES,PROD_NME,Quicknet e-sim 50GB iPad pro 13-inch 1TB 2024
+F_RM_PSD_SALES,PROD_NME,Quicknet e-sim 50GB iPad pro 13-inch 265GB 2024
+F_RM_PSD_SALES,PROD_NME,Quicknet e-sim 50GB iPad pro 13-inch 512GB 2024
+F_RM_PSD_SALES,PROD_NME,QuickNet PS 50GB
+F_RM_PSD_SALES,PROD_NME,Quicknet Unlimited Data Plan
+F_RM_PSD_SALES,PROD_NME,Quicknet Unlimited Postpaid 400
+F_RM_PSD_SALES,PROD_NME,UNL Roaming+4GMyFI 12M
+F_RM_PSD_SALES,PROD_NME,Unlimited Mobile Gaming + 10GB
+F_RM_PSD_SALES,PROD_NME,Unlimited Shahid & Jawwy streaming
+F_RM_PSD_SALES,PROD_NME,Unlimited Social
+F_RM_PSD_SALES,PROD_NME,Unlimited YouTube Plus 10GB
+F_RM_PSD_SALES,PROD_NME,Voice EQUICKnet 40 GB
+F_RM_PSD_SALES,REGION,C
+F_RM_PSD_SALES,REGION,E
+F_RM_PSD_SALES,REGION,N
+F_RM_PSD_SALES,REGION,N/A
+F_RM_PSD_SALES,REGION,S
+F_RM_PSD_SALES,REGION,W
+F_RM_PSD_SALES,SALES_CHNL_TYP,INDIRECT SALES
+F_RM_PSD_SALES,SALES_CHNL_TYP,SMBB-NA
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Asks to Postpone
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Auto Order Cancellation
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Cancel Connection
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Client Refuses Internal Wiring
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Commercial Site
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Contact  Number incorrect
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Customer Cancelation
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Customer Died
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Customer Donot Need Service
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Customer isnot available
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Customer isnot respond
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Customer not answering
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Customer Requested
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Doesnt Want - Drop Service
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Don't want the service
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Failed Order
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,FMS - General Defalcation
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,FMS - Remove Block Service
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,FP Suspend
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,FWA - Customer requested churn
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,FWA - Return Device
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,IRB - DUN1
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,IRB - HTD L1
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,IRB - HTD L2
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,IRB - MAN DUN2
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,IRB - MAN HTD2
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,IRB - RDUN
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,IRB - RHTD
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Land Network Quality
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Lost SIM
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Manual Order Cancellation
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Needs Reprint
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,No HAG Available
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Order Revised
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Order wrongly created
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,OTP  not received
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Request to Reprint order
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Resume Services
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,service order creation error
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,SIM to MultiSIM
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,SMBB-NA
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Transfer of Ownership
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Vanity number requested
+F_RM_PSD_SALES,SERVICE_ORDER_LINE_ITEM_,Wrong Customer Contact
+F_RM_PSD_SALES,SUB_CHNL_NME,"902"
+F_RM_PSD_SALES,SUB_CHNL_NME,D2C
+F_RM_PSD_SALES,SUB_CHNL_NME,MT
+F_RM_PSD_SALES,SUB_CHNL_NME,N/A
+F_RM_PSD_SALES,SUB_CHNL_NME,Riyadh-HQtr
+F_RM_PSD_SALES,SUB_CHNL_NME,Roaming
+F_RM_PSD_SALES,SUB_CHNL_NME,RTL
+F_RM_PSD_SALES,SUB_CHNL_NME,SIS
+F_RM_PSD_SALES,SUB_CHNL_NME,Special Customer
+F_RM_PSD_SALES,SUB_CHNL_NME,VS-CCC
+F_RM_PSD_SALES,USER_NAME,AAAALGHAMDI.C
+F_RM_PSD_SALES,USER_NAME,AAAFADEL.C
+F_RM_PSD_SALES,USER_NAME,AAAFTAN
+F_RM_PSD_SALES,USER_NAME,AAAGHAZWANI.C
+F_RM_PSD_SALES,USER_NAME,AAAHMADIY
+F_RM_PSD_SALES,USER_NAME,ZSZAHRANI.C
+F_RM_PSD_SALES,USER_NAME,ZTAHIE.C
+F_RM_PSD_SALES,USER_NAME,ZUAALQARNI.C
+F_RM_PSD_SALES,USER_NAME,ZYTKHAN
+F_RM_PSD_SALES,USER_NAME,ZZAHRANI.C
+F_RM_PSD_SALES,USER_NAME,ZZKHAN
