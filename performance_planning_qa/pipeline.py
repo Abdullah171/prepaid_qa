@@ -16,7 +16,11 @@ from performance_planning_qa.prompts import (
     build_sql_messages,
     build_sql_repair_messages,
 )
-from performance_planning_qa.sql_safety import SQLSafetyError, validate_readonly_sql
+from performance_planning_qa.sql_safety import (
+    SQLSafetyError,
+    SQLValidationResult,
+    validate_readonly_sql,
+)
 
 
 @dataclass(frozen=True)
@@ -36,6 +40,7 @@ class PipelineResult:
     answer: str | None = None
     prompt_log_paths: tuple[Path, ...] = ()
     dry_run: bool = False
+    error: str | None = None
 
     @property
     def sql(self) -> str | None:
@@ -51,9 +56,25 @@ class PipelineResult:
             "validation_tables": list(self.validation_tables),
             "dry_run": self.dry_run,
             "answer": self.answer,
+            "error": self.error,
             "prompt_log_paths": [str(path) for path in self.prompt_log_paths],
             "query_result": self.query_result.to_payload() if self.query_result else None,
         }
+
+
+@dataclass(frozen=True)
+class SQLPreparationResult:
+    generated: GeneratedSQL
+    validation: SQLValidationResult | None = None
+    error: str | None = None
+
+
+@dataclass(frozen=True)
+class SQLExecutionResult:
+    generated: GeneratedSQL
+    validation: SQLValidationResult | None = None
+    query_result: QueryResult | None = None
+    error: str | None = None
 
 
 class NL2SQLPipeline:
@@ -87,11 +108,177 @@ class NL2SQLPipeline:
     def ask(self, question: str, *, dry_run: bool = False) -> PipelineResult:
         self._current_prompt_logs = []
         generated = self.generate_sql(question)
-        if generated.needs_clarification:
+        direct_result = self._direct_generated_result(
+            question=question,
+            generated=generated,
+            dry_run=dry_run,
+            allow_missing_sql_fallback=True,
+        )
+        if direct_result is not None:
+            return direct_result
+
+        prepared = self._validate_or_repair(question, generated)
+        direct_result = self._direct_generated_result(
+            question=question,
+            generated=prepared.generated,
+            dry_run=dry_run,
+            allow_missing_sql_fallback=False,
+        )
+        if direct_result is not None:
+            return direct_result
+        if prepared.validation is None:
+            return self._sql_failure_result(
+                question=question,
+                generated=prepared.generated,
+                error=prepared.error,
+                dry_run=dry_run,
+                phase="validation",
+            )
+
+        generated = prepared.generated
+        validation = prepared.validation
+        if dry_run:
             return PipelineResult(
                 question=question,
                 generated_sql=generated,
-                answer=generated.clarifying_question,
+                validation_tables=validation.table_references,
+                prompt_log_paths=tuple(self._current_prompt_logs),
+                dry_run=True,
+            )
+
+        executed = self._execute_or_repair(
+            question=question,
+            generated=generated,
+            validation=validation,
+        )
+        direct_result = self._direct_generated_result(
+            question=question,
+            generated=executed.generated,
+            dry_run=False,
+            allow_missing_sql_fallback=False,
+        )
+        if direct_result is not None:
+            return direct_result
+        if executed.validation is None or executed.query_result is None:
+            return self._sql_failure_result(
+                question=question,
+                generated=executed.generated,
+                error=executed.error,
+                dry_run=False,
+                phase="execution",
+            )
+
+        answer_payload = self._answer_from_result(
+            question,
+            executed.validation.sql,
+            executed.query_result,
+        )
+        return PipelineResult(
+            question=question,
+            generated_sql=executed.generated,
+            validation_tables=executed.validation.table_references,
+            query_result=executed.query_result,
+            answer=str(answer_payload.get("answer") or "").strip(),
+            prompt_log_paths=tuple(self._current_prompt_logs),
+            dry_run=False,
+        )
+
+    def close(self) -> None:
+        self.db.close()
+
+    def _validate_or_repair(self, question: str, generated: GeneratedSQL) -> SQLPreparationResult:
+        attempts = max(self.settings.sql_repair_attempts, 0)
+        last_error: str | None = None
+        current = generated
+        for attempt in range(attempts + 1):
+            if _has_direct_user_response(current):
+                return SQLPreparationResult(generated=current)
+            if not current.sql:
+                return SQLPreparationResult(generated=current, error="LLM did not return SQL.")
+            try:
+                validation = validate_readonly_sql(current.sql or "")
+                return SQLPreparationResult(generated=current, validation=validation)
+            except SQLSafetyError as exc:
+                last_error = str(exc)
+                if attempt >= attempts:
+                    break
+                current = self._repair_sql(
+                    question=question,
+                    generated=current,
+                    error=str(exc),
+                )
+        return SQLPreparationResult(
+            generated=current,
+            error=f"Generated SQL failed safety validation: {last_error}",
+        )
+
+    def _execute_or_repair(
+        self,
+        *,
+        question: str,
+        generated: GeneratedSQL,
+        validation: SQLValidationResult,
+    ) -> SQLExecutionResult:
+        try:
+            query_result = self.db.execute_select(validation.sql)
+        except DatabaseQueryError as exc:
+            return self._repair_after_database_error(
+                question=question,
+                generated=generated,
+                error=str(exc),
+            )
+        return SQLExecutionResult(
+            generated=generated,
+            validation=validation,
+            query_result=query_result,
+        )
+
+    def _repair_after_database_error(
+        self,
+        *,
+        question: str,
+        generated: GeneratedSQL,
+        error: str,
+    ) -> SQLExecutionResult:
+        last_error = error
+        current = generated
+        for _ in range(max(self.settings.sql_repair_attempts, 1)):
+            current = self._repair_sql(question=question, generated=current, error=error)
+            if _has_direct_user_response(current):
+                return SQLExecutionResult(generated=current, error=last_error)
+            if not current.sql:
+                return SQLExecutionResult(generated=current, error=last_error)
+            try:
+                validation = validate_readonly_sql(current.sql or "")
+                result = self.db.execute_select(validation.sql)
+                return SQLExecutionResult(
+                    generated=current,
+                    validation=validation,
+                    query_result=result,
+                )
+            except (DatabaseQueryError, SQLSafetyError) as exc:
+                last_error = str(exc)
+                error = str(exc)
+        return SQLExecutionResult(
+            generated=current,
+            error=f"SQL execution failed after repair attempt: {last_error or error}",
+        )
+
+    def _direct_generated_result(
+        self,
+        *,
+        question: str,
+        generated: GeneratedSQL,
+        dry_run: bool,
+        allow_missing_sql_fallback: bool,
+    ) -> PipelineResult | None:
+        if generated.needs_clarification:
+            answer = generated.clarifying_question or _default_clarifying_question()
+            generated = replace(generated, clarifying_question=answer)
+            return PipelineResult(
+                question=question,
+                generated_sql=generated,
+                answer=answer,
                 prompt_log_paths=tuple(self._current_prompt_logs),
                 dry_run=dry_run,
             )
@@ -103,7 +290,7 @@ class NL2SQLPipeline:
                 prompt_log_paths=tuple(self._current_prompt_logs),
                 dry_run=dry_run,
             )
-        if not generated.sql:
+        if allow_missing_sql_fallback and not generated.sql:
             fallback = _scoped_direct_answer()
             generated = replace(generated, direct_answer=fallback)
             return PipelineResult(
@@ -113,78 +300,34 @@ class NL2SQLPipeline:
                 prompt_log_paths=tuple(self._current_prompt_logs),
                 dry_run=dry_run,
             )
+        return None
 
-        generated, validation = self._validate_or_repair(question, generated)
-        if dry_run:
-            return PipelineResult(
-                question=question,
-                generated_sql=generated,
-                validation_tables=validation.table_references,
-                prompt_log_paths=tuple(self._current_prompt_logs),
-                dry_run=True,
-            )
-
-        try:
-            query_result = self.db.execute_select(validation.sql)
-        except DatabaseQueryError as exc:
-            generated, validation, query_result = self._repair_after_database_error(
-                question=question,
-                generated=generated,
-                error=str(exc),
-            )
-
-        answer_payload = self._answer_from_result(question, validation.sql, query_result)
-        return PipelineResult(
-            question=question,
-            generated_sql=generated,
-            validation_tables=validation.table_references,
-            query_result=query_result,
-            answer=str(answer_payload.get("answer") or "").strip(),
-            prompt_log_paths=tuple(self._current_prompt_logs),
-            dry_run=False,
-        )
-
-    def close(self) -> None:
-        self.db.close()
-
-    def _validate_or_repair(self, question: str, generated: GeneratedSQL):
-        attempts = max(self.settings.sql_repair_attempts, 0)
-        last_error: Exception | None = None
-        current = generated
-        for attempt in range(attempts + 1):
-            try:
-                validation = validate_readonly_sql(current.sql or "")
-                return current, validation
-            except SQLSafetyError as exc:
-                last_error = exc
-                if attempt >= attempts:
-                    break
-                current = self._repair_sql(
-                    question=question,
-                    generated=current,
-                    error=str(exc),
-                )
-        raise RuntimeError(f"Generated SQL failed safety validation: {last_error}") from last_error
-
-    def _repair_after_database_error(
+    def _sql_failure_result(
         self,
         *,
         question: str,
         generated: GeneratedSQL,
-        error: str,
-    ):
-        last_error: Exception | None = None
-        current = generated
-        for _ in range(max(self.settings.sql_repair_attempts, 1)):
-            current = self._repair_sql(question=question, generated=current, error=error)
-            try:
-                validation = validate_readonly_sql(current.sql or "")
-                result = self.db.execute_select(validation.sql)
-                return current, validation, result
-            except (DatabaseQueryError, SQLSafetyError) as exc:
-                last_error = exc
-                error = str(exc)
-        raise RuntimeError(f"SQL execution failed after repair attempt: {last_error or error}") from last_error
+        error: str | None,
+        dry_run: bool,
+        phase: str,
+    ) -> PipelineResult:
+        cleaned_error = _sanitize_error(error)
+        answer, needs_clarification = _sql_failure_message(cleaned_error, phase=phase)
+        if needs_clarification:
+            generated = replace(
+                generated,
+                needs_clarification=True,
+                clarifying_question=answer,
+                direct_answer=None,
+            )
+        return PipelineResult(
+            question=question,
+            generated_sql=generated,
+            answer=answer,
+            prompt_log_paths=tuple(self._current_prompt_logs),
+            dry_run=dry_run,
+            error=cleaned_error,
+        )
 
     def _repair_sql(self, *, question: str, generated: GeneratedSQL, error: str) -> GeneratedSQL:
         payload = self._complete_json(
@@ -241,6 +384,100 @@ def _optional_str(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _has_direct_user_response(generated: GeneratedSQL) -> bool:
+    return generated.needs_clarification or bool(generated.direct_answer)
+
+
+def _default_clarifying_question() -> str:
+    return "Please clarify the metric, time period, and filters you want analyzed."
+
+
+def _sanitize_error(error: str | None) -> str | None:
+    if error is None:
+        return None
+    text = " ".join(str(error).split())
+    if not text:
+        return None
+    max_length = 600
+    if len(text) > max_length:
+        return f"{text[:max_length].rstrip()}..."
+    return text
+
+
+def _sql_failure_message(error: str | None, *, phase: str) -> tuple[str, bool]:
+    if not error:
+        return (
+            "I could not build a valid SQL query for that question. Please clarify the "
+            "metric, time period, and filters you want analyzed.",
+            True,
+        )
+
+    lowered = error.lower()
+    if any(
+        token in lowered
+        for token in (
+            "column",
+            "field",
+            "object does not exist",
+            "table",
+            "not found",
+            "does not exist",
+            "invalid name",
+            "unrecognized",
+        )
+    ):
+        return (
+            "I could not execute the query because the database rejected a generated "
+            "table or field reference. Please clarify the exact metric, dimension, or "
+            "filter you want using the available performance planning data.",
+            True,
+        )
+
+    if any(token in lowered for token in ("date", "timestamp", "invalid time")):
+        return (
+            "I could not execute the query because the database rejected a date or "
+            "time expression. Please clarify the exact date, month, year, or date "
+            "range you want analyzed.",
+            True,
+        )
+
+    if any(token in lowered for token in ("ambiguous", "ambig")):
+        return (
+            "I could not execute the query because part of the generated SQL was "
+            "ambiguous. Please clarify the metric and grouping you want.",
+            True,
+        )
+
+    if any(token in lowered for token in ("timeout", "spool", "memory", "exceeded")):
+        return (
+            "I could not execute the query after the repair attempt because it still "
+            "looks too broad or expensive for the database. Please narrow the date "
+            "range, filters, or grouping.",
+            True,
+        )
+
+    if any(token in lowered for token in ("permission", "access", "authorized", "logon")):
+        return (
+            "The database rejected the query after the repair attempt because of an "
+            f"access or connection issue: {error}",
+            False,
+        )
+
+    if phase == "validation":
+        return (
+            "I could not produce a SQL query that passed the read-only safety checks "
+            "after the repair attempt. Please rephrase the question with a clear "
+            "metric, time period, and filters.",
+            True,
+        )
+
+    return (
+        "I could not execute a valid SQL query after the repair attempt. Database "
+        f"error: {error}",
+        False,
+    )
 
 
 def _scoped_direct_answer() -> str:

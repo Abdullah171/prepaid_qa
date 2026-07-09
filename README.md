@@ -54,41 +54,77 @@ uv sync
 
 ## Usage
 
-Generate SQL and execute it:
+Start the FastAPI server:
 
 ```bash
-uv run python main.py "What is monthly total revenue by REF_DATE for 2024?"
+uv run uvicorn main:app --reload
 ```
 
-Show the SQL:
-
-```bash
-uv run python main.py --show-sql "Show churn count by churn type for June 2026"
-```
-
-Generate and validate SQL without executing:
-
-```bash
-uv run python main.py --dry-run "Top 10 sales channels by completed orders in 2026"
-```
-
-Interactive mode:
+Or run the same server through `main.py`:
 
 ```bash
 uv run python main.py
 ```
 
+Ask a question:
+
+```bash
+curl -X POST http://127.0.0.1:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What is monthly total revenue by REF_DATE for 2024?"}'
+```
+
+Generate and validate SQL without executing it:
+
+```bash
+curl -X POST http://127.0.0.1:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question":"Top 10 sales channels by completed orders in 2026","dry_run":true}'
+```
+
+Health check:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+API docs are available at `http://127.0.0.1:8000/docs`.
+
+The original CLI remains available through the package script. Generate SQL and execute it:
+
+```bash
+uv run performance-planning-qa "What is monthly total revenue by REF_DATE for 2024?"
+```
+
+Show the SQL:
+
+```bash
+uv run performance-planning-qa --show-sql "Show churn count by churn type for June 2026"
+```
+
+Generate and validate SQL without executing:
+
+```bash
+uv run performance-planning-qa --dry-run "Top 10 sales channels by completed orders in 2026"
+```
+
+Interactive mode:
+
+```bash
+uv run performance-planning-qa
+```
+
 JSON output:
 
 ```bash
-uv run python main.py --json --show-sql "Average line revenue by value segment"
+uv run performance-planning-qa --json --show-sql "Average line revenue by value segment"
 ```
 
 Prompt logging is currently disabled in the pipeline and CLI. The logger code remains in the repo for debugging, but normal runs do not write prompt `.txt` files or print prompt log paths.
 
 ## Architecture
 
-- `main.py`: CLI entry point.
+- `main.py`: FastAPI application entry point.
 - `performance_planning_qa/config.py`: `.env` and runtime settings.
 - `performance_planning_qa/context_loader.py`: loads `performance.sql` and all raw sample files.
 - `performance_planning_qa/prompts.py`: SQL-generation, repair, and answer prompts.
