@@ -138,8 +138,6 @@ class AppSettings:
     sample_data_dir: Path
     llm: LLMSettings
     teradata: TeradataSettings
-    query_max_rows: int
-    answer_result_max_chars: int
     sql_repair_attempts: int
     prompt_log: PromptLogSettings
 
@@ -185,8 +183,6 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
         sample_data_dir=sample_dir,
         llm=llm,
         teradata=teradata,
-        query_max_rows=_get_int("QUERY_MAX_ROWS", default=200),
-        answer_result_max_chars=_get_int("ANSWER_RESULT_MAX_CHARS", default=60000),
         sql_repair_attempts=_get_int("SQL_REPAIR_ATTEMPTS", default=1),
         prompt_log=PromptLogSettings(
             enabled=_get_bool("LLM_PROMPT_LOG_ENABLED", default=False),

@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
-import json
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
 from performance_planning_qa.config import AppSettings, load_settings
 from performance_planning_qa.context_loader import PromptContext, load_prompt_context
-from performance_planning_qa.database import DatabaseQueryError, QueryResult, TeradataClient, to_jsonable
+from performance_planning_qa.database import DatabaseQueryError, QueryResult, TeradataClient
 from performance_planning_qa.llm import MiniMaxClient
 from performance_planning_qa.prompt_logger import PromptLogger
 from performance_planning_qa.prompts import (
@@ -23,9 +22,6 @@ from performance_planning_qa.sql_safety import SQLSafetyError, validate_readonly
 @dataclass(frozen=True)
 class GeneratedSQL:
     sql: str | None
-    assumptions: list[str] = field(default_factory=list)
-    explanation: str = ""
-    result_intent: str = ""
     needs_clarification: bool = False
     clarifying_question: str | None = None
     direct_answer: str | None = None
@@ -38,8 +34,6 @@ class PipelineResult:
     validation_tables: tuple[str, ...] = ()
     query_result: QueryResult | None = None
     answer: str | None = None
-    key_points: list[str] = field(default_factory=list)
-    caveats: list[str] = field(default_factory=list)
     prompt_log_paths: tuple[Path, ...] = ()
     dry_run: bool = False
 
@@ -51,17 +45,12 @@ class PipelineResult:
         return {
             "question": self.question,
             "sql": self.generated_sql.sql,
-            "assumptions": self.generated_sql.assumptions,
-            "explanation": self.generated_sql.explanation,
-            "result_intent": self.generated_sql.result_intent,
             "needs_clarification": self.generated_sql.needs_clarification,
             "clarifying_question": self.generated_sql.clarifying_question,
             "direct_answer": self.generated_sql.direct_answer,
             "validation_tables": list(self.validation_tables),
             "dry_run": self.dry_run,
             "answer": self.answer,
-            "key_points": self.key_points,
-            "caveats": self.caveats,
             "prompt_log_paths": [str(path) for path in self.prompt_log_paths],
             "query_result": self.query_result.to_payload() if self.query_result else None,
         }
@@ -95,7 +84,7 @@ class NL2SQLPipeline:
         )
         return _generated_sql_from_payload(payload)
 
-    def ask(self, question: str, *, dry_run: bool = False, max_rows: int | None = None) -> PipelineResult:
+    def ask(self, question: str, *, dry_run: bool = False) -> PipelineResult:
         self._current_prompt_logs = []
         generated = self.generate_sql(question)
         if generated.needs_clarification:
@@ -135,15 +124,13 @@ class NL2SQLPipeline:
                 dry_run=True,
             )
 
-        effective_max_rows = max_rows or self.settings.query_max_rows
         try:
-            query_result = self.db.execute_select(validation.sql, max_rows=effective_max_rows)
+            query_result = self.db.execute_select(validation.sql)
         except DatabaseQueryError as exc:
             generated, validation, query_result = self._repair_after_database_error(
                 question=question,
                 generated=generated,
                 error=str(exc),
-                max_rows=effective_max_rows,
             )
 
         answer_payload = self._answer_from_result(question, validation.sql, query_result)
@@ -153,8 +140,6 @@ class NL2SQLPipeline:
             validation_tables=validation.table_references,
             query_result=query_result,
             answer=str(answer_payload.get("answer") or "").strip(),
-            key_points=_string_list(answer_payload.get("key_points")),
-            caveats=_string_list(answer_payload.get("caveats")),
             prompt_log_paths=tuple(self._current_prompt_logs),
             dry_run=False,
         )
@@ -187,7 +172,6 @@ class NL2SQLPipeline:
         question: str,
         generated: GeneratedSQL,
         error: str,
-        max_rows: int,
     ):
         last_error: Exception | None = None
         current = generated
@@ -195,7 +179,7 @@ class NL2SQLPipeline:
             current = self._repair_sql(question=question, generated=current, error=error)
             try:
                 validation = validate_readonly_sql(current.sql or "")
-                result = self.db.execute_select(validation.sql, max_rows=max_rows)
+                result = self.db.execute_select(validation.sql)
                 return current, validation, result
             except (DatabaseQueryError, SQLSafetyError) as exc:
                 last_error = exc
@@ -214,12 +198,10 @@ class NL2SQLPipeline:
             temperature=self.settings.llm.sql_temperature,
         )
         repaired = _generated_sql_from_payload(payload)
-        if not repaired.assumptions:
-            repaired = replace(repaired, assumptions=generated.assumptions)
         return repaired
 
     def _answer_from_result(self, question: str, sql: str, result: QueryResult) -> dict[str, Any]:
-        payload = _bounded_result_payload(result, self.settings.answer_result_max_chars)
+        payload = result.to_payload()
         return self._complete_json(
             build_answer_messages(question=question, sql=sql, result_payload=payload),
             phase="answer_generation",
@@ -248,9 +230,6 @@ class NL2SQLPipeline:
 def _generated_sql_from_payload(payload: dict[str, Any]) -> GeneratedSQL:
     return GeneratedSQL(
         sql=_optional_str(payload.get("sql")),
-        assumptions=_string_list(payload.get("assumptions")),
-        explanation=str(payload.get("explanation") or "").strip(),
-        result_intent=str(payload.get("result_intent") or "").strip(),
         needs_clarification=bool(payload.get("needs_clarification", False)),
         clarifying_question=_optional_str(payload.get("clarifying_question")),
         direct_answer=_optional_str(payload.get("direct_answer")),
@@ -264,29 +243,8 @@ def _optional_str(value: Any) -> str | None:
     return text or None
 
 
-def _string_list(value: Any) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return [str(item).strip() for item in value if str(item).strip()]
-    text = str(value).strip()
-    return [text] if text else []
-
-
 def _scoped_direct_answer() -> str:
     return (
         "Hi. I can help with analytical questions about the provided performance planning "
         "database schema, including postpaid base, sales, churn, and monthly revenue tables."
     )
-
-
-def _bounded_result_payload(result: QueryResult, max_chars: int) -> dict[str, Any]:
-    payload = result.to_payload()
-    payload["rows"] = to_jsonable(payload["rows"])
-    while True:
-        encoded = json.dumps(payload, ensure_ascii=False, default=str)
-        if len(encoded) <= max_chars or not payload["rows"]:
-            payload["payload_truncated_for_llm"] = len(encoded) > max_chars
-            return payload
-        payload["rows"] = payload["rows"][: max(1, len(payload["rows"]) // 2)]
-        payload["truncated"] = True

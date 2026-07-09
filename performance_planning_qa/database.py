@@ -16,14 +16,12 @@ class QueryResult:
     columns: list[str]
     rows: list[dict[str, Any]]
     row_count: int
-    truncated: bool
     elapsed_ms: int
 
     def to_payload(self) -> dict[str, Any]:
         return {
             "columns": self.columns,
             "row_count": self.row_count,
-            "truncated": self.truncated,
             "elapsed_ms": self.elapsed_ms,
             "rows": to_jsonable(self.rows),
         }
@@ -74,7 +72,7 @@ class TeradataClient:
         self._remove_context()
         self._connected = False
 
-    def execute_select(self, sql: str, *, max_rows: int) -> QueryResult:
+    def execute_select(self, sql: str) -> QueryResult:
         self.connect()
         if self._execute_sql is None:
             raise RuntimeError("Teradata execute_sql is not initialized.")
@@ -83,18 +81,15 @@ class TeradataClient:
         try:
             cursor = self._execute_sql(sql)
             columns = _get_columns(cursor)
-            raw_rows = _fetch_rows(cursor, max_rows + 1)
+            raw_rows = _fetch_all_rows(cursor)
         except Exception as exc:
             raise DatabaseQueryError(f"Teradata query failed: {exc}") from exc
-        truncated = len(raw_rows) > max_rows
-        raw_rows = raw_rows[:max_rows]
         rows = [_coerce_row(row, columns) for row in raw_rows]
         elapsed_ms = int((time.monotonic() - started) * 1000)
         return QueryResult(
             columns=columns,
             rows=rows,
             row_count=len(rows),
-            truncated=truncated,
             elapsed_ms=elapsed_ms,
         )
 
@@ -124,16 +119,19 @@ def _get_columns(cursor: Any) -> list[str]:
     return []
 
 
-def _fetch_rows(cursor: Any, limit: int) -> list[Any]:
-    if hasattr(cursor, "fetchmany"):
-        return list(cursor.fetchmany(limit))
+def _fetch_all_rows(cursor: Any) -> list[Any]:
     if hasattr(cursor, "fetchall"):
-        return list(cursor.fetchall())[:limit]
+        return list(cursor.fetchall())
+    if hasattr(cursor, "fetchmany"):
+        rows = []
+        while True:
+            batch = list(cursor.fetchmany(10000))
+            if not batch:
+                return rows
+            rows.extend(batch)
     rows = []
     for row in cursor:
         rows.append(row)
-        if len(rows) >= limit:
-            break
     return rows
 
 

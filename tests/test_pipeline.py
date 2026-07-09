@@ -24,7 +24,7 @@ class FakeDB:
     def __init__(self):
         self.sql_calls = []
 
-    def execute_select(self, sql, *, max_rows):
+    def execute_select(self, sql):
         self.sql_calls.append(sql)
         if len(self.sql_calls) == 1:
             raise DatabaseQueryError("Teradata query failed: bad column name BAD_COL")
@@ -32,7 +32,6 @@ class FakeDB:
             columns=["CHURN_DATE"],
             rows=[{"CHURN_DATE": "2026-01-01"}],
             row_count=1,
-            truncated=False,
             elapsed_ms=10,
         )
 
@@ -63,9 +62,6 @@ class PipelineTests(unittest.TestCase):
                         "clarifying_question": None,
                         "direct_answer": "Hi. I can help with analytics over the provided tables.",
                         "sql": None,
-                        "assumptions": [],
-                        "explanation": "",
-                        "result_intent": "",
                     }
                 ]
             ),
@@ -86,9 +82,6 @@ class PipelineTests(unittest.TestCase):
                         "needs_clarification": False,
                         "clarifying_question": None,
                         "sql": None,
-                        "assumptions": [],
-                        "explanation": "",
-                        "result_intent": "",
                     }
                 ]
             ),
@@ -115,9 +108,6 @@ class PipelineTests(unittest.TestCase):
                             "clarifying_question": None,
                             "direct_answer": "Hi. I can help with analytics over the provided tables.",
                             "sql": None,
-                            "assumptions": [],
-                            "explanation": "",
-                            "result_intent": "",
                         }
                     ]
                 ),
@@ -137,23 +127,15 @@ class PipelineTests(unittest.TestCase):
                     "clarifying_question": None,
                     "direct_answer": None,
                     "sql": "SELECT BAD_COL FROM DP_EDW_PPF.AF_RET_GSM_CHURN",
-                    "assumptions": [],
-                    "explanation": "Initial SQL.",
-                    "result_intent": "Test.",
                 },
                 {
                     "needs_clarification": False,
                     "clarifying_question": None,
                     "direct_answer": None,
                     "sql": "SELECT TOP 1 CHURN_DATE FROM DP_EDW_PPF.AF_RET_GSM_CHURN",
-                    "assumptions": [],
-                    "explanation": "Repaired SQL.",
-                    "result_intent": "Test.",
                 },
                 {
                     "answer": "The sample churn date is 2026-01-01.",
-                    "key_points": [],
-                    "caveats": [],
                 },
             ]
         )

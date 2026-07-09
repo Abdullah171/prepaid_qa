@@ -32,12 +32,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print generated SQL before the answer.",
     )
     parser.add_argument(
-        "--max-rows",
-        type=int,
-        default=None,
-        help="Maximum result rows to fetch before asking the LLM to summarize.",
-    )
-    parser.add_argument(
         "--json",
         action="store_true",
         help="Print the full pipeline result as JSON.",
@@ -87,7 +81,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.interactive or not question:
             return run_interactive(pipeline, args)
 
-        result = pipeline.ask(question, dry_run=args.dry_run, max_rows=args.max_rows)
+        result = pipeline.ask(question, dry_run=args.dry_run)
         print_result(result, show_sql=args.show_sql or args.dry_run, as_json=args.json)
         return 0
     finally:
@@ -108,7 +102,7 @@ def run_interactive(pipeline: NL2SQLPipeline, args: argparse.Namespace) -> int:
             continue
 
         try:
-            result = pipeline.ask(question, dry_run=args.dry_run, max_rows=args.max_rows)
+            result = pipeline.ask(question, dry_run=args.dry_run)
             print_result(result, show_sql=args.show_sql or args.dry_run, as_json=args.json)
         except Exception as exc:
             print(f"Error: {exc}", file=sys.stderr)
@@ -134,31 +128,12 @@ def print_result(result: PipelineResult, *, show_sql: bool, as_json: bool) -> No
         print("SQL:")
         print(result.sql)
 
-    if result.dry_run:
-        if result.generated_sql.explanation:
-            print("\nExplanation:")
-            print(result.generated_sql.explanation)
-        if result.generated_sql.result_intent:
-            print("\nResult intent:")
-            print(result.generated_sql.result_intent)
-    elif result.answer:
+    if result.answer:
         print("Answer:")
         print(result.answer)
 
-    if result.key_points:
-        print("\nKey points:")
-        for point in result.key_points:
-            print(f"- {point}")
-
-    caveats = [*result.generated_sql.assumptions, *result.caveats]
-    if caveats:
-        print("\nAssumptions and caveats:")
-        for caveat in caveats:
-            print(f"- {caveat}")
-
     if result.query_result:
-        suffix = " (truncated)" if result.query_result.truncated else ""
-        print(f"\nRows returned: {result.query_result.row_count}{suffix}")
+        print(f"\nRows returned: {result.query_result.row_count}")
         print(f"Query time: {result.query_result.elapsed_ms} ms")
 
     print_prompt_logs(result)
