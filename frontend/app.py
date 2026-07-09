@@ -53,13 +53,30 @@ def _init_state() -> None:
     )
     st.session_state.setdefault("active_session_id", None)
     st.session_state.setdefault("dry_run", False)
+    st.session_state.setdefault("show_source", False)
 
 
 def _sidebar() -> ApiClient:
     with st.sidebar:
-        st.title("Performance Planning")
+        st.markdown(
+            """
+            <div class="ppqa-brand">
+              <div class="ppqa-brand-mark">stc</div>
+              <div>
+                <div class="ppqa-brand-title">Performance Planning</div>
+                <div class="ppqa-brand-subtitle">Analytics Q&A</div>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         api_base_url = st.text_input("API URL", key="api_base_url")
         st.toggle("Dry run", key="dry_run", help="Generate SQL without executing it.")
+        st.toggle(
+            "See source",
+            key="show_source",
+            help="Show generated SQL, query metrics, and returned rows.",
+        )
         client = ApiClient(api_base_url)
 
         try:
@@ -72,22 +89,15 @@ def _sidebar() -> ApiClient:
         st.divider()
 
         if st.button("New chat", use_container_width=True, type="primary"):
-            try:
-                session = client.create_session()
-                st.session_state.active_session_id = session["id"]
-                st.rerun()
-            except ApiError as exc:
-                st.error(str(exc))
+            st.session_state.active_session_id = None
+            st.rerun()
 
-        st.caption("Sessions")
+        st.caption("Chat history")
         try:
             sessions = client.list_sessions()
         except ApiError as exc:
             st.error(str(exc))
             sessions = []
-
-        if not st.session_state.active_session_id and sessions:
-            st.session_state.active_session_id = sessions[0]["id"]
 
         for session in sessions:
             _render_session_row(client, session)
@@ -99,9 +109,14 @@ def _render_session_row(client: ApiClient, session: dict[str, Any]) -> None:
     session_id = session["id"]
     is_active = st.session_state.active_session_id == session_id
     title = session.get("title") or "New chat"
-    label = title if len(title) <= 38 else f"{title[:35].rstrip()}..."
+    max_title_length = 30 if is_active else 38
+    label = (
+        title
+        if len(title) <= max_title_length
+        else f"{title[: max_title_length - 3].rstrip()}..."
+    )
     if is_active:
-        label = f"> {label}"
+        label = f"Active: {label}"
 
     cols = st.sidebar.columns([0.78, 0.22], gap="small")
     if cols[0].button(label, key=f"select-{session_id}", use_container_width=True):
@@ -125,15 +140,15 @@ def _render_header(session_detail: dict[str, Any] | None) -> None:
     if session_detail:
         session = session_detail["session"]
         title = session.get("title") or "New chat"
-        count = session.get("message_count", 0)
+        subtitle = _message_count_label(session.get("message_count", 0))
     else:
-        title = "Performance Planning Q&A"
-        count = 0
+        title = "New chat"
+        subtitle = "Draft session"
     st.markdown(
         f"""
         <div class="ppqa-header">
           <div class="ppqa-title">{_html_escape(title)}</div>
-          <div class="ppqa-subtitle">{count} saved messages</div>
+          <div class="ppqa-subtitle">{_html_escape(subtitle)}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -145,9 +160,10 @@ def _render_empty_state() -> None:
         """
         <div class="ppqa-empty">
           <div class="ppqa-empty-inner">
-            <div class="ppqa-empty-title">Start a planning analysis</div>
+            <div class="ppqa-empty-kicker">Performance Planning</div>
+            <div class="ppqa-empty-title">Start a new analysis</div>
             <div class="ppqa-empty-copy">
-              Ask about postpaid base, sales, churn, or monthly revenue.
+              Postpaid base, sales, churn, and monthly revenue are ready for review.
             </div>
           </div>
         </div>
@@ -163,7 +179,7 @@ def _render_messages(messages: list[dict[str, Any]]) -> None:
 
     for message in messages:
         role = message.get("role", "assistant")
-        with st.chat_message(role):
+        with st.chat_message(role, avatar=_message_avatar(role)):
             st.markdown(message.get("content") or "")
             if role == "assistant":
                 _render_assistant_artifacts(message.get("metadata") or {})
@@ -176,6 +192,8 @@ def _render_assistant_artifacts(metadata: dict[str, Any]) -> None:
 
     if error:
         st.error(error)
+    if not st.session_state.get("show_source", False):
+        return
     if sql:
         with st.expander("SQL", expanded=False):
             st.code(sql, language="sql")
@@ -209,10 +227,10 @@ def _submit_prompt(client: ApiClient, prompt: str) -> None:
             st.error(str(exc))
             return
 
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar=_message_avatar("user")):
         st.markdown(prompt)
 
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=_message_avatar("assistant")):
         with st.spinner("Running analysis"):
             try:
                 response = client.ask_session(
@@ -229,6 +247,18 @@ def _submit_prompt(client: ApiClient, prompt: str) -> None:
         _render_assistant_artifacts(assistant_message.get("metadata") or {})
 
     st.rerun()
+
+
+def _message_avatar(role: str) -> str:
+    if role == "user":
+        return ":material/account_circle:"
+    return ":material/query_stats:"
+
+
+def _message_count_label(count: int) -> str:
+    if count == 1:
+        return "1 saved message"
+    return f"{count} saved messages"
 
 
 def _html_escape(value: str) -> str:

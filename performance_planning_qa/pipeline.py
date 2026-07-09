@@ -360,6 +360,9 @@ class NL2SQLPipeline:
 
     def _answer_from_result(self, question: str, sql: str, result: QueryResult) -> dict[str, Any]:
         payload = result.to_payload()
+
+        # print("Sql query result. = ", payload)
+
         return self._complete_json(
             build_answer_messages(
                 question=question,
