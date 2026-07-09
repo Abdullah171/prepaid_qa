@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from typing import Any
+import json_repair
 
 from performance_planning_qa.config import LLMSettings
 
@@ -51,26 +52,31 @@ class MiniMaxClient:
             raise RuntimeError("LLM returned an empty response.")
         return content.strip()
 
-    def complete_json(self, messages: list[ChatMessage], *, temperature: float) -> dict[str, Any]:
+    def complete_json(self, messages: list[ChatMessage], *, temperature: float, fallback_key: str | None = None) -> dict[str, Any]:
         text = self.complete(messages, temperature=temperature)
-        return extract_json_object(text)
+        return extract_json_object(text, fallback_key=fallback_key)
 
 
-def extract_json_object(text: str) -> dict[str, Any]:
+def extract_json_object(text: str, fallback_key: str | None = None) -> dict[str, Any]:
     """Extract the first JSON object from an LLM response."""
 
     stripped = text.strip()
-    fenced = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", stripped, flags=re.DOTALL | re.IGNORECASE)
+    fenced = re.search(r"```(?:json)?\s*(.*?)\s*```", stripped, flags=re.DOTALL | re.IGNORECASE)
     if fenced:
         stripped = fenced.group(1).strip()
 
     try:
         parsed = json.loads(stripped)
     except json.JSONDecodeError:
-        parsed = json.loads(_first_balanced_object(stripped))
+        try:
+            parsed = json.loads(_first_balanced_object(stripped))
+        except ValueError:
+            parsed = json_repair.loads(stripped)
 
     if not isinstance(parsed, dict):
-        raise ValueError("Expected a JSON object from the LLM.")
+        if fallback_key:
+            return {fallback_key: text.strip()}
+        raise ValueError(f"Expected a JSON object from the LLM. Got {type(parsed).__name__}. Raw response:\n{text}")
     return parsed
 
 

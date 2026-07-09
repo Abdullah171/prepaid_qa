@@ -390,7 +390,8 @@ class NL2SQLPipeline:
         # )
         # if record is not None:
         #     self._current_prompt_logs.append(record.path)
-        return self.llm.complete_json(messages, temperature=temperature)
+        fallback_key = "answer" if phase == "answer_generation" else "direct_answer"
+        return self.llm.complete_json(messages, temperature=temperature, fallback_key=fallback_key)
 
 
 def _generated_sql_from_payload(payload: dict[str, Any]) -> GeneratedSQL:
