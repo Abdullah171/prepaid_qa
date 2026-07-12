@@ -15,6 +15,106 @@ class ChatTurn:
     content: str
 
 
+SQL_DOMAIN_GUIDANCE = """Curated performance-planning table grain and join guidance:
+- F_RM_POSTPAID_BASE is a subscription status-period table, not one row per line. Before joining it to sales, churn, or revenue for month-level analysis, deduplicate it to one row per month, access method, and account with QUALIFY ROW_NUMBER.
+- F_RM_PSD_SALES is an order/service-order line table. Use ORDER_END_DT for sales timing. Join to base on ACCS_METH_VAL + ACCNT_NMBR and, for activation/base-start analysis, ORDER_END_DT = LINE_STRT_DATE.
+- AF_RET_GSM_CHURN is a churn event/attribute table. Use CHURN_DATE for churn timing. Join to base on MSISDN = ACCS_METH_VAL and ACCNT_NUM = ACCNT_NMBR, then keep the first churn on or after the line start when a single churn record is needed.
+- F_RM_PS_MTHLY_REV is already monthly at line/account grain. REF_DATE is the monthly reference date, usually month-end in the samples. For a standalone monthly revenue question such as June 2026 revenue, use F_RM_PS_MTHLY_REV directly with REF_DATE = DATE '2026-06-30' or a bounded June date range. Do not join to base unless the user explicitly asks for a base-aligned revenue analysis.
+- Revenue joins can multiply totals when one side is not reduced to the requested grain first. Pre-aggregate or QUALIFY each table to one row per requested grain before joining.
+- When both access method and account are available, join on both keys. Avoid joining only on MSISDN/access method unless the other table has no account key.
+- Do not use open-ended joins such as R.REF_DATE >= BASE.CALENDAR_DATE for standalone month revenue totals. That pattern returns the base month and later revenue months and can multiply a June-only answer.
+- The analyst examples below use Teradata SEL shorthand. In final generated SQL, use SELECT or WITH, not SEL.
+- In final generated SQL, use normal Teradata clause order: FROM/JOIN, WHERE, GROUP BY, HAVING, QUALIFY, ORDER BY.
+"""
+
+
+ANALYST_JOIN_FEW_SHOT_EXAMPLES = """Analyst few-shot join examples for learning table relationships. Keep the SQL text as reference examples, but final generated SQL must still be one valid read-only Teradata SELECT/WITH query for the user's exact question.
+
+--Base and Sales
+SEL BASE.CALENDAR_DATE, BASE.ACCS_METH_VAL, BASE.SCREEN_TYPE, BASE.LINE_STRT_DATE, S.ORDER_END_DT,S.ORDER_TYP_NME ,S.ORDER_CHANNEL_NME                             
+FROM
+(
+sel LAST_DAY(CALENDAR_DATE) CALENDAR_DATE, 
+PSB.CUST_KEY,                      
+PSB.ACCNT_NMBR,
+PSB.ACCS_METH_VAL,
+SCREEN_TYPE,
+Cast(PSB.SUBS_STRT_DTTM AS DATE) LINE_STRT_DATE,
+CASE WHEN SUBS_PROD_STS_TYP_NM = 'Outgoing Barred' THEN 'D1'
+     WHEN SUBS_PROD_STS_TYP_NM IN ('Service Blocked','Incoming Barred','Suspended') THEN 'D2' ELSE SUBS_PROD_STS_TYP_NM END SUBS_PROD_STS_TYP_NM
+FROM DP_EDW_PPF.F_RM_POSTPAID_BASE PSB 
+INNER JOIN (SEL CALENDAR_DATE 
+			   FROM DP_EDW_PPF.CBU_WEEKS
+			   WHERE CALENDAR_DATE BETWEEN '2026-01-01' AND Date GROUP BY 1
+				) AS W ON CALENDAR_DATE BETWEEN SUBS_PROD_STS_STRT_DTTM AND SUBS_PROD_STS_END_DTTM
+WHERE SUBS_PROD_STS_TYP_NM NOT IN ('Inactive','DELETED FROM SOURCE','UNKNOWN')
+AND LINE_TYPE = 'PS' AND SCREEN_TYPE IN('SS', 'LS')  
+QUALIFY Row_Number() Over(PARTITION BY Last_Day(CALENDAR_DATE),psb.ACCS_METH_VAL, PSB.ACCNT_NMBR  ORDER BY PSB.SUBS_STRT_DTTM DESC, 
+											PSB.SUBS_END_DTTM DESC, PSB.SUBS_PROD_STS_STRT_DTTM DESC, PSB.SUBS_PROD_STS_END_DTTM DESC) =1
+) BASE
+left join DP_EDW_PPF.F_RM_PSD_SALES S on (BASE.ACCS_METH_VAL = S.ACCS_METH_VAL and BASE.ACCNT_NMBR = S.ACCNT_NMBR and S.ORDER_END_DT = BASE.LINE_STRT_DATE)
+
+
+--Base and churn
+SEL BASE.CALENDAR_DATE, BASE.ACCS_METH_VAL, BASE.SCREEN_TYPE, BASE.LINE_STRT_DATE, C.CHURN_DATE,C.CHURN_TYPE,C.CHURN_CHANNEL_NAME                                         
+FROM
+(
+sel LAST_DAY(CALENDAR_DATE) CALENDAR_DATE, 
+PSB.CUST_KEY,                      
+PSB.ACCNT_NMBR,
+PSB.ACCS_METH_VAL,
+SCREEN_TYPE,
+Cast(PSB.SUBS_STRT_DTTM AS DATE) LINE_STRT_DATE,
+CASE WHEN SUBS_PROD_STS_TYP_NM = 'Outgoing Barred' THEN 'D1'
+     WHEN SUBS_PROD_STS_TYP_NM IN ('Service Blocked','Incoming Barred','Suspended') THEN 'D2' ELSE SUBS_PROD_STS_TYP_NM END SUBS_PROD_STS_TYP_NM
+FROM DP_EDW_PPF.F_RM_POSTPAID_BASE PSB 
+INNER JOIN (SEL CALENDAR_DATE 
+			   FROM DP_EDW_PPF.CBU_WEEKS
+			   WHERE CALENDAR_DATE BETWEEN '2026-01-01' AND Date GROUP BY 1
+				) AS W ON CALENDAR_DATE BETWEEN SUBS_PROD_STS_STRT_DTTM AND SUBS_PROD_STS_END_DTTM
+WHERE SUBS_PROD_STS_TYP_NM NOT IN ('Inactive','DELETED FROM SOURCE','UNKNOWN')
+AND LINE_TYPE = 'PS' AND SCREEN_TYPE IN('SS', 'LS')  
+QUALIFY Row_Number() Over(PARTITION BY Last_Day(CALENDAR_DATE),psb.ACCS_METH_VAL, PSB.ACCNT_NMBR  ORDER BY PSB.SUBS_STRT_DTTM DESC, 
+											PSB.SUBS_END_DTTM DESC, PSB.SUBS_PROD_STS_STRT_DTTM DESC, PSB.SUBS_PROD_STS_END_DTTM DESC) =1
+) BASE
+left join DP_EDW_PPF.AF_RET_GSM_CHURN C on (BASE.ACCS_METH_VAL = C.MSISDN and BASE.ACCNT_NMBR = C.ACCNT_NUM and C.CHURN_DATE >= BASE.LINE_STRT_DATE)
+QUALIFY Row_Number() Over(PARTITION BY BASE.CALENDAR_DATE, BASE.ACCS_METH_VAL, BASE.ACCNT_NMBR ORDER BY COALESCE(C.CHURN_DATE ,date)) =1
+
+
+--Base and Revenue
+SEL BASE.CALENDAR_DATE, BASE.ACCS_METH_VAL, BASE.SCREEN_TYPE, BASE.LINE_STRT_DATE, R.TOTAL_LINE_REV, R.LINE_REV_EXCL_DEVICES                                         
+FROM
+(
+sel LAST_DAY(CALENDAR_DATE) CALENDAR_DATE, 
+PSB.CUST_KEY,                      
+PSB.ACCNT_NMBR,
+PSB.ACCS_METH_VAL,
+SCREEN_TYPE,
+Cast(PSB.SUBS_STRT_DTTM AS DATE) LINE_STRT_DATE,
+CASE WHEN SUBS_PROD_STS_TYP_NM = 'Outgoing Barred' THEN 'D1'
+     WHEN SUBS_PROD_STS_TYP_NM IN ('Service Blocked','Incoming Barred','Suspended') THEN 'D2' ELSE SUBS_PROD_STS_TYP_NM END SUBS_PROD_STS_TYP_NM
+FROM DP_EDW_PPF.F_RM_POSTPAID_BASE PSB 
+INNER JOIN (SEL CALENDAR_DATE 
+			   FROM DP_EDW_PPF.CBU_WEEKS
+			   WHERE CALENDAR_DATE BETWEEN '2026-01-01' AND Date GROUP BY 1
+				) AS W ON CALENDAR_DATE BETWEEN SUBS_PROD_STS_STRT_DTTM AND SUBS_PROD_STS_END_DTTM
+WHERE SUBS_PROD_STS_TYP_NM NOT IN ('Inactive','DELETED FROM SOURCE','UNKNOWN')
+AND LINE_TYPE = 'PS' AND SCREEN_TYPE IN('SS', 'LS')  
+QUALIFY Row_Number() Over(PARTITION BY Last_Day(CALENDAR_DATE),psb.ACCS_METH_VAL, PSB.ACCNT_NMBR  ORDER BY PSB.SUBS_STRT_DTTM DESC, 
+											PSB.SUBS_END_DTTM DESC, PSB.SUBS_PROD_STS_STRT_DTTM DESC, PSB.SUBS_PROD_STS_END_DTTM DESC) =1
+) BASE
+left join DP_EDW_PPF.F_RM_PS_MTHLY_REV R on (BASE.ACCS_METH_VAL = R.ACCS_METH_NUM and BASE.ACCNT_NMBR = R.ACCT_NUM and R.REF_DATE >= BASE.CALENDAR_DATE)
+
+
+--Sales and Churn
+SEL LAST_DAY(ORDER_END_DT) SALES_MONTH, S.ACCS_METH_VAL  ,S.ORDER_TYP_NME ,S.ORDER_CHANNEL_NME, C.CHURN_DATE, C.CHURN_TYPE,C.CHURN_CHANNEL_NAME     
+FROM DP_EDW_PPF.F_RM_PSD_SALES S
+LEFT JOIN DP_EDW_PPF.AF_RET_GSM_CHURN C on (S.ACCS_METH_VAL = C.MSISDN and S.ACCNT_NMBR = C.ACCNT_NUM and C.CHURN_DATE >= S.ORDER_END_DT)
+QUALIFY Row_Number() Over(PARTITION BY SALES_MONTH, S.ACCS_METH_VAL, S.ACCNT_NMBR ORDER BY COALESCE(C.CHURN_DATE ,date)) =1
+WHERE ORDER_END_DT BETWEEN '2026-01-01' AND Date
+"""
+
+
 SQL_SYSTEM_PROMPT = """You are a senior Teradata SQL analyst and scoped assistant for STC performance planning.
 
 Decide whether to generate one production-quality, read-only Teradata SQL query, ask the user for missing scope, or answer directly when no SQL is appropriate.
@@ -39,10 +139,11 @@ Rules:
 - Ask for clarification for broad "top", "best", "worst", "highest", or "lowest" requests when the metric, ranking dimension, or time period is missing.
 - Ask for clarification when natural-language labels are too vague to map safely to one exact table column or categorical value from the supplied schema and samples.
 - Do not ask for clarification just because a query touches a large table. If the user gives a clear bounded period, specific date, specific account/line/customer/package, or a small aggregate question with clear scope and no missing required inputs, generate SQL.
-- Use only the four tables and exact columns described in the supplied performance.sql schema.
-- Prefer fully-qualified table names: DP_EDW_PPF.F_RM_POSTPAID_BASE, DP_EDW_PPF.F_RM_PSD_SALES, DP_EDW_PPF.AF_RET_GSM_CHURN, DP_EDW_PPF.F_RM_PS_MTHLY_REV.
+- Use only the business tables and helper calendar table described in the supplied performance.sql schema.
+- Prefer fully-qualified table names: DP_EDW_PPF.F_RM_POSTPAID_BASE, DP_EDW_PPF.F_RM_PSD_SALES, DP_EDW_PPF.AF_RET_GSM_CHURN, DP_EDW_PPF.F_RM_PS_MTHLY_REV, DP_EDW_PPF.CBU_WEEKS.
 - Treat the JSON and CSV files as raw examples of records and common categorical values, not as queryable tables.
 - Use Teradata syntax. Do not use LIMIT. Use SELECT TOP n for detail samples when a non-aggregate query could return many rows.
+- Always output final SQL with SELECT or WITH. Do not use the Teradata SEL shorthand in final output.
 - For dates, use DATE 'YYYY-MM-DD' or TIMESTAMP 'YYYY-MM-DD HH:MI:SS' literals.
 - For active base questions, use the subscription status period dates and open-ended timestamp handling from the schema examples.
 - For sales questions, usually use ORDER_END_DT.
@@ -113,6 +214,12 @@ def build_sql_messages(
     user_prompt = f"""Raw schema and sample context:
 {context.render_raw()}
 
+Curated SQL guidance:
+{SQL_DOMAIN_GUIDANCE}
+
+Few-shot SQL examples:
+{ANALYST_JOIN_FEW_SHOT_EXAMPLES}
+
 {_render_recent_conversation(chat_history)}
 
 User question:
@@ -134,6 +241,12 @@ def build_sql_repair_messages(
 ) -> list[dict[str, str]]:
     user_prompt = f"""Raw schema and sample context:
 {context.render_raw()}
+
+Curated SQL guidance:
+{SQL_DOMAIN_GUIDANCE}
+
+Few-shot SQL examples:
+{ANALYST_JOIN_FEW_SHOT_EXAMPLES}
 
 {_render_recent_conversation(chat_history)}
 

@@ -6,21 +6,28 @@
 
  Tables included:
    1. DP_EDW_PPF.F_RM_POSTPAID_BASE
-      - Subscription lifecycle/base table. Each record represents a subscription
-        product status period with start and end timestamps.
+      - Subscription lifecycle/base table. Each row is a subscription product
+        status period, not one row per line. For monthly base, reduce to one row
+        per month/access method/account before joining to other fact tables.
 
    2. DP_EDW_PPF.F_RM_PSD_SALES
-      - Daily sales/service-order line table. Each record represents a sales order
-        line for a mobile line/MSISDN.
+      - Daily sales/service-order line table. Each row is a completed service
+        order line for a mobile line/MSISDN. Use ORDER_END_DT for sales timing.
 
    3. DP_EDW_PPF.AF_RET_GSM_CHURN
-      - Daily churn/customer churn attributes table. Used to analyze churn by date,
-        churn type, nationality, region, customer profile, value, payment, complaints,
-        and engagement attributes.
+      - Daily churn line/customer attribute table. Each row is a churn event or
+        churn-state record for a line. Use CHURN_DATE for churn timing and keep
+        one churn per requested line/grain when joining.
 
    4. DP_EDW_PPF.F_RM_PS_MTHLY_REV
-      - Monthly line revenue table. Used to analyze line revenue, average revenue,
-        value brackets, usage revenue, device revenue, discounts, and billing metrics.
+      - Monthly postpaid line revenue table. Each row is already at monthly
+        line/account grain by REF_DATE. Use it directly for monthly revenue
+        totals, averages, value bands, usage revenue, device revenue, discounts,
+        and billing metrics.
+
+   5. DP_EDW_PPF.CBU_WEEKS
+      - Calendar helper table. Use CALENDAR_DATE only when building daily/monthly
+        active-base snapshots across subscription status periods.
 
  Common join keys / semantic relationships:
    - Mobile line / access method number:
@@ -50,18 +57,44 @@
      SUBS_PROD_STS_STRT_DTTM, SUBS_PROD_STS_END_DTTM.
    - Sales date: ORDER_END_DT.
    - Churn date: CHURN_DATE. Load snapshot date: LOAD_DATE.
-   - Monthly revenue reference/billing dates: REF_DATE, BILL_STRT_DT.
+   - Calendar helper date: CBU_WEEKS.CALENDAR_DATE.
+   - Monthly revenue reference/billing dates: REF_DATE, BILL_STRT_DT. REF_DATE
+     is the revenue month reference date and appears as month-end in samples;
+     BILL_STRT_DT can be the next billing-cycle start date and should not be
+     used as the default month filter for revenue totals.
+
+ Grain and join safety:
+   - Always know the grain before joining. Revenue, sales, churn, and base can
+     have different row counts for the same line/account.
+   - When joining line-level facts and both keys exist, join by both access
+     method/MSISDN and account number:
+       base.ACCS_METH_VAL = sales.ACCS_METH_VAL / churn.MSISDN / revenue.ACCS_METH_NUM
+       base.ACCNT_NMBR    = sales.ACCNT_NMBR    / churn.ACCNT_NUM / revenue.ACCT_NUM
+   - Before joining F_RM_POSTPAID_BASE to another table for month-level analysis,
+     reduce base to one row per Last_Day(CALENDAR_DATE), ACCS_METH_VAL,
+     and ACCNT_NMBR using QUALIFY ROW_NUMBER.
+   - For a standalone month revenue question such as June 2026 revenue, query
+     F_RM_PS_MTHLY_REV directly using REF_DATE = DATE '2026-06-30' or a bounded
+     June range. Do not join to base just to calculate total monthly revenue.
+   - Avoid open-ended revenue joins such as R.REF_DATE >= BASE.CALENDAR_DATE for
+     standalone monthly revenue totals; that returns future months for each base
+     row and can multiply the result.
 
  NL-to-SQL guidance:
    - For active base/subscription questions, use F_RM_POSTPAID_BASE and filter
-     date ranges using SUBS_PROD_STS_STRT_DTTM and SUBS_PROD_STS_END_DTTM.
+     date ranges using SUBS_PROD_STS_STRT_DTTM and SUBS_PROD_STS_END_DTTM. For
+     postpaid service lines, common filters are LINE_TYPE = 'PS',
+     SCREEN_TYPE IN ('SS', 'LS'), and SUBS_PROD_STS_TYP_NM not in
+     ('Inactive','DELETED FROM SOURCE','UNKNOWN').
    - For sales questions, use F_RM_PSD_SALES and aggregate by ORDER_END_DT,
      ORDER_CHANNEL_NME, REGION, PROD_NME, SALES_CHNL_TYP, SUB_CHNL_NME, etc.
    - For churn questions, use AF_RET_GSM_CHURN and aggregate by CHURN_DATE,
      CHURN_TYPE, NATIONALITY, SAUDI_FLAG, REGION, CITY, VALUE_SEGMENT_NAME, etc.
-   - For revenue questions, use F_RM_PS_MTHLY_REV and aggregate by REF_DATE,
-     ACCS_METH_NUM, ACCT_NUM, and revenue fields such as TOTAL_LINE_REV,
-     PACKAGE_REV, DEVICE_REV, USAGE_REV, and AVG_LINE_REV_LAST_3M.
+   - For revenue questions, use F_RM_PS_MTHLY_REV directly unless the user
+     explicitly asks for a lifecycle/base/sales/churn relationship. Aggregate by
+     REF_DATE, ACCS_METH_NUM, ACCT_NUM, value band, and revenue fields such as
+     TOTAL_LINE_REV, LINE_REV_EXCL_DEVICES, PACKAGE_REV, DEVICE_REV, USAGE_REV,
+     ROAM_REV, DCB_REV, OTHER_USAGE_REV, and AVG_LINE_REV_LAST_3M.
 ================================================================================
 */
 
@@ -69,8 +102,19 @@
    Table 1: Postpaid Base
    Business meaning:
      Every row indicates the start and end date/time for each subscription/product
-     status period. Use this table for base size, active subscriptions, subscription
-     status, subscription reason, product, account, and customer-level base analysis.
+     status period. This table can contain multiple rows for the same access method
+     and account across time, products, and status changes. Use this table for base
+     size, active subscriptions, subscription status, subscription reason, product,
+     account, and customer-level base analysis.
+
+     For active postpaid service-line base, common filters are:
+       LINE_TYPE = 'PS'
+       SCREEN_TYPE IN ('SS', 'LS')
+       SUBS_PROD_STS_TYP_NM NOT IN ('Inactive','DELETED FROM SOURCE','UNKNOWN')
+
+     Status rollups commonly used by analysts:
+       Outgoing Barred -> D1
+       Service Blocked, Incoming Barred, Suspended -> D2
 ============================================================================ */
 
 CREATE SET TABLE DP_EDW_PPF.F_RM_POSTPAID_BASE ,FALLBACK ,
@@ -125,7 +169,9 @@ Column guide: DP_EDW_PPF.F_RM_POSTPAID_BASE
    Business meaning:
      Every row represents a daily service order/sales line item. Use this table
      for sales counts, product sales, order types, channels, sales users, regions,
-     and customer demographics at order-line level.
+     and customer demographics at order-line level. ORDER_END_DT is the sales
+     completion date. Samples show prepaid-to-postpaid migrations as
+     ORDER_TYP_NME = 'Migrate' and ORDER_SUBTYP_NME = 'PrepaidtoPostpaid'.
 ============================================================================ */
 
 CREATE SET TABLE DP_EDW_PPF.F_RM_PSD_SALES ,FALLBACK ,
@@ -195,7 +241,9 @@ Column guide: DP_EDW_PPF.F_RM_PSD_SALES
      Churn table at daily customer/line level. Use this table to calculate churned
      customers or churned lines by churn date, churn type, nationality, Saudi flag,
      package, tenure, region, payment behavior, engagement, complaints, value
-     segment, and exclusion segments.
+     segment, and exclusion segments. Samples include both prepaid stream records
+     such as STREAM_TYPE = 'PP' and postpaid/service records such as STREAM_TYPE = 'PS';
+     use stream/screen filters when the user specifically asks for postpaid only.
 ============================================================================ */
 
 CREATE SET TABLE DP_EDW_PPF.AF_RET_GSM_CHURN ,FALLBACK ,
@@ -333,6 +381,11 @@ Column guide: DP_EDW_PPF.AF_RET_GSM_CHURN
      Monthly line revenue table. Use this table for revenue, ARPU-like metrics,
      value brackets, device revenue, usage revenue, roaming revenue, DCB revenue,
      discounts, adjustments, number of lines, and last-3-month revenue metrics.
+     REF_DATE is the revenue month reference and is month-end in the samples. For
+     total revenue in a month, SUM(TOTAL_LINE_REV) directly from this table at
+     that REF_DATE. For average revenue per line, use AVG(TOTAL_LINE_REV) or
+     SUM(TOTAL_LINE_REV) / COUNT(DISTINCT ACCS_METH_NUM) depending on the
+     requested business definition.
 ============================================================================ */
 
 CREATE SET TABLE DP_EDW_PPF.F_RM_PS_MTHLY_REV ,FALLBACK ,
@@ -411,20 +464,42 @@ Column guide: DP_EDW_PPF.F_RM_PS_MTHLY_REV
 */
 
 /* ============================================================================
+   Table 5: Calendar Helper
+   Business meaning:
+     Calendar/date helper used by analyst base snapshots. Use this only to expand
+     subscription status periods into daily or month-end base dates. It is not a
+     metric table.
+============================================================================ */
+
+CREATE SET TABLE DP_EDW_PPF.CBU_WEEKS ,FALLBACK ,
+     NO BEFORE JOURNAL,
+     NO AFTER JOURNAL,
+     CHECKSUM = DEFAULT,
+     DEFAULT MERGEBLOCKRATIO
+     (
+      CALENDAR_DATE DATE FORMAT 'YY/MM/DD');
+
+/*
+Column guide: DP_EDW_PPF.CBU_WEEKS
+  CALENDAR_DATE                              : Calendar date used to build daily or monthly base snapshots.
+*/
+
+/* ============================================================================
    Common SQL examples for NL-to-SQL systems
 ============================================================================ */
 
-/* Example: daily sales count by region */
+/* Example: daily sales count by region for a bounded month */
 /*
 SELECT
     ORDER_END_DT,
     REGION,
     COUNT(*) AS SALES_LINE_COUNT
 FROM DP_EDW_PPF.F_RM_PSD_SALES
+WHERE ORDER_END_DT BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'
 GROUP BY 1, 2;
 */
 
-/* Example: daily churn count by churn type and nationality */
+/* Example: postpaid daily churn count by churn type and nationality for a bounded month */
 /*
 SELECT
     CHURN_DATE,
@@ -432,37 +507,117 @@ SELECT
     NATIONALITY,
     COUNT(DISTINCT MSISDN) AS CHURNED_LINES
 FROM DP_EDW_PPF.AF_RET_GSM_CHURN
+WHERE CHURN_DATE BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'
+  AND STREAM_TYPE = 'PS'
+  AND SCREEN_TYPE IN ('SS', 'LS')
 GROUP BY 1, 2, 3;
 */
 
-/* Example: monthly total revenue by reference month */
+/* Example: standalone June 2026 total revenue; do not join to base for this */
 /*
 SELECT
     REF_DATE,
     SUM(TOTAL_LINE_REV) AS TOTAL_REVENUE,
-    AVG(AVG_LINE_REV_LAST_3M) AS AVG_REVENUE_LAST_3M
+    COUNT(DISTINCT ACCS_METH_NUM) AS UNIQUE_LINES
 FROM DP_EDW_PPF.F_RM_PS_MTHLY_REV
+WHERE REF_DATE = DATE '2026-06-30'
 GROUP BY 1;
 */
 
-/* Example: active subscription base as of a selected date */
+/* Example: average June 2026 revenue per line by value segment */
 /*
 SELECT
-    COUNT(DISTINCT ACCS_METH_VAL) AS ACTIVE_LINES
-FROM DP_EDW_PPF.F_RM_POSTPAID_BASE
-WHERE TIMESTAMP '2026-01-31 00:00:00' BETWEEN SUBS_PROD_STS_STRT_DTTM
-                                          AND COALESCE(SUBS_PROD_STS_END_DTTM, TIMESTAMP '9999-12-31 23:59:59');
+    VBS_INCL_DEV,
+    AVG(TOTAL_LINE_REV) AS AVG_REVENUE_PER_LINE,
+    SUM(TOTAL_LINE_REV) AS TOTAL_REVENUE,
+    COUNT(DISTINCT ACCS_METH_NUM) AS UNIQUE_LINES
+FROM DP_EDW_PPF.F_RM_PS_MTHLY_REV
+WHERE REF_DATE = DATE '2026-06-30'
+GROUP BY 1;
 */
 
-/* Example: revenue joined to churn by line number */
+/* Example: active postpaid base at end of June 2026, deduped by line/account */
 /*
 SELECT
-    c.CHURN_DATE,
-    c.CHURN_TYPE,
-    c.NATIONALITY,
-    SUM(r.TOTAL_LINE_REV) AS TOTAL_LINE_REV_BEFORE_CHURN
-FROM DP_EDW_PPF.AF_RET_GSM_CHURN c
-LEFT JOIN DP_EDW_PPF.F_RM_PS_MTHLY_REV r
-  ON c.MSISDN = r.ACCS_METH_NUM
+    BASE.CALENDAR_DATE,
+    BASE.SCREEN_TYPE,
+    BASE.ROOT_PROD_NAME,
+    COUNT(DISTINCT BASE.ACCS_METH_VAL) AS ACTIVE_LINES
+FROM
+(
+    SELECT
+        LAST_DAY(W.CALENDAR_DATE) AS CALENDAR_DATE,
+        PSB.ACCNT_NMBR,
+        PSB.ACCS_METH_VAL,
+        PSB.ROOT_PROD_NAME,
+        PSB.SCREEN_TYPE,
+        CAST(PSB.SUBS_STRT_DTTM AS DATE) AS LINE_STRT_DATE,
+        CASE
+            WHEN PSB.SUBS_PROD_STS_TYP_NM = 'Outgoing Barred' THEN 'D1'
+            WHEN PSB.SUBS_PROD_STS_TYP_NM IN ('Service Blocked','Incoming Barred','Suspended') THEN 'D2'
+            ELSE PSB.SUBS_PROD_STS_TYP_NM
+        END AS SUBS_PROD_STS_TYP_NM
+    FROM DP_EDW_PPF.F_RM_POSTPAID_BASE PSB
+    INNER JOIN
+    (
+        SELECT CALENDAR_DATE
+        FROM DP_EDW_PPF.CBU_WEEKS
+        WHERE CALENDAR_DATE = DATE '2026-06-30'
+        GROUP BY 1
+    ) W
+      ON W.CALENDAR_DATE BETWEEN CAST(PSB.SUBS_PROD_STS_STRT_DTTM AS DATE)
+                             AND CAST(PSB.SUBS_PROD_STS_END_DTTM AS DATE)
+    WHERE PSB.SUBS_PROD_STS_TYP_NM NOT IN ('Inactive','DELETED FROM SOURCE','UNKNOWN')
+      AND PSB.LINE_TYPE = 'PS'
+      AND PSB.SCREEN_TYPE IN ('SS', 'LS')
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY LAST_DAY(W.CALENDAR_DATE), PSB.ACCS_METH_VAL, PSB.ACCNT_NMBR
+        ORDER BY PSB.SUBS_STRT_DTTM DESC,
+                 PSB.SUBS_END_DTTM DESC,
+                 PSB.SUBS_PROD_STS_STRT_DTTM DESC,
+                 PSB.SUBS_PROD_STS_END_DTTM DESC
+    ) = 1
+) BASE
 GROUP BY 1, 2, 3;
+*/
+
+/* Example: churn joined to same-month revenue at bounded grain */
+/*
+WITH CHURNED_LINES AS
+(
+    SELECT
+        CHURN_DATE,
+        MSISDN,
+        ACCNT_NUM,
+        CHURN_TYPE,
+        CHURN_CHANNEL_NAME
+    FROM DP_EDW_PPF.AF_RET_GSM_CHURN
+    WHERE CHURN_DATE BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'
+      AND STREAM_TYPE = 'PS'
+      AND SCREEN_TYPE IN ('SS', 'LS')
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY MSISDN, ACCNT_NUM
+        ORDER BY CHURN_DATE
+    ) = 1
+),
+JUNE_REVENUE AS
+(
+    SELECT
+        ACCS_METH_NUM,
+        ACCT_NUM,
+        SUM(TOTAL_LINE_REV) AS TOTAL_LINE_REV
+    FROM DP_EDW_PPF.F_RM_PS_MTHLY_REV
+    WHERE REF_DATE = DATE '2026-06-30'
+    GROUP BY 1, 2
+)
+SELECT
+    C.CHURN_TYPE,
+    C.CHURN_CHANNEL_NAME,
+    COUNT(DISTINCT C.MSISDN) AS CHURNED_LINES,
+    SUM(R.TOTAL_LINE_REV) AS JUNE_TOTAL_LINE_REV
+FROM CHURNED_LINES C
+LEFT JOIN JUNE_REVENUE R
+  ON C.MSISDN = R.ACCS_METH_NUM
+ AND C.ACCNT_NUM = R.ACCT_NUM
+GROUP BY 1, 2;
 */
