@@ -17,6 +17,12 @@ For each user question it:
 2. Validates the SQL is read-only and references only the allowed tables.
 3. Executes the SQL through `teradataml`.
 4. Sends the query result back to MiniMax to produce a concise analytical answer.
+5. Conditionally builds a validated chart from those returned rows for explicit
+   visualization requests and time-trend questions.
+
+Structured LLM responses are parsed as strict JSON first. If parsing fails, the
+app uses `json-repair` for common issues such as unquoted keys, single quotes,
+trailing commas, surrounding prose, or an unterminated final object.
 
 The FastAPI app also supports persisted chat sessions backed by local PostgreSQL. Session
 history is passed back into the SQL and answer prompts so follow-up questions can refer to
@@ -117,6 +123,73 @@ uv run streamlit run frontend/app.py
 Open `http://127.0.0.1:8501`. The sidebar can create, select, and delete chat
 sessions. Deleting a session removes it from PostgreSQL through the FastAPI API.
 
+### Conditional Charts
+
+Charts are generated from the rows returned for the current question, never by
+loading or plotting an entire source table. Visualization wording does not
+change or narrow the analytical SQL: the result must first contain everything
+needed for the best textual answer. The app creates a chart when either:
+
+- the user explicitly asks for a chart, graph, plot, visual, diagram, or visualization; or
+- the question asks for a monthly, weekly, daily, quarterly, yearly, or other
+  time trend.
+
+Ordinary scalar answers and non-visual questions do not get a chart. Supported
+types are line, bar, area, scatter, pie, and donut. An explicit compatible type
+is honored; otherwise time series default to a line chart and categorical data
+defaults to a bar chart. Other requested chart types fall back to a compatible
+supported type with a visible explanation instead of being silently treated as
+supported. A current instruction to use only text, prose, or a table suppresses
+the chart even when the question otherwise contains trend wording.
+
+The language model may select returned column names, but it cannot provide chart
+values. The backend validates those fields and copies every plotted value from
+the returned data into a versioned chart payload. The payload is saved in the
+assistant message's existing JSONB metadata, so charts render again when a chat
+is reopened without a database migration. A follow-up such as “make that a bar
+chart” reuses the preceding result instead of running the analysis again.
+A strong analytical continuation such as “do the same for churn” runs the new
+analysis and inherits only the immediately preceding chart intent; it never
+reuses the old chart's fields, title, or data.
+When a trend or chart question first requires clarification, the resolved reply
+also inherits that original visualization intent unless the user asks for text
+or a table instead.
+
+The API returns `chart: null` when no visualization is appropriate. Otherwise
+the response includes a renderer-neutral payload such as:
+
+```json
+{
+  "answer": "Revenue increased across the three months.",
+  "chart": {
+    "version": 1,
+    "type": "line",
+    "title": "Monthly revenue trend",
+    "x": "MONTH",
+    "y": ["REVENUE"],
+    "series": null,
+    "x_kind": "temporal",
+    "trigger": "trend",
+    "requested_type": null,
+    "fallback_reason": null,
+    "truncated": false,
+    "data": [
+      {"MONTH": "2026-01", "REVENUE": 10},
+      {"MONTH": "2026-02", "REVENUE": 12}
+    ]
+  }
+}
+```
+
+Chart data is capped at 200 rows; long time ranges are sampled across the full
+period while keeping complete selected time buckets. Known row-level identifier
+columns and common identifier aliases are rejected as chart dimensions or
+measures, while aggregate fields such as `NUMBER_OF_LINES` remain usable.
+Multiple selected measures are rendered in separate panels with independent
+value scales. The frontend uses the STC purple/cyan/magenta palette, focused
+line-chart value scales, and period-aware date ticks so small trend changes and
+monthly points remain readable.
+
 ## Chat Memory Schema
 
 The chat tables are defined in `sql/chat_memory_schema.sql`:
@@ -185,6 +258,8 @@ Prompt logging is currently disabled in the pipeline and CLI. The logger code re
 - `performance_planning_qa/prompt_logger.py`: optional prompt logging helper, currently disabled in the pipeline.
 - `performance_planning_qa/sql_safety.py`: read-only SQL validation and table allow-list.
 - `performance_planning_qa/database.py`: Teradata connection and query execution via `teradataml`.
+- `performance_planning_qa/charting.py`: conditional chart intent, result-field validation,
+  and versioned renderer-neutral chart payloads.
 - `performance_planning_qa/pipeline.py`: end-to-end orchestration.
 
 ## Local Tests

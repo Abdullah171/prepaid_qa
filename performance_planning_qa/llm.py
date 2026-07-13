@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from typing import Any
+
 import json_repair
 
 from performance_planning_qa.config import LLMSettings
@@ -52,31 +53,69 @@ class MiniMaxClient:
             raise RuntimeError("LLM returned an empty response.")
         return content.strip()
 
-    def complete_json(self, messages: list[ChatMessage], *, temperature: float, fallback_key: str | None = None) -> dict[str, Any]:
+    def complete_json(
+        self,
+        messages: list[ChatMessage],
+        *,
+        temperature: float,
+        fallback_key: str | None = None,
+    ) -> dict[str, Any]:
         text = self.complete(messages, temperature=temperature)
         return extract_json_object(text, fallback_key=fallback_key)
 
 
 def extract_json_object(text: str, fallback_key: str | None = None) -> dict[str, Any]:
-    """Extract the first JSON object from an LLM response."""
+    """Extract an object, repairing common LLM JSON mistakes when necessary."""
 
     stripped = text.strip()
     fenced = re.search(r"```(?:json)?\s*(.*?)\s*```", stripped, flags=re.DOTALL | re.IGNORECASE)
     if fenced:
         stripped = fenced.group(1).strip()
 
+    candidates = [stripped]
     try:
-        parsed = json.loads(stripped)
-    except json.JSONDecodeError:
+        object_fragment = _first_balanced_object(stripped)
+    except ValueError:
+        object_fragment = None
+    if object_fragment and object_fragment != stripped:
+        candidates.append(object_fragment)
+
+    parsed: Any = None
+    parsed_found = False
+    for candidate in candidates:
         try:
-            parsed = json.loads(_first_balanced_object(stripped))
-        except ValueError:
-            parsed = json_repair.loads(stripped)
+            parsed = json.loads(candidate)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        parsed_found = True
+        break
+
+    repair_error: Exception | None = None
+    if not parsed_found:
+        # Prefer the isolated object over surrounding prose. Fall back to the
+        # complete response for unterminated objects that cannot be isolated.
+        for candidate in reversed(candidates):
+            try:
+                repaired = json_repair.loads(candidate)
+            except Exception as exc:  # json-repair can raise several parser errors
+                repair_error = exc
+                continue
+            parsed = repaired
+            parsed_found = True
+            if isinstance(repaired, dict):
+                break
+
+    if not parsed_found:
+        if fallback_key:
+            return {fallback_key: text.strip()}
+        raise ValueError("Could not parse or repair the LLM response as JSON.") from repair_error
 
     if not isinstance(parsed, dict):
         if fallback_key:
             return {fallback_key: text.strip()}
-        raise ValueError(f"Expected a JSON object from the LLM. Got {type(parsed).__name__}. Raw response:\n{text}")
+        raise ValueError(
+            f"Expected a JSON object from the LLM. Got {type(parsed).__name__}."
+        )
     return parsed
 
 

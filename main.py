@@ -7,7 +7,7 @@ import asyncio
 from datetime import datetime
 import logging
 import os
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.concurrency import run_in_threadpool
@@ -49,6 +49,21 @@ class QueryResultResponse(BaseModel):
     rows: list[dict[str, Any]]
 
 
+class ChartResponse(BaseModel):
+    version: Literal[1]
+    type: Literal["line", "bar", "area", "scatter", "pie", "donut"]
+    title: str
+    x: str
+    y: list[str]
+    series: str | None = None
+    x_kind: Literal["temporal", "quantitative", "nominal"]
+    trigger: Literal["explicit", "trend"]
+    requested_type: Literal["line", "bar", "area", "scatter", "pie", "donut"] | None = None
+    fallback_reason: str | None = None
+    truncated: bool = False
+    data: list[dict[str, Any]]
+
+
 class AskResponse(BaseModel):
     question: str
     sql: str | None
@@ -58,6 +73,7 @@ class AskResponse(BaseModel):
     validation_tables: list[str]
     dry_run: bool
     answer: str | None
+    chart: ChartResponse | None = None
     error: str | None
     prompt_log_paths: list[str]
     query_result: QueryResultResponse | None
@@ -237,56 +253,65 @@ async def ask_session(
     if not question:
         raise HTTPException(status_code=422, detail="question must not be empty")
 
-    session, messages = await _load_session_with_messages(request, session_id)
-    chat_history = _pipeline_history_from_messages(messages)
     pipeline = _get_pipeline(request)
+    chat_store = _get_chat_store(request)
     pipeline_lock: asyncio.Lock = request.app.state.pipeline_lock
 
     try:
+        # Keep load -> analysis -> persistence ordered so simultaneous follow-ups
+        # cannot both reuse the same stale session result.
         async with pipeline_lock:
+            session, messages = await _load_session_with_messages(request, session_id)
+            chat_history = _pipeline_history_from_messages(messages)
+            previous_result = _latest_assistant_result(messages)
             result = await run_in_threadpool(
                 pipeline.ask,
                 question,
                 dry_run=request_body.dry_run,
                 chat_history=chat_history,
+                previous_result=previous_result,
             )
+            result_payload = result.to_dict()
+            assistant_content = _assistant_content_from_result(result_payload)
+            user_message = await _run_chat_store(
+                request,
+                chat_store.add_message,
+                session_id=session_id,
+                role="user",
+                content=question,
+                dry_run=request_body.dry_run,
+            )
+            assistant_message = await _run_chat_store(
+                request,
+                chat_store.add_message,
+                session_id=session_id,
+                role="assistant",
+                content=assistant_content,
+                dry_run=request_body.dry_run,
+                metadata=result_payload,
+            )
+            if session.message_count == 0 and session.title == DEFAULT_SESSION_TITLE:
+                updated_session = await _run_chat_store(
+                    request,
+                    chat_store.update_session_title,
+                    session_id,
+                    make_session_title(question),
+                )
+                if updated_session is not None:
+                    session = updated_session
+            else:
+                latest_session = await _run_chat_store(
+                    request,
+                    chat_store.get_session,
+                    session_id,
+                )
+                if latest_session is not None:
+                    session = latest_session
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("Failed to answer session question")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    result_payload = result.to_dict()
-    assistant_content = _assistant_content_from_result(result_payload)
-    chat_store = _get_chat_store(request)
-    user_message = await _run_chat_store(
-        request,
-        chat_store.add_message,
-        session_id=session_id,
-        role="user",
-        content=question,
-        dry_run=request_body.dry_run,
-    )
-    assistant_message = await _run_chat_store(
-        request,
-        chat_store.add_message,
-        session_id=session_id,
-        role="assistant",
-        content=assistant_content,
-        dry_run=request_body.dry_run,
-        metadata=result_payload,
-    )
-    if session.message_count == 0 and session.title == DEFAULT_SESSION_TITLE:
-        updated_session = await _run_chat_store(
-            request,
-            chat_store.update_session_title,
-            session_id,
-            make_session_title(question),
-        )
-        if updated_session is not None:
-            session = updated_session
-    else:
-        latest_session = await _run_chat_store(request, chat_store.get_session, session_id)
-        if latest_session is not None:
-            session = latest_session
 
     return {
         "session": session.to_payload(),
@@ -350,8 +375,33 @@ def _pipeline_history_from_messages(messages: list[ChatMessage]) -> list[ChatTur
             sql = message.metadata.get("sql")
             if sql:
                 content = f"{content}\nSQL used for that answer:\n{sql}"
+            chart = message.metadata.get("chart")
+            if isinstance(chart, dict):
+                chart_type = str(chart.get("type") or "chart")
+                x_field = str(chart.get("x") or "").strip()
+                y_fields = chart.get("y") or []
+                if isinstance(y_fields, list):
+                    y_label = ", ".join(str(field) for field in y_fields[:4])
+                else:
+                    y_label = str(y_fields)
+                if x_field and y_label:
+                    content = (
+                        f"{content}\nVisualization shown: {chart_type} using "
+                        f"{x_field} and {y_label}."
+                    )
         history.append(ChatTurn(role=message.role, content=content))
     return history
+
+
+def _latest_assistant_result(messages: list[ChatMessage]) -> dict[str, Any] | None:
+    """Return immediate assistant metadata for result reuse or clarification intent."""
+
+    if not messages or messages[-1].role != "assistant":
+        return None
+    metadata = messages[-1].metadata
+    if isinstance(metadata, dict) and metadata:
+        return metadata
+    return None
 
 
 def _assistant_content_from_result(result_payload: dict[str, Any]) -> str:

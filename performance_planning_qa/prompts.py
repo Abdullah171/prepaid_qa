@@ -130,6 +130,12 @@ Rules:
   3. If any required metric, dimension, filter, categorical value, customer/account/line/package identifier, grouping grain, or time period is missing or ambiguous, ask for clarification instead of generating SQL.
 - When recent conversation is supplied, use it only to resolve references in the current question, such as "that", "same period", "break it down", or "compare with previous". The current question is still the task to answer.
 - If the current question is a follow-up, carry forward only details that were explicit in the recent conversation. Do not invent missing filters, time periods, metrics, or dimensions.
+- Treat requests for a chart, graph, plot, visual, diagram, or visualization as presentation instructions only. First generate the same complete analytical SQL you would generate if the visualization wording were removed. Do not return an image, chart markup, or plotting code.
+- Never drop an answer-relevant metric, dimension, comparison, filter, total, or supporting row; never change the analytical grain; and never add a chart-only aggregation merely to make the result easier to plot. The SQL result must remain sufficient for the best possible textual answer.
+- A metric, dimension, or time grain that the user explicitly asks to analyze remains part of the analytical question. For example, "monthly revenue trend" requires monthly rows because monthly is the requested analysis grain, while "revenue, shown as a line chart" does not gain a new time grain merely because a line chart was requested.
+- Use simple letter/number/underscore aliases for returned analytical dimensions and measures; do not put dots or bracket characters in aliases intended for chart selection.
+- For a daily, weekly, monthly, quarterly, or yearly trend, return an explicit ordered period column with a clear alias. If the range can cross calendar years, include the year in that period value (prefer a real period date or a label such as YYYY-MM) rather than returning only a month/week number that would repeat across years.
+- If a visualization request does not specify enough analytical scope (metric, grouping grain, filters, or bounded time period), ask for clarification under the same rules as a text-only analytical request.
 - When asking for clarification, set needs_clarification to true, clarifying_question to one concise question that lists all missing or ambiguous inputs, and direct_answer and sql to null.
 - Do not silently assume a date range, current month, current year, latest period, all history, all customers, all accounts, all lines, all packages, or a default top N unless the user explicitly asks for it.
 - Time guardrail: if the question is about sales, churn, revenue, active base, subscriptions, counts, totals, averages, movements, comparisons, trends, growth, seasonality, or any metric that can vary over time, require an explicit bounded date, month, year, date range, or clear relative period before generating SQL.
@@ -184,9 +190,39 @@ Format answers for readability using GitHub-flavored Markdown when useful:
 - For trends or time series, summarize the direction, notable peaks/dips, and relevant period-over-period changes when those values are present in the SQL result.
 - Keep formatting purposeful. Do not add decorative text, SQL, or implementation details.
 
-CRITICAL REQUIREMENT: Your ENTIRE response MUST be a single, valid JSON object. Do NOT wrap the JSON in markdown code blocks. Do NOT add conversational text before or after the JSON. You must include your markdown answer inside the JSON object string like this:
+OPTIONAL CHART PLAN:
+- In addition to the answer, return a chart plan only when the current user explicitly asks for a chart/graph/plot/visual/diagram/visualization, or when the current question genuinely asks for a trend, time series, monthly/weekly/daily/quarterly/yearly movement, or values over time.
+- A strong "do the same for ..." analytical continuation may also inherit the immediately preceding visualization, but only when the application explicitly supplies that visualization context. Always choose fields and a title from the new current result.
+- For an ordinary scalar, lookup, list, ranking, or grouped question that does not meet those conditions, set "chart" to null. A chart is optional presentation, not something to add to every answer.
+- The application validates the plan and copies all plotted values directly from the supplied result. You must select column names only; NEVER return chart values, data points, JavaScript, HTML, or plotting code.
+- "x" must be one exact column name from SQL result payload.columns.
+- "y" must be an array of one or more exact numeric column names from SQL result payload.columns.
+- "series" is either null or one exact categorical column name used to split/color a measure.
+- Never select row-level identifiers such as account numbers, access methods/MSISDNs, customer or subscription keys, phone numbers, or user identifiers for x, y, or series.
+- Allowed types are "line", "bar", "area", "scatter", "pie", and "donut". Honor an explicitly requested compatible type. Prefer line for an ordered time trend and bar for categorical comparisons. Use pie/donut only for non-negative parts or categories of one measure.
+- Line and area require at least two ordered x values. Scatter requires numeric x and y fields. Pie and donut require exactly one non-negative y field and series must be null.
+- Pie/donut categories must be unique, positive in total, and limited to a readable number of slices. Do not aggregate duplicate categories in the chart plan.
+- For an implicit trend request, select an actual returned time/period column as x. If the result has no such column or only one usable period, set "chart" to null.
+- Set "chart" to null when fewer than two useful plotted values are returned. Do not select row counters, identifiers, or technical metadata as measures unless the user explicitly asks for them.
+- Keep the title short and specific to the user's current question. Do not place factual values in the title.
+- If the returned rows cannot support a meaningful requested chart, set "chart" to null; never fabricate, aggregate, interpolate, or fill missing values.
+
+CRITICAL REQUIREMENT: Your ENTIRE response MUST be a single, valid JSON object. Do NOT wrap the JSON in markdown code blocks. Do NOT add conversational text before or after the JSON. Use this shape:
 {
-  "answer": "Direct answer. Markdown is allowed inside this string when it improves readability."
+  "answer": "Direct answer. Markdown is allowed inside this string when it improves readability.",
+  "chart": null
+}
+
+When a chart is appropriate, return the full object in this shape:
+{
+  "answer": "Direct answer and trend takeaway.",
+  "chart": {
+    "type": "line",
+    "title": "Monthly revenue trend",
+    "x": "EXACT_RESULT_COLUMN",
+    "y": ["EXACT_NUMERIC_RESULT_COLUMN"],
+    "series": null
+  }
 }
 """
 
@@ -201,6 +237,7 @@ Rules:
 - When recent conversation is supplied, use it only to resolve explicit follow-up references in the current question.
 - If the error shows that required user scope is missing, such as the exact metric, dimension, filter, date, month, year, or date range, do not guess. Return needs_clarification true, a concise clarifying_question, direct_answer null, and sql null.
 - Apply the same preflight and time guardrails as the SQL generation prompt. If repair would require assuming a date range, latest period, broad history window, ranking metric, grouping grain, categorical value, or selective filter, ask the user to clarify instead of repairing the SQL.
+- Preserve the analytical metric, grain, dimensions, filters, comparisons, and supporting information while repairing. Ignore presentation-only chart types when deciding the result shape. Return SQL only; never return plotting code or chart markup.
 - If the query cannot be repaired from the provided schema, return a direct_answer saying it cannot be answered from the provided database context, with needs_clarification false and sql null.
 - Do not introduce tables or columns outside the supplied schema.
 """
@@ -271,11 +308,15 @@ def build_answer_messages(
     sql: str,
     result_payload: dict[str, Any],
     chat_history: list[ChatTurn] | None = None,
+    chart_context: str | None = None,
 ) -> list[dict[str, str]]:
+    rendered_chart_context = chart_context or "none"
     user_prompt = f"""User question:
 {question}
 
 {_render_recent_conversation(chat_history)}
+
+Inherited visualization context: {rendered_chart_context}
 
 SQL executed:
 {sql}

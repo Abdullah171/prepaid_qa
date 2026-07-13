@@ -3,9 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+import logging
 from pathlib import Path
 from typing import Any
 
+from performance_planning_qa.charting import (
+    ALLOWED_CHART_TYPES,
+    ChartIntent,
+    ChartSpec,
+    build_chart_spec,
+    chart_output_suppressed,
+    detect_chart_intent,
+    is_anaphoric_chart_followup,
+    is_chart_only_followup,
+)
 from performance_planning_qa.config import AppSettings, load_settings
 from performance_planning_qa.context_loader import PromptContext, load_prompt_context
 from performance_planning_qa.database import DatabaseQueryError, QueryResult, TeradataClient
@@ -24,6 +35,9 @@ from performance_planning_qa.sql_safety import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(frozen=True)
 class GeneratedSQL:
     sql: str | None
@@ -39,6 +53,7 @@ class PipelineResult:
     validation_tables: tuple[str, ...] = ()
     query_result: QueryResult | None = None
     answer: str | None = None
+    chart: ChartSpec | None = None
     prompt_log_paths: tuple[Path, ...] = ()
     dry_run: bool = False
     error: str | None = None
@@ -57,6 +72,7 @@ class PipelineResult:
             "validation_tables": list(self.validation_tables),
             "dry_run": self.dry_run,
             "answer": self.answer,
+            "chart": self.chart.to_payload() if self.chart else None,
             "error": self.error,
             "prompt_log_paths": [str(path) for path in self.prompt_log_paths],
             "query_result": self.query_result.to_payload() if self.query_result else None,
@@ -118,9 +134,15 @@ class NL2SQLPipeline:
         *,
         dry_run: bool = False,
         chat_history: list[ChatTurn] | None = None,
+        previous_result: dict[str, Any] | None = None,
     ) -> PipelineResult:
         self._current_prompt_logs = []
         self._current_chat_history = chat_history or []
+        if not dry_run:
+            chart_followup = self._chart_followup_result(question, previous_result)
+            if chart_followup is not None:
+                return chart_followup
+
         generated = self.generate_sql(question, chat_history=self._current_chat_history)
         direct_result = self._direct_generated_result(
             question=question,
@@ -182,10 +204,31 @@ class NL2SQLPipeline:
                 phase="execution",
             )
 
+        inherited_intent, inherited_candidate, chart_context = (
+            self._inherited_chart_context(question, previous_result)
+        )
         answer_payload = self._answer_from_result(
             question,
             executed.validation.sql,
             executed.query_result,
+            chart_context=chart_context,
+        )
+        answer_candidate = answer_payload.get("chart")
+        if inherited_candidate is not None:
+            merged_candidate = (
+                dict(answer_candidate) if isinstance(answer_candidate, dict) else {}
+            )
+            # A strong "same" continuation keeps the preceding rendered type.
+            # Current explicit type requests never reach the inheritance path.
+            merged_candidate["type"] = inherited_candidate["type"]
+            chart_candidate: Any = merged_candidate
+        else:
+            chart_candidate = answer_candidate
+        chart = self._build_chart(
+            question,
+            executed.query_result,
+            candidate=chart_candidate,
+            inherited_intent=inherited_intent,
         )
         return PipelineResult(
             question=question,
@@ -193,12 +236,128 @@ class NL2SQLPipeline:
             validation_tables=executed.validation.table_references,
             query_result=executed.query_result,
             answer=str(answer_payload.get("answer") or "").strip(),
+            chart=chart,
             prompt_log_paths=tuple(self._current_prompt_logs),
             dry_run=False,
         )
 
     def close(self) -> None:
         self.db.close()
+
+    def _chart_followup_result(
+        self,
+        question: str,
+        previous_result: dict[str, Any] | None,
+    ) -> PipelineResult | None:
+        """Reuse the preceding rows for requests such as "make that a bar chart"."""
+
+        if not is_chart_only_followup(question) or not isinstance(previous_result, dict):
+            return None
+
+        query_result = _query_result_from_payload(previous_result.get("query_result"))
+        if query_result is None:
+            return None
+
+        previous_chart = previous_result.get("chart")
+        candidate = previous_chart if isinstance(previous_chart, dict) else None
+        chart = self._build_chart(question, query_result, candidate=candidate)
+        if chart is None:
+            return None
+
+        sql = _optional_str(previous_result.get("sql"))
+        generated = GeneratedSQL(sql=sql)
+        raw_validation_tables = previous_result.get("validation_tables")
+        if not isinstance(raw_validation_tables, (list, tuple)):
+            raw_validation_tables = []
+        validation_tables = tuple(
+            str(table)
+            for table in raw_validation_tables
+            if str(table).strip()
+        )
+        return PipelineResult(
+            question=question,
+            generated_sql=generated,
+            validation_tables=validation_tables,
+            query_result=query_result,
+            answer=f"Here’s the previous result as a {chart.type} chart.",
+            chart=chart,
+            prompt_log_paths=tuple(self._current_prompt_logs),
+            dry_run=False,
+        )
+
+    def _build_chart(
+        self,
+        question: str,
+        result: QueryResult,
+        *,
+        candidate: Any,
+        inherited_intent: ChartIntent | None = None,
+    ) -> ChartSpec | None:
+        """Validate an optional model plan; chart failure must not fail the answer."""
+
+        try:
+            if inherited_intent is not None:
+                return build_chart_spec(
+                    question,
+                    result,
+                    candidate=candidate,
+                    inherited_intent=inherited_intent,
+                )
+            return build_chart_spec(question, result, candidate=candidate)
+        except Exception:
+            logger.exception("Optional chart generation failed")
+            return None
+
+    def _inherited_chart_context(
+        self,
+        question: str,
+        previous_result: dict[str, Any] | None,
+    ) -> tuple[ChartIntent | None, dict[str, str] | None, str | None]:
+        """Carry chart intent across restated analyses and clarification replies."""
+
+        if not isinstance(previous_result, dict):
+            return None, None, None
+
+        if is_anaphoric_chart_followup(question):
+            previous_chart = previous_result.get("chart")
+            if isinstance(previous_chart, dict):
+                chart_type = str(previous_chart.get("type") or "").strip().lower()
+                if chart_type in ALLOWED_CHART_TYPES:
+                    raw_trigger = str(
+                        previous_chart.get("trigger") or "explicit"
+                    ).strip().lower()
+                    trigger = "trend" if raw_trigger == "trend" else "explicit"
+                    intent = ChartIntent(trigger=trigger)
+                    candidate = {"type": chart_type}
+                    context = (
+                        "The current question is a strong analytical continuation "
+                        f"of the immediately preceding {chart_type} chart. Return a "
+                        "chart plan for the new result when compatible, using only "
+                        "its new fields and a new title."
+                    )
+                    return intent, candidate, context
+
+        if (
+            previous_result.get("needs_clarification") is True
+            and detect_chart_intent(question) is None
+            and not chart_output_suppressed(question)
+        ):
+            original_question = str(previous_result.get("question") or "").strip()
+            original_intent = detect_chart_intent(original_question)
+            if original_intent is not None:
+                candidate = (
+                    {"type": original_intent.requested_type}
+                    if original_intent.requested_type is not None
+                    else None
+                )
+                context = (
+                    "The current answer resolves a clarification requested for the "
+                    "immediately preceding visualization question. Return a chart "
+                    "plan for the new result using only its fields and a new title."
+                )
+                return original_intent, candidate, context
+
+        return None, None, None
 
     def _validate_or_repair(self, question: str, generated: GeneratedSQL) -> SQLPreparationResult:
         attempts = max(self.settings.sql_repair_attempts, 0)
@@ -358,7 +517,14 @@ class NL2SQLPipeline:
         repaired = _generated_sql_from_payload(payload)
         return repaired
 
-    def _answer_from_result(self, question: str, sql: str, result: QueryResult) -> dict[str, Any]:
+    def _answer_from_result(
+        self,
+        question: str,
+        sql: str,
+        result: QueryResult,
+        *,
+        chart_context: str | None = None,
+    ) -> dict[str, Any]:
         payload = result.to_payload()
 
         # print("Sql query result. = ", payload)
@@ -369,6 +535,7 @@ class NL2SQLPipeline:
                 sql=sql,
                 result_payload=payload,
                 chat_history=self._current_chat_history,
+                chart_context=chart_context,
             ),
             phase="answer_generation",
             temperature=self.settings.llm.answer_temperature,
@@ -408,6 +575,40 @@ def _optional_str(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _query_result_from_payload(value: Any) -> QueryResult | None:
+    """Rehydrate persisted rows for a chart-only follow-up without re-querying."""
+
+    if not isinstance(value, dict):
+        return None
+    raw_rows = value.get("rows")
+    if not isinstance(raw_rows, list):
+        return None
+    rows = [dict(row) for row in raw_rows if isinstance(row, dict)]
+    if not rows:
+        return None
+
+    raw_columns = value.get("columns")
+    if isinstance(raw_columns, list):
+        columns = [str(column) for column in raw_columns if str(column).strip()]
+    else:
+        columns = []
+    if not columns:
+        columns = list(dict.fromkeys(str(key) for row in rows for key in row))
+    if not columns:
+        return None
+
+    try:
+        elapsed_ms = max(0, int(value.get("elapsed_ms") or 0))
+    except (TypeError, ValueError):
+        elapsed_ms = 0
+    return QueryResult(
+        columns=columns,
+        rows=rows,
+        row_count=len(rows),
+        elapsed_ms=elapsed_ms,
+    )
 
 
 def _has_direct_user_response(generated: GeneratedSQL) -> bool:
