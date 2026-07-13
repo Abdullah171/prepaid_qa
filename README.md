@@ -142,6 +142,12 @@ supported type with a visible explanation instead of being silently treated as
 supported. A current instruction to use only text, prose, or a table suppresses
 the chart even when the question otherwise contains trend wording.
 
+Answer formatting is independent of chart generation. The assistant can include
+a compact Markdown table whenever multi-row or multi-metric data is easier to
+compare in columns, including ordinary non-chart questions. Large results are
+summarized into a focused table instead of being dumped in full, while simple
+scalar answers remain concise prose.
+
 The language model may select returned column names, but it cannot provide chart
 values. The backend validates those fields and copies every plotted value from
 the returned data into a versioned chart payload. The payload is saved in the
