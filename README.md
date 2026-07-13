@@ -7,16 +7,16 @@ Natural-language to Teradata SQL and analytical Q&A for the four performance pla
 The app loads:
 
 - Teradata credentials from `.env`
-- STC MiniMax OpenAI-compatible endpoint settings from `.env`
+- STC LiteLLM OpenAI-compatible endpoint settings from `.env`
 - `performance.sql` as the canonical schema and business metadata
 - all raw JSON and CSV files in `sample_data/` as prompt context
 
 For each user question it:
 
-1. Sends the schema and raw samples to MiniMax to generate Teradata SQL.
+1. Sends the schema and raw samples to GLM through LiteLLM to generate Teradata SQL.
 2. Validates the SQL is read-only and references only the allowed tables.
 3. Executes the SQL through `teradataml`.
-4. Sends the query result back to MiniMax to produce a concise analytical answer.
+4. Sends the query result back to GLM through LiteLLM to produce a concise analytical answer.
 5. Conditionally builds a validated chart from those returned rows for explicit
    visualization requests and time-trend questions.
 
@@ -33,9 +33,16 @@ the prior conversation.
 Expected `.env` keys:
 
 ```env
-ANALYSIS_PROVIDER="stc/minmax2.7"
-STC_MINIMAX_ENDPOINT="https://.../v1"
-DEFAULT_STC_MINIMAX_MODEL="MiniMaxAI/MiniMax-M2.7"
+LLM_PROVIDER="glm" # Choose "glm" or "minmax"
+
+GLM_ENDPOINT="https://litellm.example/chat/completions"
+GLM_MODEL="GLM-5.2"
+GLM_API_KEY="..."
+
+MINIMAX_ENDPOINT="https://minimax.example/v1"
+MINIMAX_MODEL="MiniMaxAI/MiniMax-M2.7"
+MINIMAX_API_KEY="not-needed"
+ASR_ENDPOINT="https://..."
 
 TERADATA_HOST_NAME="..."
 TERADATA_USER="..."
@@ -55,10 +62,12 @@ Password="pkgbench"
 Optional keys:
 
 ```env
-STC_MINIMAX_API_KEY="not-needed"
-STC_MINIMAX_VERIFY_SSL=false
-STC_MINIMAX_TIMEOUT_SECONDS=120
-STC_MINIMAX_MAX_TOKENS=4096
+LLM_VERIFY_SSL=false
+LLM_TIMEOUT_SECONDS=120
+LLM_MAX_TOKENS=8096
+ASR_VERIFY_SSL=false
+ASR_TIMEOUT_SECONDS=120
+ASR_MAX_AUDIO_BYTES=26214400
 TERADATA_DATABASE="DP_EDW_PPF"
 TERADATA_LOGMECH="LDAP"
 SQL_REPAIR_ATTEMPTS=1
@@ -112,6 +121,10 @@ curl http://127.0.0.1:8000/health
 
 API docs are available at `http://127.0.0.1:8000/docs`.
 
+The `POST /transcribe` endpoint accepts a WAV file in the multipart field
+`audio` and proxies it to `${ASR_ENDPOINT}/transcribe`. The service URL remains
+server-side; the browser only calls the local FastAPI API.
+
 ## Streamlit Frontend
 
 Start the API, then run:
@@ -122,6 +135,12 @@ uv run streamlit run frontend/app.py
 
 Open `http://127.0.0.1:8501`. The sidebar can create, select, and delete chat
 sessions. Deleting a session removes it from PostgreSQL through the FastAPI API.
+
+The native chat composer has microphone and Send controls together. A submitted
+recording is sent only to ASR, then its transcription is placed back into the
+composer for review and editing. Selecting Send again submits the reviewed text
+for analysis; recording audio never goes directly to the LLM. When the frontend
+is not served from localhost, it must use HTTPS for browser microphone permission.
 
 ### Conditional Charts
 
@@ -260,7 +279,7 @@ Prompt logging is currently disabled in the pipeline and CLI. The logger code re
 - `performance_planning_qa/config.py`: `.env` and runtime settings.
 - `performance_planning_qa/context_loader.py`: loads `performance.sql` and all raw sample files.
 - `performance_planning_qa/prompts.py`: SQL-generation, repair, and answer prompts.
-- `performance_planning_qa/llm.py`: STC MiniMax OpenAI-compatible client.
+- `performance_planning_qa/llm.py`: STC LiteLLM OpenAI-compatible client.
 - `performance_planning_qa/prompt_logger.py`: optional prompt logging helper, currently disabled in the pipeline.
 - `performance_planning_qa/sql_safety.py`: read-only SQL validation and table allow-list.
 - `performance_planning_qa/database.py`: Teradata connection and query execution via `teradataml`.
@@ -270,7 +289,7 @@ Prompt logging is currently disabled in the pipeline and CLI. The logger code re
 
 ## Local Tests
 
-These tests validate local context loading and SQL guardrails without connecting to MiniMax or Teradata:
+These tests validate local context loading and SQL guardrails without connecting to LiteLLM or Teradata:
 
 ```bash
 python3 -m unittest discover -s tests

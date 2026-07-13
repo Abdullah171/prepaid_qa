@@ -1,4 +1,4 @@
-"""OpenAI-compatible client wrapper for STC MiniMax."""
+"""OpenAI-compatible client wrapper for the STC LiteLLM gateway."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from performance_planning_qa.config import LLMSettings
 ChatMessage = dict[str, str]
 
 
-class MiniMaxClient:
+class LiteLLMClient:
     def __init__(self, settings: LLMSettings):
         settings.validate()
         self.settings = settings
@@ -42,13 +42,21 @@ class MiniMaxClient:
         return self._client
 
     def complete(self, messages: list[ChatMessage], *, temperature: float) -> str:
-        response = self.client.chat.completions.create(
+        stream = self.client.chat.completions.create(
             model=self.settings.model,
             messages=messages,
             temperature=temperature,
             max_tokens=self.settings.max_tokens,
+            stream=True,
         )
-        content = response.choices[0].message.content
+        parts: list[str] = []
+        for chunk in stream:
+            if not chunk.choices:
+                continue
+            content = chunk.choices[0].delta.content
+            if content:
+                parts.append(content)
+        content = "".join(parts)
         if not content:
             raise RuntimeError("LLM returned an empty response.")
         return content.strip()

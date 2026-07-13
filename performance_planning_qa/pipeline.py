@@ -20,7 +20,7 @@ from performance_planning_qa.charting import (
 from performance_planning_qa.config import AppSettings, load_settings
 from performance_planning_qa.context_loader import PromptContext, load_prompt_context
 from performance_planning_qa.database import DatabaseQueryError, QueryResult, TeradataClient
-from performance_planning_qa.llm import MiniMaxClient
+from performance_planning_qa.llm import LiteLLMClient
 from performance_planning_qa.prompt_logger import PromptLogger
 from performance_planning_qa.prompts import (
     ChatTurn,
@@ -99,13 +99,13 @@ class NL2SQLPipeline:
         self,
         settings: AppSettings,
         *,
-        llm_client: MiniMaxClient | None = None,
+        llm_client: LiteLLMClient | None = None,
         db_client: TeradataClient | None = None,
         context: PromptContext | None = None,
     ):
         self.settings = settings
         self.context = context or load_prompt_context(settings.schema_path, settings.sample_data_dir)
-        self.llm = llm_client or MiniMaxClient(settings.llm)
+        self.llm = llm_client or LiteLLMClient(settings.llm)
         self.db = db_client or TeradataClient(settings.teradata)
         self.prompt_logger = PromptLogger(settings.prompt_log, settings.llm)
         self._current_prompt_logs: list[Path] = []

@@ -11,6 +11,8 @@ dependencies = [
     "openai",
     "psycopg[binary]",
     "python-dotenv",
+    "python-multipart",
+    "requests",
     "streamlit",
     "teradataml",
     "uvicorn[standard]",

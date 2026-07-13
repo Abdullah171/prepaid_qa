@@ -191,8 +191,8 @@ div[data-testid="stChatMessage"] {
 }
 
 div[data-testid="stChatInput"] {
-  border-top: 1px solid var(--ppqa-border);
-  padding-top: 0.6rem;
+  border-top: 0;
+  padding-top: 0.45rem;
 }
 
 .stButton > button {

@@ -54,7 +54,7 @@ def main() -> None:
     else:
         _render_empty_state()
 
-    prompt = st.chat_input("Ask a performance planning question")
+    prompt = _render_question_composer(client)
     if prompt:
         _submit_prompt(client, prompt)
 
@@ -67,6 +67,9 @@ def _init_state() -> None:
     st.session_state.setdefault("active_session_id", None)
     st.session_state.setdefault("dry_run", False)
     st.session_state.setdefault("show_source", False)
+    st.session_state.setdefault("composer_version", 0)
+    st.session_state.setdefault("voice_transcription_error", None)
+    st.session_state.setdefault("voice_transcription_ready", False)
 
 
 def _sidebar() -> ApiClient:
@@ -540,6 +543,54 @@ def _vega_x_kind(
         if value not in ordered_values:
             ordered_values.append(value)
     return "ordinal", ordered_values
+
+
+def _render_question_composer(client: ApiClient) -> str | None:
+    transcription_error = st.session_state.voice_transcription_error
+    if transcription_error:
+        st.error(transcription_error)
+    elif st.session_state.voice_transcription_ready:
+        st.caption("Transcription ready — review or edit it, then select Send.")
+
+    composer_key = f"question_composer_{st.session_state.composer_version}"
+    submission = st.chat_input(
+        "Ask a performance planning question",
+        key=composer_key,
+        accept_audio=True,
+        audio_sample_rate=16_000,
+    )
+    if submission is None:
+        return None
+
+    typed_text = submission.text.strip()
+    recording = submission.audio
+    if recording is None:
+        st.session_state.voice_transcription_error = None
+        st.session_state.voice_transcription_ready = False
+        return typed_text or None
+
+    with st.spinner("Transcribing recording"):
+        try:
+            transcription = client.transcribe_audio(recording.getvalue())
+        except ApiError as exc:
+            _reset_composer(typed_text)
+            st.session_state.voice_transcription_error = str(exc)
+            st.session_state.voice_transcription_ready = False
+            st.rerun()
+            return None
+
+    draft = " ".join(part for part in (typed_text, transcription) if part)
+    _reset_composer(draft)
+    st.session_state.voice_transcription_error = None
+    st.session_state.voice_transcription_ready = True
+    st.rerun()
+    return None
+
+
+def _reset_composer(draft: str = "") -> None:
+    st.session_state.composer_version += 1
+    next_key = f"question_composer_{st.session_state.composer_version}"
+    st.session_state[next_key] = draft
 
 
 def _submit_prompt(client: ApiClient, prompt: str) -> None:

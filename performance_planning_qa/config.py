@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -94,11 +95,16 @@ class LLMSettings:
         return endpoint
 
     def validate(self) -> None:
+        env_prefix = {"glm": "GLM", "minmax": "MINIMAX"}.get(
+            self.provider, self.provider.upper()
+        )
         missing = []
         if not self.endpoint:
-            missing.append("STC_MINIMAX_ENDPOINT")
+            missing.append(f"{env_prefix}_ENDPOINT")
         if not self.model:
-            missing.append("DEFAULT_STC_MINIMAX_MODEL")
+            missing.append(f"{env_prefix}_MODEL")
+        if not self.api_key:
+            missing.append(f"{env_prefix}_API_KEY")
         if missing:
             raise ValueError(f"Missing LLM configuration: {', '.join(missing)}")
 
@@ -129,6 +135,32 @@ class TeradataSettings:
 class PromptLogSettings:
     enabled: bool
     directory: Path
+
+
+@dataclass(frozen=True)
+class ASRSettings:
+    endpoint: str
+    verify_ssl: bool
+    timeout_seconds: float
+    max_audio_bytes: int
+
+    @property
+    def transcribe_url(self) -> str:
+        endpoint = self.endpoint.rstrip("/")
+        if endpoint.endswith("/transcribe"):
+            return endpoint
+        return f"{endpoint}/transcribe"
+
+    def validate(self) -> None:
+        if not self.endpoint:
+            raise ValueError("Missing ASR configuration: ASR_ENDPOINT")
+        parsed = urlsplit(self.endpoint)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("ASR_ENDPOINT must be an absolute HTTP(S) URL")
+        if self.timeout_seconds <= 0:
+            raise ValueError("ASR_TIMEOUT_SECONDS must be greater than zero")
+        if self.max_audio_bytes <= 0:
+            raise ValueError("ASR_MAX_AUDIO_BYTES must be greater than zero")
 
 
 @dataclass(frozen=True)
@@ -163,6 +195,7 @@ class AppSettings:
     schema_path: Path
     sample_data_dir: Path
     llm: LLMSettings
+    asr: ASRSettings
     teradata: TeradataSettings
     chat_storage: ChatStorageSettings
     sql_repair_attempts: int
@@ -176,16 +209,28 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
     schema_path = Path(_get_any("SCHEMA_PATH", default=str(root / "performance.sql")) or "")
     sample_dir = Path(_get_any("SAMPLE_DATA_DIR", default=str(root / "sample_data")) or "")
 
+    llm_provider = (_get_any("LLM_PROVIDER", default="glm") or "").lower()
+    if llm_provider not in {"glm", "minmax"}:
+        raise ValueError("LLM_PROVIDER must be either 'glm' or 'minmax'")
+    llm_prefix = {"glm": "GLM", "minmax": "MINIMAX"}[llm_provider]
+
     llm = LLMSettings(
-        provider=_get_any("ANALYSIS_PROVIDER", default="stc/minimax2.7") or "",
-        endpoint=_get_any("STC_MINIMAX_ENDPOINT", "MINIMAX_ENDPOINT", default="") or "",
-        model=_get_any("DEFAULT_STC_MINIMAX_MODEL", "STC_MINIMAX_MODEL", default="") or "",
-        api_key=_get_any("STC_MINIMAX_API_KEY", "MINIMAX_API_KEY", default="not-needed") or "not-needed",
-        verify_ssl=_get_bool("STC_MINIMAX_VERIFY_SSL", default=False),
-        timeout_seconds=_get_float("STC_MINIMAX_TIMEOUT_SECONDS", default=120.0),
+        provider=llm_provider,
+        endpoint=_get_any(f"{llm_prefix}_ENDPOINT", default="") or "",
+        model=_get_any(f"{llm_prefix}_MODEL", default="") or "",
+        api_key=_get_any(f"{llm_prefix}_API_KEY", default="") or "",
+        verify_ssl=_get_bool("LLM_VERIFY_SSL", default=False),
+        timeout_seconds=_get_float("LLM_TIMEOUT_SECONDS", default=120.0),
         sql_temperature=_get_float("NL2SQL_TEMPERATURE", default=0.0),
         answer_temperature=_get_float("ANSWER_TEMPERATURE", default=0.2),
-        max_tokens=_get_int("STC_MINIMAX_MAX_TOKENS", default=8096),
+        max_tokens=_get_int("LLM_MAX_TOKENS", default=8096),
+    )
+
+    asr = ASRSettings(
+        endpoint=_get_any("ASR_ENDPOINT", default="") or "",
+        verify_ssl=_get_bool("ASR_VERIFY_SSL", default=False),
+        timeout_seconds=_get_float("ASR_TIMEOUT_SECONDS", default=120.0),
+        max_audio_bytes=_get_int("ASR_MAX_AUDIO_BYTES", default=25 * 1024 * 1024),
     )
 
     teradata = TeradataSettings(
@@ -229,6 +274,7 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
         schema_path=schema_path,
         sample_data_dir=sample_dir,
         llm=llm,
+        asr=asr,
         teradata=teradata,
         chat_storage=chat_storage,
         sql_repair_attempts=_get_int("SQL_REPAIR_ATTEMPTS", default=1),

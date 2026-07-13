@@ -45,12 +45,24 @@ class ApiClient:
             json={"question": question, "dry_run": dry_run},
         )
 
+    def transcribe_audio(self, audio: bytes) -> str:
+        payload = self._request(
+            "POST",
+            "/transcribe",
+            files={"audio": ("recording.wav", audio, "audio/wav")},
+        )
+        text = payload.get("text") if isinstance(payload, dict) else None
+        if not isinstance(text, str) or not text.strip():
+            raise ApiError("The API returned an empty transcription")
+        return text.strip()
+
     def _request(
         self,
         method: str,
         path: str,
         *,
         json: dict[str, Any] | None = None,
+        files: dict[str, tuple[str, bytes, str]] | None = None,
         expect_json: bool = True,
     ):
         url = f"{self.base_url.rstrip('/')}{path}"
@@ -59,6 +71,7 @@ class ApiClient:
                 method,
                 url,
                 json=json,
+                files=files,
                 timeout=self.timeout_seconds,
             )
         except requests.RequestException as exc:
