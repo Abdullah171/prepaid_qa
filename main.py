@@ -135,7 +135,7 @@ async def lifespan(app: FastAPI):
     settings = load_settings()
     app.state.pipeline = NL2SQLPipeline(settings)
     app.state.pipeline_lock = asyncio.Lock()
-    app.state.chat_store = ChatStore(settings.chat_storage)
+    app.state.chat_store = ChatStore(settings.chat_storage, settings.teradata)
     app.state.chat_store_lock = asyncio.Lock()
     await run_in_threadpool(app.state.chat_store.ensure_schema)
     try:

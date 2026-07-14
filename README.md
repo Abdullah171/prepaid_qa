@@ -24,9 +24,9 @@ Structured LLM responses are parsed as strict JSON first. If parsing fails, the
 app uses `json-repair` for common issues such as unquoted keys, single quotes,
 trailing commas, surrounding prose, or an unterminated final object.
 
-The FastAPI app also supports persisted chat sessions backed by local PostgreSQL. Session
-history is passed back into the SQL and answer prompts so follow-up questions can refer to
-the prior conversation.
+The FastAPI app also supports persisted chat sessions backed by either local PostgreSQL
+or Teradata. Session history is passed back into the SQL and answer prompts so follow-up
+questions can refer to the prior conversation.
 
 ## Environment
 
@@ -48,7 +48,14 @@ TERADATA_USER="..."
 TERADATA_PASSWORD="..."
 ```
 
-Local chat memory uses the PostgreSQL credentials in `.env`:
+Choose the chat-history database and Teradata database in `.env`:
+
+```env
+chat_db="local" # Choose "local" or "teradata"
+CHAT_TERADATA_DATABASE="DP_EDW_PPF_STG"
+```
+
+The `local` option uses the PostgreSQL credentials in `.env`:
 
 ```env
 Host="localhost"
@@ -70,6 +77,7 @@ SQL_REPAIR_ATTEMPTS=1
 LLM_PROMPT_LOG_ENABLED=false
 LLM_PROMPT_LOG_DIR="logs/llm_prompts"
 CHAT_DB_SCHEMA_PATH="sql/chat_memory_schema.sql"
+CHAT_DB_LOCAL_SCHEMA_PATH="sql/chat_memory_schema_postgres.sql"
 PPQA_API_BASE_URL="http://127.0.0.1:8000"
 ```
 
@@ -126,7 +134,8 @@ uv run streamlit run frontend/app.py
 ```
 
 Open `http://127.0.0.1:8501`. The sidebar can create, select, and delete chat
-sessions. Deleting a session removes it from PostgreSQL through the FastAPI API.
+sessions. Deleting a session removes it from the selected chat database through the
+FastAPI API.
 
 ### Conditional Charts
 
@@ -203,20 +212,23 @@ monthly points remain readable.
 
 ## Chat Memory Schema
 
-The chat tables are defined in `sql/chat_memory_schema.sql`:
+The Teradata chat tables are defined in `sql/chat_memory_schema.sql`:
 
-- `public.ppqa_chat_sessions`: session title and timestamps.
-- `public.ppqa_chat_messages`: user and assistant messages, dry-run flag, and JSONB
-  metadata containing SQL/result details for assistant responses.
+- `DP_EDW_PPF_STG.SC_PPQA_CHAT_SESSIONS`: session title and timestamps.
+- `DP_EDW_PPF_STG.SC_PPQA_CHAT_MESSAGES`: user and assistant messages, dry-run flag,
+  and JSON metadata containing SQL/result details for assistant responses.
 
-Apply the schema manually when needed:
+Run that file with your Teradata SQL client before setting `chat_db="teradata"`.
+The PostgreSQL version is in `sql/chat_memory_schema_postgres.sql` and can be applied
+manually when needed:
 
 ```bash
 PGPASSWORD=pkgbench psql -h localhost -p 5433 -U pkgbench -d pkgbench \
-  -f sql/chat_memory_schema.sql
+  -f sql/chat_memory_schema_postgres.sql
 ```
 
-The API also runs this schema file at startup with `CREATE TABLE IF NOT EXISTS`.
+For local storage, the API also runs the PostgreSQL schema at startup with
+`CREATE TABLE IF NOT EXISTS`. For Teradata, startup verifies that both tables exist.
 
 ## Session API
 

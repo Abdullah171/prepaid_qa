@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 from pathlib import Path
+import re
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -138,6 +139,8 @@ class PromptLogSettings:
 
 @dataclass(frozen=True)
 class ChatStorageSettings:
+    backend: str
+    teradata_database: str
     host: str
     port: int
     database: str
@@ -145,8 +148,20 @@ class ChatStorageSettings:
     password: str
     sslmode: str
     schema_path: Path
+    local_schema_path: Path
 
     def validate(self) -> None:
+        if self.backend not in {"local", "teradata"}:
+            raise ValueError("chat_db must be either 'local' or 'teradata'")
+        if self.backend == "teradata":
+            if not self.teradata_database:
+                raise ValueError("CHAT_TERADATA_DATABASE must not be empty")
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_$#]*", self.teradata_database):
+                raise ValueError("CHAT_TERADATA_DATABASE must be a valid Teradata identifier")
+            if not self.schema_path.exists():
+                raise ValueError(f"Teradata chat schema file does not exist: {self.schema_path}")
+            return
+
         missing = []
         if not self.host:
             missing.append("CHAT_DB_HOST or Host")
@@ -158,8 +173,10 @@ class ChatStorageSettings:
             missing.append("CHAT_DB_PASSWORD or Password")
         if missing:
             raise ValueError(f"Missing chat storage configuration: {', '.join(missing)}")
-        if not self.schema_path.exists():
-            raise ValueError(f"Chat memory schema file does not exist: {self.schema_path}")
+        if not self.local_schema_path.exists():
+            raise ValueError(
+                f"PostgreSQL chat schema file does not exist: {self.local_schema_path}"
+            )
 
 
 @dataclass(frozen=True)
@@ -214,7 +231,26 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
     if not chat_schema_path.is_absolute():
         chat_schema_path = root / chat_schema_path
 
+    local_chat_schema_path = Path(
+        _get_any(
+            "CHAT_DB_LOCAL_SCHEMA_PATH",
+            default=str(root / "sql" / "chat_memory_schema_postgres.sql"),
+        )
+        or ""
+    )
+    if not local_chat_schema_path.is_absolute():
+        local_chat_schema_path = root / local_chat_schema_path
+
+    chat_backend = (_get_any("chat_db", "CHAT_DB", default="local") or "").lower()
+    if chat_backend not in {"local", "teradata"}:
+        raise ValueError("chat_db must be either 'local' or 'teradata'")
+
     chat_storage = ChatStorageSettings(
+        backend=chat_backend,
+        teradata_database=_get_any(
+            "CHAT_TERADATA_DATABASE", default="DP_EDW_PPF_STG"
+        )
+        or "",
         host=_get_any("CHAT_DB_HOST", "POSTGRES_HOST", "PGHOST", "Host", default="localhost")
         or "",
         port=_get_int(_first_existing_env("CHAT_DB_PORT", "POSTGRES_PORT", "PGPORT", "Port"), 5432),
@@ -226,6 +262,7 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
         or "",
         sslmode=_get_any("CHAT_DB_SSLMODE", "PGSSLMODE", default="disable") or "disable",
         schema_path=chat_schema_path,
+        local_schema_path=local_chat_schema_path,
     )
 
     prompt_log_dir = Path(

@@ -8,7 +8,7 @@ import json
 from typing import Any
 from uuid import uuid4
 
-from performance_planning_qa.config import ChatStorageSettings
+from performance_planning_qa.config import ChatStorageSettings, TeradataSettings
 from performance_planning_qa.database import to_jsonable
 
 
@@ -56,15 +56,49 @@ class ChatMessage:
 
 
 class ChatStore:
-    def __init__(self, settings: ChatStorageSettings):
+    """Persist chat history in local PostgreSQL or Teradata."""
+
+    def __init__(
+        self,
+        settings: ChatStorageSettings,
+        teradata_settings: TeradataSettings | None = None,
+    ):
         self.settings = settings
+        self.teradata_settings = teradata_settings
         self._connection = None
 
+    @property
+    def is_teradata(self) -> bool:
+        return self.settings.backend == "teradata"
+
+    @property
+    def sessions_table(self) -> str:
+        if self.is_teradata:
+            return f"{self.settings.teradata_database}.SC_PPQA_CHAT_SESSIONS"
+        return "public.SC_PPQA_CHAT_SESSIONS"
+
+    @property
+    def messages_table(self) -> str:
+        if self.is_teradata:
+            return f"{self.settings.teradata_database}.SC_PPQA_CHAT_MESSAGES"
+        return "public.SC_PPQA_CHAT_MESSAGES"
+
+    @property
+    def placeholder(self) -> str:
+        return "?" if self.is_teradata else "%s"
+
     def connect(self):
-        if self._connection is not None and not self._connection.closed:
+        if self._connection is not None:
             return self._connection
 
         self.settings.validate()
+        if self.is_teradata:
+            self._connection = self._connect_teradata()
+        else:
+            self._connection = self._connect_postgres()
+        return self._connection
+
+    def _connect_postgres(self):
         try:
             import psycopg
             from psycopg.rows import dict_row
@@ -73,7 +107,7 @@ class ChatStore:
                 "Missing PostgreSQL dependency. Install project dependencies with `uv sync`."
             ) from exc
 
-        self._connection = psycopg.connect(
+        connection = psycopg.connect(
             host=self.settings.host,
             port=self.settings.port,
             dbname=self.settings.database,
@@ -82,8 +116,34 @@ class ChatStore:
             sslmode=self.settings.sslmode,
             row_factory=dict_row,
         )
-        self._connection.autocommit = True
-        return self._connection
+        connection.autocommit = True
+        return connection
+
+    def _connect_teradata(self):
+        if self.teradata_settings is None:
+            raise ChatStoreError("Teradata settings are required when chat_db=teradata")
+        self.teradata_settings.validate()
+        try:
+            import teradatasql
+        except ImportError as exc:
+            raise ChatStoreError(
+                "Missing Teradata dependency. Install project dependencies with `uv sync`."
+            ) from exc
+
+        kwargs: dict[str, Any] = {
+            "host": self.teradata_settings.host,
+            "user": self.teradata_settings.username,
+            "password": self.teradata_settings.password,
+            "database": self.settings.teradata_database,
+        }
+        if self.teradata_settings.logmech:
+            kwargs["logmech"] = self.teradata_settings.logmech
+        if self.teradata_settings.logdata:
+            kwargs["logdata"] = self.teradata_settings.logdata
+        try:
+            return teradatasql.connect(**kwargs)
+        except Exception as exc:
+            raise ChatStoreError(f"Failed to connect chat storage to Teradata: {exc}") from exc
 
     def close(self) -> None:
         if self._connection is None:
@@ -92,52 +152,64 @@ class ChatStore:
         self._connection = None
 
     def ensure_schema(self) -> None:
-        schema_sql = self.settings.schema_path.read_text(encoding="utf-8")
+        if self.is_teradata:
+            try:
+                self._fetch_all(f"SELECT TOP 1 id FROM {self.sessions_table}")
+                self._fetch_all(f"SELECT TOP 1 id FROM {self.messages_table}")
+            except Exception as exc:
+                raise ChatStoreError(
+                    "Teradata chat tables are unavailable. Run sql/chat_memory_schema.sql "
+                    f"in {self.settings.teradata_database}."
+                ) from exc
+            return
+
+        schema_sql = self.settings.local_schema_path.read_text(encoding="utf-8")
         with self.connect().cursor() as cursor:
             cursor.execute(schema_sql)
 
     def create_session(self, title: str | None = None) -> ChatSession:
         session_id = str(uuid4())
         cleaned_title = _normalize_title(title) or DEFAULT_SESSION_TITLE
-        row = self._fetch_one(
-            """
-            INSERT INTO public.ppqa_chat_sessions (id, title)
-            VALUES (%s, %s)
-            RETURNING id::text, title, created_at, updated_at, 0::int AS message_count
-            """,
+        p = self.placeholder
+        self._execute_write(
+            f"INSERT INTO {self.sessions_table} (id, title) VALUES ({p}, {p})",
             (session_id, cleaned_title),
         )
-        return _session_from_row(row)
+        session = self.get_session(session_id)
+        if session is None:
+            raise ChatStoreError("The new chat session could not be read after insertion")
+        return session
 
     def list_sessions(self) -> list[ChatSession]:
         rows = self._fetch_all(
-            """
+            f"""
             SELECT
-                s.id::text,
+                s.id,
                 s.title,
                 s.created_at,
                 s.updated_at,
-                COUNT(m.id)::int AS message_count
-            FROM public.ppqa_chat_sessions AS s
-            LEFT JOIN public.ppqa_chat_messages AS m ON m.session_id = s.id
+                CAST(COUNT(m.id) AS INTEGER) AS message_count
+            FROM {self.sessions_table} AS s
+            LEFT JOIN {self.messages_table} AS m ON m.session_id = s.id
             GROUP BY s.id, s.title, s.created_at, s.updated_at
             ORDER BY s.updated_at DESC, s.created_at DESC
-            """,
+            """
         )
         return [_session_from_row(row) for row in rows]
 
     def get_session(self, session_id: str) -> ChatSession | None:
+        p = self.placeholder
         row = self._fetch_optional(
-            """
+            f"""
             SELECT
-                s.id::text,
+                s.id,
                 s.title,
                 s.created_at,
                 s.updated_at,
-                COUNT(m.id)::int AS message_count
-            FROM public.ppqa_chat_sessions AS s
-            LEFT JOIN public.ppqa_chat_messages AS m ON m.session_id = s.id
-            WHERE s.id = %s
+                CAST(COUNT(m.id) AS INTEGER) AS message_count
+            FROM {self.sessions_table} AS s
+            LEFT JOIN {self.messages_table} AS m ON m.session_id = s.id
+            WHERE s.id = {p}
             GROUP BY s.id, s.title, s.created_at, s.updated_at
             """,
             (session_id,),
@@ -148,27 +220,28 @@ class ChatStore:
         cleaned_title = _normalize_title(title)
         if not cleaned_title:
             return self.get_session(session_id)
-        row = self._fetch_optional(
-            """
-            UPDATE public.ppqa_chat_sessions
-            SET title = %s, updated_at = NOW()
-            WHERE id = %s
-            RETURNING id::text, title, created_at, updated_at, (
-                SELECT COUNT(*)::int
-                FROM public.ppqa_chat_messages
-                WHERE session_id = public.ppqa_chat_sessions.id
-            ) AS message_count
+        p = self.placeholder
+        self._execute_write(
+            f"""
+            UPDATE {self.sessions_table}
+            SET title = {p}, updated_at = CURRENT_TIMESTAMP(6)
+            WHERE id = {p}
             """,
             (cleaned_title, session_id),
         )
-        return _session_from_row(row) if row is not None else None
+        return self.get_session(session_id)
 
     def delete_session(self, session_id: str) -> bool:
-        row = self._fetch_one(
-            "DELETE FROM public.ppqa_chat_sessions WHERE id = %s RETURNING id::text",
-            (session_id,),
+        if self.get_session(session_id) is None:
+            return False
+        p = self.placeholder
+        self._execute_writes(
+            (
+                (f"DELETE FROM {self.messages_table} WHERE session_id = {p}", (session_id,)),
+                (f"DELETE FROM {self.sessions_table} WHERE id = {p}", (session_id,)),
+            )
         )
-        return row is not None
+        return True
 
     def add_message(
         self,
@@ -181,92 +254,125 @@ class ChatStore:
     ) -> ChatMessage:
         if role not in {"user", "assistant"}:
             raise ValueError(f"Unsupported chat message role: {role!r}")
+        if self.get_session(session_id) is None:
+            raise ChatStoreError(f"Chat session does not exist: {session_id}")
 
         message_id = str(uuid4())
         payload = json.dumps(to_jsonable(metadata or {}), ensure_ascii=False)
-        connection = self.connect()
-        with connection.transaction():
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    INSERT INTO public.ppqa_chat_messages
+        p = self.placeholder
+        metadata_value = p if self.is_teradata else f"{p}::jsonb"
+        self._execute_writes(
+            (
+                (
+                    f"""
+                    INSERT INTO {self.messages_table}
                         (id, session_id, role, content, dry_run, metadata)
-                    VALUES (%s, %s, %s, %s, %s, %s::jsonb)
-                    RETURNING
-                        id::text,
-                        session_id::text,
+                    VALUES ({p}, {p}, {p}, {p}, {p}, {metadata_value})
+                    """,
+                    (
+                        message_id,
+                        session_id,
                         role,
                         content,
-                        dry_run,
-                        metadata,
-                        created_at
+                        int(dry_run) if self.is_teradata else dry_run,
+                        payload,
+                    ),
+                ),
+                (
+                    f"""
+                    UPDATE {self.sessions_table}
+                    SET updated_at = CURRENT_TIMESTAMP(6)
+                    WHERE id = {p}
                     """,
-                    (message_id, session_id, role, content, dry_run, payload),
-                )
-                row = cursor.fetchone()
-                cursor.execute(
-                    "UPDATE public.ppqa_chat_sessions SET updated_at = NOW() WHERE id = %s",
                     (session_id,),
-                )
+                ),
+            )
+        )
+        row = self._fetch_optional(
+            f"""
+            SELECT id, session_id, role, content, dry_run, metadata, created_at
+            FROM {self.messages_table}
+            WHERE id = {p}
+            """,
+            (message_id,),
+        )
+        if row is None:
+            raise ChatStoreError("The new chat message could not be read after insertion")
         return _message_from_row(row)
 
     def list_messages(self, session_id: str, *, limit: int | None = None) -> list[ChatMessage]:
-        params: tuple[Any, ...]
-        if limit is None:
-            query = """
-                SELECT
-                    id::text,
-                    session_id::text,
-                    role,
-                    content,
-                    dry_run,
-                    metadata,
-                    created_at
-                FROM public.ppqa_chat_messages
-                WHERE session_id = %s
-                ORDER BY created_at ASC
-            """
-            params = (session_id,)
-        else:
-            query = """
-                SELECT *
-                FROM (
-                    SELECT
-                        id::text,
-                        session_id::text,
-                        role,
-                        content,
-                        dry_run,
-                        metadata,
-                        created_at
-                    FROM public.ppqa_chat_messages
-                    WHERE session_id = %s
-                    ORDER BY created_at DESC
-                    LIMIT %s
-                ) AS recent_messages
-                ORDER BY created_at ASC
-            """
-            params = (session_id, limit)
-        return [_message_from_row(row) for row in self._fetch_all(query, params)]
+        p = self.placeholder
+        rows = self._fetch_all(
+            f"""
+            SELECT id, session_id, role, content, dry_run, metadata, created_at
+            FROM {self.messages_table}
+            WHERE session_id = {p}
+            ORDER BY created_at ASC
+            """,
+            (session_id,),
+        )
+        if limit is not None:
+            if limit < 0:
+                raise ValueError("limit must be zero or greater")
+            rows = rows[-limit:] if limit else []
+        return [_message_from_row(row) for row in rows]
 
-    def _fetch_one(self, query: str, params: tuple[Any, ...] = ()) -> dict[str, Any]:
-        with self.connect().cursor() as cursor:
-            cursor.execute(query, params)
-            return cursor.fetchone()
+    def _execute_write(self, query: str, params: tuple[Any, ...] = ()) -> None:
+        self._execute_writes(((query, params),))
 
-    def _fetch_optional(self, query: str, params: tuple[Any, ...] = ()) -> dict[str, Any] | None:
-        with self.connect().cursor() as cursor:
-            cursor.execute(query, params)
-            return cursor.fetchone()
+    def _execute_writes(
+        self,
+        statements: tuple[tuple[str, tuple[Any, ...]], ...],
+    ) -> None:
+        connection = self.connect()
+        if not self.is_teradata:
+            with connection.transaction():
+                with connection.cursor() as cursor:
+                    for query, params in statements:
+                        cursor.execute(query, params)
+            return
+
+        try:
+            with connection.cursor() as cursor:
+                for query, params in statements:
+                    cursor.execute(query, params)
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+
+    def _fetch_optional(
+        self,
+        query: str,
+        params: tuple[Any, ...] = (),
+    ) -> dict[str, Any] | None:
+        rows = self._fetch_all(query, params)
+        return rows[0] if rows else None
 
     def _fetch_all(self, query: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
         with self.connect().cursor() as cursor:
             cursor.execute(query, params)
-            return list(cursor.fetchall())
+            columns = [str(item[0]).lower() for item in (cursor.description or ())]
+            raw_rows = cursor.fetchall()
+        rows: list[dict[str, Any]] = []
+        for raw_row in raw_rows:
+            if isinstance(raw_row, dict):
+                row = {str(key).lower(): value for key, value in raw_row.items()}
+            else:
+                row = dict(zip(columns, raw_row, strict=False))
+            rows.append({key: _read_lob(value) for key, value in row.items()})
+        return rows
 
 
 class ChatStoreError(RuntimeError):
     pass
+
+
+def _read_lob(value: Any) -> Any:
+    """Convert a Teradata CLOB value to text while leaving scalar values unchanged."""
+
+    reader = getattr(value, "read", None)
+    return reader() if callable(reader) else value
 
 
 def make_session_title(question: str) -> str:
