@@ -104,7 +104,7 @@ def _sidebar() -> ApiClient:
 
         st.divider()
 
-        if st.button("New chat", use_container_width=True, type="primary"):
+        if st.button("New chat", width="stretch", type="primary"):
             st.session_state.active_session_id = None
             st.rerun()
 
@@ -135,7 +135,7 @@ def _render_session_row(client: ApiClient, session: dict[str, Any]) -> None:
         label = f"Active: {label}"
 
     cols = st.sidebar.columns([0.78, 0.22], gap="small")
-    if cols[0].button(label, key=f"select-{session_id}", use_container_width=True):
+    if cols[0].button(label, key=f"select-{session_id}", width="stretch"):
         st.session_state.active_session_id = session_id
         st.rerun()
     if cols[1].button("x", key=f"delete-{session_id}", help="Delete session"):
@@ -237,7 +237,7 @@ def _render_assistant_artifacts(
 
     if rows:
         with st.expander("Result rows", expanded=False):
-            st.dataframe(rows, use_container_width=True, hide_index=True)
+            st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def _render_chart(chart: Any, *, chart_key: str | None = None) -> None:
@@ -474,7 +474,7 @@ def _render_chart(chart: Any, *, chart_key: str | None = None) -> None:
     st.vega_lite_chart(
         rows,
         spec=spec,
-        use_container_width=True,
+        width="stretch",
         key=key,
     )
 

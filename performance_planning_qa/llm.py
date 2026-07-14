@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import json
+import logging
 import re
 from typing import Any
 
@@ -11,7 +13,30 @@ import json_repair
 from performance_planning_qa.config import LLMSettings
 
 
+logger = logging.getLogger(__name__)
+
 ChatMessage = dict[str, str]
+
+
+def _with_current_date_context(messages: list[ChatMessage]) -> list[ChatMessage]:
+    """Return a copy of the messages with fresh date context for the LLM."""
+
+    now = datetime.now().astimezone()
+    date_context = (
+        f"Current date: {now.date().isoformat()} ({now.strftime('%A')}). "
+        "Use this date to resolve relative time expressions such as today, yesterday, "
+        "this month, this year, last N months, and previous N months. Do not assume the "
+        "supplied data is current or complete "
+        "through this date."
+    )
+
+    contextualized = [message.copy() for message in messages]
+    for message in contextualized:
+        if message.get("role") == "system":
+            message["content"] = f"{date_context}\n\n{message.get('content', '')}"
+            return contextualized
+
+    return [{"role": "system", "content": date_context}, *contextualized]
 
 
 class LiteLLMClient:
@@ -44,20 +69,84 @@ class LiteLLMClient:
     def complete(self, messages: list[ChatMessage], *, temperature: float) -> str:
         stream = self.client.chat.completions.create(
             model=self.settings.model,
-            messages=messages,
+            messages=_with_current_date_context(messages),
             temperature=temperature,
             max_tokens=self.settings.max_tokens,
             stream=True,
         )
         parts: list[str] = []
-        for chunk in stream:
-            if not chunk.choices:
-                continue
-            content = chunk.choices[0].delta.content
-            if content:
-                parts.append(content)
+        diagnostics: dict[str, Any] = {
+            "provider": self.settings.provider,
+            "model": self.settings.model,
+            "chunk_count": 0,
+            "choice_count": 0,
+            "chunks_without_choices": 0,
+            "content_fragments": 0,
+            "content_characters": 0,
+            "reasoning_characters": 0,
+            "refusal_characters": 0,
+            "tool_call_chunks": 0,
+            "finish_reasons": [],
+            "response_ids": [],
+            "usage": None,
+        }
+        finish_reasons: set[str] = set()
+        response_ids: set[str] = set()
+
+        try:
+            for chunk in stream:
+                diagnostics["chunk_count"] += 1
+
+                response_id = getattr(chunk, "id", None)
+                if response_id:
+                    response_ids.add(str(response_id))
+
+                usage = getattr(chunk, "usage", None)
+                if usage is not None:
+                    diagnostics["usage"] = _model_payload(usage)
+
+                choices = getattr(chunk, "choices", None) or []
+                if not choices:
+                    diagnostics["chunks_without_choices"] += 1
+                    continue
+
+                diagnostics["choice_count"] += len(choices)
+                for choice in choices:
+                    finish_reason = getattr(choice, "finish_reason", None)
+                    if finish_reason:
+                        finish_reasons.add(str(finish_reason))
+
+                    delta = getattr(choice, "delta", None)
+                    if delta is None:
+                        continue
+
+                    content = getattr(delta, "content", None)
+                    if content:
+                        parts.append(content)
+                        diagnostics["content_fragments"] += 1
+                        diagnostics["content_characters"] += len(content)
+
+                    reasoning = getattr(delta, "reasoning_content", None)
+                    if reasoning:
+                        diagnostics["reasoning_characters"] += len(reasoning)
+
+                    refusal = getattr(delta, "refusal", None)
+                    if refusal:
+                        diagnostics["refusal_characters"] += len(refusal)
+
+                    if getattr(delta, "tool_calls", None):
+                        diagnostics["tool_call_chunks"] += 1
+        except Exception:
+            diagnostics["finish_reasons"] = sorted(finish_reasons)
+            diagnostics["response_ids"] = sorted(response_ids)
+            logger.exception("LLM stream failed; diagnostics=%s", diagnostics)
+            raise
+
         content = "".join(parts)
-        if not content:
+        if not content.strip():
+            diagnostics["finish_reasons"] = sorted(finish_reasons)
+            diagnostics["response_ids"] = sorted(response_ids)
+            logger.error("LLM returned an empty response; diagnostics=%s", diagnostics)
             raise RuntimeError("LLM returned an empty response.")
         return content.strip()
 
@@ -70,6 +159,15 @@ class LiteLLMClient:
     ) -> dict[str, Any]:
         text = self.complete(messages, temperature=temperature)
         return extract_json_object(text, fallback_key=fallback_key)
+
+
+def _model_payload(value: Any) -> Any:
+    """Convert SDK metadata to a log-friendly value without response content."""
+
+    model_dump = getattr(value, "model_dump", None)
+    if callable(model_dump):
+        return model_dump()
+    return str(value)
 
 
 def extract_json_object(text: str, fallback_key: str | None = None) -> dict[str, Any]:
