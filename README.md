@@ -42,7 +42,6 @@ GLM_API_KEY="..."
 MINIMAX_ENDPOINT="https://minimax.example/v1"
 MINIMAX_MODEL="MiniMaxAI/MiniMax-M2.7"
 MINIMAX_API_KEY="not-needed"
-ASR_ENDPOINT="https://..."
 
 TERADATA_HOST_NAME="..."
 TERADATA_USER="..."
@@ -65,9 +64,6 @@ Optional keys:
 LLM_VERIFY_SSL=false
 LLM_TIMEOUT_SECONDS=120
 LLM_MAX_TOKENS=8096
-ASR_VERIFY_SSL=false
-ASR_TIMEOUT_SECONDS=120
-ASR_MAX_AUDIO_BYTES=26214400
 TERADATA_DATABASE="DP_EDW_PPF"
 TERADATA_LOGMECH="LDAP"
 SQL_REPAIR_ATTEMPTS=1
@@ -121,10 +117,6 @@ curl http://127.0.0.1:8000/health
 
 API docs are available at `http://127.0.0.1:8000/docs`.
 
-The `POST /transcribe` endpoint accepts a WAV file in the multipart field
-`audio` and proxies it to `${ASR_ENDPOINT}/transcribe`. The service URL remains
-server-side; the browser only calls the local FastAPI API.
-
 ## Streamlit Frontend
 
 Start the API, then run:
@@ -135,12 +127,6 @@ uv run streamlit run frontend/app.py
 
 Open `http://127.0.0.1:8501`. The sidebar can create, select, and delete chat
 sessions. Deleting a session removes it from PostgreSQL through the FastAPI API.
-
-The native chat composer has microphone and Send controls together. A submitted
-recording is sent only to ASR, then its transcription is placed back into the
-composer for review and editing. Selecting Send again submits the reviewed text
-for analysis; recording audio never goes directly to the LLM. When the frontend
-is not served from localhost, it must use HTTPS for browser microphone permission.
 
 ### Conditional Charts
 

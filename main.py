@@ -9,18 +9,11 @@ import logging
 import os
 from typing import Any, Literal
 
-from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from performance_planning_qa.asr import (
-    ASRConfigurationError,
-    ASRTimeoutError,
-    ASRUpstreamError,
-    is_wav,
-    transcribe_wav,
-)
 from performance_planning_qa.chat_store import (
     DEFAULT_SESSION_TITLE,
     ChatMessage,
@@ -128,10 +121,6 @@ class HealthResponse(BaseModel):
     status: str
 
 
-class TranscriptionResponse(BaseModel):
-    text: str
-
-
 def _cors_origins() -> list[str]:
     load_environment()
     raw_origins = os.getenv("API_CORS_ORIGINS")
@@ -145,7 +134,6 @@ def _cors_origins() -> list[str]:
 async def lifespan(app: FastAPI):
     settings = load_settings()
     app.state.pipeline = NL2SQLPipeline(settings)
-    app.state.asr_settings = settings.asr
     app.state.pipeline_lock = asyncio.Lock()
     app.state.chat_store = ChatStore(settings.chat_storage)
     app.state.chat_store_lock = asyncio.Lock()
@@ -177,38 +165,6 @@ app.add_middleware(
 @app.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
     return HealthResponse(status="ok")
-
-
-@app.post("/transcribe", response_model=TranscriptionResponse)
-async def transcribe_audio(request: Request, audio: UploadFile = File(...)) -> dict[str, str]:
-    """Transcribe a browser-recorded WAV without submitting it to the LLM."""
-
-    settings = request.app.state.asr_settings
-    try:
-        recording = await audio.read(settings.max_audio_bytes + 1)
-    finally:
-        await audio.close()
-
-    if not recording:
-        raise HTTPException(status_code=422, detail="The audio recording is empty")
-    if len(recording) > settings.max_audio_bytes:
-        max_mb = settings.max_audio_bytes / (1024 * 1024)
-        raise HTTPException(
-            status_code=413,
-            detail=f"The audio recording exceeds the {max_mb:g} MB limit",
-        )
-    if not is_wav(recording):
-        raise HTTPException(status_code=415, detail="Only WAV audio recordings are supported")
-
-    try:
-        text = await run_in_threadpool(transcribe_wav, recording, settings)
-    except ASRConfigurationError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except ASRTimeoutError as exc:
-        raise HTTPException(status_code=504, detail=str(exc)) from exc
-    except ASRUpstreamError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    return {"text": text}
 
 
 @app.post("/ask", response_model=AskResponse)
