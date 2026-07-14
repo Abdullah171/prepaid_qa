@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from performance_planning_qa.chat_store import (
     DEFAULT_SESSION_TITLE,
+    MAX_SESSION_TITLE_LENGTH,
     ChatMessage,
     ChatStore,
     make_session_title,
@@ -80,11 +81,11 @@ class AskResponse(BaseModel):
 
 
 class CreateSessionRequest(BaseModel):
-    title: str | None = Field(default=None, max_length=120)
+    title: str | None = Field(default=None, max_length=MAX_SESSION_TITLE_LENGTH)
 
 
 class UpdateSessionRequest(BaseModel):
-    title: str = Field(..., min_length=1, max_length=120)
+    title: str = Field(..., min_length=1, max_length=MAX_SESSION_TITLE_LENGTH)
 
 
 class ChatSessionResponse(BaseModel):

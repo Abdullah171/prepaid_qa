@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS public.SC_PPQA_CHAT_SESSIONS (
 CREATE TABLE IF NOT EXISTS public.SC_PPQA_CHAT_MESSAGES (
     id UUID PRIMARY KEY,
     session_id UUID NOT NULL REFERENCES public.SC_PPQA_CHAT_SESSIONS(id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+    message_role TEXT NOT NULL CHECK (message_role IN ('user', 'assistant')),
     content TEXT NOT NULL,
     dry_run BOOLEAN NOT NULL DEFAULT FALSE,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,

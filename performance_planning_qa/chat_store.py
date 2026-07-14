@@ -1,4 +1,4 @@
-"""PostgreSQL persistence for chat sessions and messages."""
+"""PostgreSQL and Teradata persistence for chat sessions and messages."""
 
 from __future__ import annotations
 
@@ -13,6 +13,8 @@ from performance_planning_qa.database import to_jsonable
 
 
 DEFAULT_SESSION_TITLE = "New chat"
+MAX_SESSION_TITLE_LENGTH = 500
+TERADATA_METADATA_MAX_CHARS = 32_000
 
 
 @dataclass(frozen=True)
@@ -82,6 +84,10 @@ class ChatStore:
         if self.is_teradata:
             return f"{self.settings.teradata_database}.SC_PPQA_CHAT_MESSAGES"
         return "public.SC_PPQA_CHAT_MESSAGES"
+
+    @property
+    def session_title_column(self) -> str:
+        return "TITLE_" if self.is_teradata else "title"
 
     @property
     def placeholder(self) -> str:
@@ -172,7 +178,10 @@ class ChatStore:
         cleaned_title = _normalize_title(title) or DEFAULT_SESSION_TITLE
         p = self.placeholder
         self._execute_write(
-            f"INSERT INTO {self.sessions_table} (id, title) VALUES ({p}, {p})",
+            f"""
+            INSERT INTO {self.sessions_table} (id, {self.session_title_column})
+            VALUES ({p}, {p})
+            """,
             (session_id, cleaned_title),
         )
         session = self.get_session(session_id)
@@ -185,13 +194,13 @@ class ChatStore:
             f"""
             SELECT
                 s.id,
-                s.title,
+                s.{self.session_title_column},
                 s.created_at,
                 s.updated_at,
                 CAST(COUNT(m.id) AS INTEGER) AS message_count
             FROM {self.sessions_table} AS s
             LEFT JOIN {self.messages_table} AS m ON m.session_id = s.id
-            GROUP BY s.id, s.title, s.created_at, s.updated_at
+            GROUP BY s.id, s.{self.session_title_column}, s.created_at, s.updated_at
             ORDER BY s.updated_at DESC, s.created_at DESC
             """
         )
@@ -203,14 +212,14 @@ class ChatStore:
             f"""
             SELECT
                 s.id,
-                s.title,
+                s.{self.session_title_column},
                 s.created_at,
                 s.updated_at,
                 CAST(COUNT(m.id) AS INTEGER) AS message_count
             FROM {self.sessions_table} AS s
             LEFT JOIN {self.messages_table} AS m ON m.session_id = s.id
             WHERE s.id = {p}
-            GROUP BY s.id, s.title, s.created_at, s.updated_at
+            GROUP BY s.id, s.{self.session_title_column}, s.created_at, s.updated_at
             """,
             (session_id,),
         )
@@ -224,7 +233,7 @@ class ChatStore:
         self._execute_write(
             f"""
             UPDATE {self.sessions_table}
-            SET title = {p}, updated_at = CURRENT_TIMESTAMP(6)
+            SET {self.session_title_column} = {p}, updated_at = CURRENT_TIMESTAMP(6)
             WHERE id = {p}
             """,
             (cleaned_title, session_id),
@@ -258,7 +267,16 @@ class ChatStore:
             raise ChatStoreError(f"Chat session does not exist: {session_id}")
 
         message_id = str(uuid4())
-        payload = json.dumps(to_jsonable(metadata or {}), ensure_ascii=False)
+        payload = json.dumps(
+            to_jsonable(metadata or {}),
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        if self.is_teradata and len(payload) > TERADATA_METADATA_MAX_CHARS:
+            raise ChatStoreError(
+                "Chat metadata exceeds the Teradata metadata VARCHAR(32000) limit "
+                f"({len(payload)} characters)."
+            )
         p = self.placeholder
         metadata_value = p if self.is_teradata else f"{p}::jsonb"
         self._execute_writes(
@@ -266,7 +284,7 @@ class ChatStore:
                 (
                     f"""
                     INSERT INTO {self.messages_table}
-                        (id, session_id, role, content, dry_run, metadata)
+                        (id, session_id, message_role, content, dry_run, metadata)
                     VALUES ({p}, {p}, {p}, {p}, {p}, {metadata_value})
                     """,
                     (
@@ -290,7 +308,7 @@ class ChatStore:
         )
         row = self._fetch_optional(
             f"""
-            SELECT id, session_id, role, content, dry_run, metadata, created_at
+            SELECT id, session_id, message_role, content, dry_run, metadata, created_at
             FROM {self.messages_table}
             WHERE id = {p}
             """,
@@ -304,7 +322,7 @@ class ChatStore:
         p = self.placeholder
         rows = self._fetch_all(
             f"""
-            SELECT id, session_id, role, content, dry_run, metadata, created_at
+            SELECT id, session_id, message_role, content, dry_run, metadata, created_at
             FROM {self.messages_table}
             WHERE session_id = {p}
             ORDER BY created_at ASC
@@ -388,13 +406,13 @@ def _normalize_title(title: str | None) -> str | None:
     cleaned = " ".join(title.strip().split())
     if not cleaned:
         return None
-    return cleaned[:120]
+    return cleaned[:MAX_SESSION_TITLE_LENGTH]
 
 
 def _session_from_row(row: dict[str, Any]) -> ChatSession:
     return ChatSession(
         id=str(row["id"]),
-        title=str(row["title"]),
+        title=str(row.get("title_") if "title_" in row else row["title"]),
         created_at=row["created_at"],
         updated_at=row["updated_at"],
         message_count=int(row.get("message_count") or 0),
@@ -408,7 +426,7 @@ def _message_from_row(row: dict[str, Any]) -> ChatMessage:
     return ChatMessage(
         id=str(row["id"]),
         session_id=str(row["session_id"]),
-        role=str(row["role"]),
+        role=str(row["message_role"]),
         content=str(row["content"]),
         dry_run=bool(row["dry_run"]),
         metadata=dict(metadata),
