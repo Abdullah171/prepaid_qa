@@ -1,6 +1,6 @@
 # performance_planning_qa
 
-Natural-language to Teradata SQL and analytical Q&A for the four performance planning tables in `performance.sql`.
+Natural-language to Teradata SQL and analytical Q&A for the performance-planning tables and helpers documented in `performance.sql`.
 
 ## What It Does
 

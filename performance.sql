@@ -1,6 +1,6 @@
 /*
 ================================================================================
- Teradata SQL Schema File: Postpaid Base, Sales, Churn, and Monthly Revenue
+ Teradata SQL Schema File: Postpaid Base, Sales, Churn, Monthly Revenue, and Product Lookup
  Purpose: Natural-language-to-SQL conversion support
  Database/Schema: DP_EDW_PPF
 
@@ -25,7 +25,11 @@
         totals, averages, value bands, usage revenue, device revenue, discounts,
         and billing metrics.
 
-   5. DP_EDW_PPF.CBU_WEEKS
+   5. DP_EDW_PPF.D_RM_PSD_PRODUCTS
+      - Shared product lookup used to translate PROD_KEY into the CRM product
+        name, CRM product ID, and product price used by acquisition ARPU.
+
+   6. DP_EDW_PPF.CBU_WEEKS
       - Calendar helper table. Use CALENDAR_DATE only when building daily/monthly
         active-base snapshots across subscription status periods.
 
@@ -48,8 +52,9 @@
        AF_RET_GSM_CHURN.PARTY_ID / CUST_NUM / CUST_IDENT_NUM
 
    - Product/package:
-       F_RM_POSTPAID_BASE.PROD_KEY / ROOT_PROD_NAME
-       F_RM_PSD_SALES.PROD_KEY / PROD_NME / PROD_DESC
+       F_RM_POSTPAID_BASE.PROD_KEY -> D_RM_PSD_PRODUCTS.PROD_KEY
+       F_RM_PSD_SALES.PROD_KEY    -> D_RM_PSD_PRODUCTS.PROD_KEY
+       D_RM_PSD_PRODUCTS.CRM_PROD_Name / CRM_PROD_ID / PROD_PRICE_AMT
        AF_RET_GSM_CHURN.PACKAGE_ANME / PACKAGE_DESC
 
  Date usage guidance:
@@ -73,6 +78,9 @@
    - Before joining F_RM_POSTPAID_BASE to another table for month-level analysis,
      reduce base to one row per Last_Day(CALENDAR_DATE), ACCS_METH_VAL,
      and ACCNT_NMBR using QUALIFY ROW_NUMBER.
+   - Join D_RM_PSD_PRODUCTS to base or sales on PROD_KEY when the CRM product
+     name, product ID, or product price is required. Ensure the lookup contributes
+     at most one row per PROD_KEY before aggregating facts.
    - For a standalone month revenue question such as June 2026 revenue, query
      F_RM_PS_MTHLY_REV directly using REF_DATE = DATE '2026-06-30' or a bounded
      June range. Do not join to base just to calculate total monthly revenue.
@@ -87,14 +95,21 @@
      SCREEN_TYPE IN ('SS', 'LS'), and SUBS_PROD_STS_TYP_NM not in
      ('Inactive','DELETED FROM SOURCE','UNKNOWN').
    - For sales questions, use F_RM_PSD_SALES and aggregate by ORDER_END_DT,
-     ORDER_CHANNEL_NME, REGION, PROD_NME, SALES_CHNL_TYP, SUB_CHNL_NME, etc.
-   - For churn questions, use AF_RET_GSM_CHURN and aggregate by CHURN_DATE,
-     CHURN_TYPE, NATIONALITY, SAUDI_FLAG, REGION, CITY, VALUE_SEGMENT_NAME, etc.
+     ORDER_CHANNEL_NME, REGION, SALES_CHNL_TYP, SUB_CHNL_NME, etc. Use
+     D_RM_PSD_PRODUCTS.CRM_PROD_Name as the standard sales/base product or
+     rate-plan name after joining on PROD_KEY.
+   - For postpaid churn questions, use AF_RET_GSM_CHURN with STREAM_TYPE = 'PS'
+     and aggregate by CHURN_DATE, CHURN_TYPE, NATIONALITY, SAUDI_FLAG, REGION,
+     CITY, VALUE_SEGMENT_NAME, etc.
    - For revenue questions, use F_RM_PS_MTHLY_REV directly unless the user
      explicitly asks for a lifecycle/base/sales/churn relationship. Aggregate by
      REF_DATE, ACCS_METH_NUM, ACCT_NUM, value band, and revenue fields such as
      TOTAL_LINE_REV, LINE_REV_EXCL_DEVICES, PACKAGE_REV, DEVICE_REV, USAGE_REV,
      ROAM_REV, DCB_REV, OTHER_USAGE_REV, and AVG_LINE_REV_LAST_3M.
+   - SCREEN_TYPE mappings are SS = small screen and LS = large screen. When the
+     user does not name one, return both separately. Churn already contains
+     SCREEN_TYPE; derive it for sales or revenue from a deduplicated base
+     lifecycle using line + account and the applicable exact date/month link.
 ================================================================================
 */
 
@@ -242,8 +257,9 @@ Column guide: DP_EDW_PPF.F_RM_PSD_SALES
      customers or churned lines by churn date, churn type, nationality, Saudi flag,
      package, tenure, region, payment behavior, engagement, complaints, value
      segment, and exclusion segments. Samples include both prepaid stream records
-     such as STREAM_TYPE = 'PP' and postpaid/service records such as STREAM_TYPE = 'PS';
-     use stream/screen filters when the user specifically asks for postpaid only.
+     such as STREAM_TYPE = 'PP' and postpaid/service records such as STREAM_TYPE = 'PS'.
+     This application is scoped exclusively to postpaid performance. Every churn
+     query must use STREAM_TYPE = 'PS'; never query STREAM_TYPE = 'PP'.
 ============================================================================ */
 
 CREATE SET TABLE DP_EDW_PPF.AF_RET_GSM_CHURN ,FALLBACK ,
@@ -464,7 +480,21 @@ Column guide: DP_EDW_PPF.F_RM_PS_MTHLY_REV
 */
 
 /* ============================================================================
-   Table 5: Calendar Helper
+   Table 5: Product Lookup
+   Business meaning:
+     Shared product dimension for base and sales. The analyst-supplied contract
+     confirms the columns below; source DDL types were not supplied, so no
+     inferred CREATE TABLE statement is included here. Join through PROD_KEY.
+
+Confirmed column contract: DP_EDW_PPF.D_RM_PSD_PRODUCTS
+  PROD_KEY                    : Product key. Join to F_RM_POSTPAID_BASE.PROD_KEY or F_RM_PSD_SALES.PROD_KEY.
+  CRM_PROD_Name               : Standard CRM product/rate-plan/package name for base and sales analysis.
+  CRM_PROD_ID                 : CRM product/package identifier.
+  PROD_PRICE_AMT              : Product price amount used for sales/acquisition ARPU.
+============================================================================ */
+
+/* ============================================================================
+   Table 6: Calendar Helper
    Business meaning:
      Calendar/date helper used by analyst base snapshots. Use this only to expand
      subscription status periods into daily or month-end base dates. It is not a
