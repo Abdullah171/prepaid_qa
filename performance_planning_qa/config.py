@@ -209,7 +209,7 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
         model=_get_any(f"{llm_prefix}_MODEL", default="") or "",
         api_key=_get_any(f"{llm_prefix}_API_KEY", default="") or "",
         verify_ssl=_get_bool("LLM_VERIFY_SSL", default=False),
-        timeout_seconds=_get_float("LLM_TIMEOUT_SECONDS", default=120.0),
+        timeout_seconds=_get_float("LLM_TIMEOUT_SECONDS", default=1200.0),
         sql_temperature=_get_float("NL2SQL_TEMPERATURE", default=0.0),
         answer_temperature=_get_float("ANSWER_TEMPERATURE", default=0.2),
         max_tokens=_get_int("LLM_MAX_TOKENS", default=70000),

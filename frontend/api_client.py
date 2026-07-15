@@ -15,7 +15,7 @@ class ApiError(RuntimeError):
 @dataclass(frozen=True)
 class ApiClient:
     base_url: str
-    timeout_seconds: float = 300.0
+    timeout_seconds: float = 1220.0
 
     def health(self) -> dict[str, Any]:
         return self._request("GET", "/health")
