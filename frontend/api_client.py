@@ -8,6 +8,9 @@ from typing import Any
 import requests
 
 
+INPROCESS_API_BASE_URL = "inprocess://ppqa"
+
+
 class ApiError(RuntimeError):
     pass
 
@@ -53,16 +56,26 @@ class ApiClient:
         json: dict[str, Any] | None = None,
         expect_json: bool = True,
     ):
-        url = f"{self.base_url.rstrip('/')}{path}"
-        try:
-            response = requests.request(
-                method,
-                url,
-                json=json,
-                timeout=self.timeout_seconds,
-            )
-        except requests.RequestException as exc:
-            raise ApiError(f"Could not reach API at {self.base_url}: {exc}") from exc
+        if self.base_url.rstrip("/") == INPROCESS_API_BASE_URL:
+            try:
+                from performance_planning_qa.inprocess_api import (
+                    get_inprocess_api_client,
+                )
+
+                response = get_inprocess_api_client().request(method, path, json=json)
+            except Exception as exc:
+                raise ApiError(f"Could not start the in-process API: {exc}") from exc
+        else:
+            url = f"{self.base_url.rstrip('/')}{path}"
+            try:
+                response = requests.request(
+                    method,
+                    url,
+                    json=json,
+                    timeout=self.timeout_seconds,
+                )
+            except requests.RequestException as exc:
+                raise ApiError(f"Could not reach API at {self.base_url}: {exc}") from exc
 
         if response.status_code >= 400:
             raise ApiError(_error_message(response))
@@ -71,7 +84,7 @@ class ApiClient:
         return response.json()
 
 
-def _error_message(response: requests.Response) -> str:
+def _error_message(response: Any) -> str:
     try:
         payload = response.json()
     except ValueError:

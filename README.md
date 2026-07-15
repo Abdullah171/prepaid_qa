@@ -165,7 +165,8 @@ stopped with **Ctrl+C**.
 Publishing that notebook does **not** publish the Streamlit application; Connect
 publishes notebooks as documents. Deploy the project as Streamlit content instead.
 The deployment entrypoint is `posit_app.py`. It lets Posit Connect manage the public
-Streamlit URL and starts FastAPI privately on loopback inside the same Connect worker.
+Streamlit URL and calls FastAPI in-process inside the same Connect worker, without
+opening a second server port.
 
 Install and register `rsconnect-python` once from Workbench:
 
