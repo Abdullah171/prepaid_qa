@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -14,33 +15,51 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-
-SERVICES = {
-    "FastAPI": [
-        sys.executable,
-        "-m",
-        "uvicorn",
-        "main:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8000",
-        "--reload",
-    ],
-    "Streamlit": [
-        sys.executable,
-        "-m",
-        "streamlit",
-        "run",
-        "frontend/app.py",
-        "--server.port",
-        "8501",
-    ],
-}
+DEFAULT_API_PORT = 8000
+DEFAULT_STREAMLIT_PORT = 8501
 
 
-def _start(command: list[str]) -> subprocess.Popen[bytes]:
-    options: dict[str, object] = {"cwd": PROJECT_ROOT}
+def _available_port(preferred_port: int) -> int:
+    """Return the preferred port, or the next available local port."""
+    for port in range(preferred_port, preferred_port + 100):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            try:
+                sock.bind(("0.0.0.0", port))
+            except OSError:
+                continue
+            return port
+    raise RuntimeError(
+        f"No available port found between {preferred_port} and {preferred_port + 99}."
+    )
+
+
+def _service_commands(api_port: int, streamlit_port: int) -> dict[str, list[str]]:
+    return {
+        "FastAPI": [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "main:app",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            str(api_port),
+            "--reload",
+        ],
+        "Streamlit": [
+            sys.executable,
+            "-m",
+            "streamlit",
+            "run",
+            "frontend/app.py",
+            "--server.port",
+            str(streamlit_port),
+        ],
+    }
+
+
+def _start(command: list[str], env: dict[str, str]) -> subprocess.Popen[bytes]:
+    options: dict[str, object] = {"cwd": PROJECT_ROOT, "env": env}
     if os.name == "nt":
         options["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
     else:
@@ -71,11 +90,25 @@ def main() -> int:
     processes: dict[str, subprocess.Popen[bytes]] = {}
 
     try:
-        for name, command in SERVICES.items():
-            processes[name] = _start(command)
+        api_port = _available_port(DEFAULT_API_PORT)
+        streamlit_port = _available_port(DEFAULT_STREAMLIT_PORT)
+        commands = _service_commands(api_port, streamlit_port)
 
-        print("FastAPI:   http://127.0.0.1:8000 (docs: /docs)")
-        print("Streamlit: http://127.0.0.1:8501")
+        if api_port != DEFAULT_API_PORT:
+            print(f"Port {DEFAULT_API_PORT} is busy; using {api_port} for FastAPI.")
+        if streamlit_port != DEFAULT_STREAMLIT_PORT:
+            print(
+                f"Port {DEFAULT_STREAMLIT_PORT} is busy; "
+                f"using {streamlit_port} for Streamlit."
+            )
+
+        env = os.environ.copy()
+        env["PPQA_API_BASE_URL"] = f"http://127.0.0.1:{api_port}"
+        for name, command in commands.items():
+            processes[name] = _start(command, env)
+
+        print(f"FastAPI:   http://127.0.0.1:{api_port} (docs: /docs)")
+        print(f"Streamlit: http://127.0.0.1:{streamlit_port}")
         print("Press Ctrl+C to stop both services.")
 
         while True:

@@ -89,6 +89,16 @@ uv sync
 
 ## Usage
 
+Start the FastAPI backend and Streamlit frontend together:
+
+```bash
+uv run python run_app.py
+```
+
+The launcher uses ports 8000 and 8501 when available. If either port is already
+occupied, it selects the next available port and configures the frontend to use
+the FastAPI port it selected.
+
 Start the FastAPI server:
 
 ```bash
