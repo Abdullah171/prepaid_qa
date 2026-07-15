@@ -147,6 +147,54 @@ Open `http://127.0.0.1:8501`. The sidebar can create, select, and delete chat
 sessions. Deleting a session removes it from the selected chat database through the
 FastAPI API.
 
+## Posit Workbench and Posit Connect
+
+From a Jupyter notebook running in Posit Workbench, this cell starts a development
+preview:
+
+```python
+import sys
+
+!{sys.executable} run_app.py
+```
+
+`run_app.py` prints the session-proxied Streamlit URL returned by Workbench's
+`rserver-url` utility. The cell stays active until both development servers are
+stopped with **Ctrl+C**.
+
+Publishing that notebook does **not** publish the Streamlit application; Connect
+publishes notebooks as documents. Deploy the project as Streamlit content instead.
+The deployment entrypoint is `posit_app.py`. It lets Posit Connect manage the public
+Streamlit URL and starts FastAPI privately on loopback inside the same Connect worker.
+
+Install and register `rsconnect-python` once from Workbench:
+
+```bash
+python -m pip install rsconnect-python
+export CONNECT_API_KEY='your-api-key'
+rsconnect add \
+  --server https://connect.example.com/ \
+  --name my-connect \
+  --api-key "$CONNECT_API_KEY"
+```
+
+Then deploy from the project directory (this command can also be run in a Jupyter
+cell by prefixing it with `!`):
+
+```bash
+rsconnect deploy streamlit \
+  --name my-connect \
+  --title "Performance Planning Q&A" \
+  --entrypoint posit_app.py \
+  .
+```
+
+The deploy command prints the Connect content URL. Configure the application's
+LLM, Teradata, and chat-database environment variables in Posit Connect. The local
+`.env` file is excluded from deployment by default, so secrets are not uploaded.
+The Connect server must also have a Python version compatible with the constraint in
+`pyproject.toml` and network access to the configured databases and LLM endpoint.
+
 ### Conditional Charts
 
 Charts are generated from the rows returned for the current question, never by

@@ -6,6 +6,7 @@ The existing entry points remain independent; this file only supervises them.
 from __future__ import annotations
 
 import os
+import shutil
 import signal
 import socket
 import subprocess
@@ -44,7 +45,6 @@ def _service_commands(api_port: int, streamlit_port: int) -> dict[str, list[str]
             "0.0.0.0",
             "--port",
             str(api_port),
-            "--reload",
         ],
         "Streamlit": [
             sys.executable,
@@ -54,8 +54,35 @@ def _service_commands(api_port: int, streamlit_port: int) -> dict[str, list[str]
             "frontend/app.py",
             "--server.port",
             str(streamlit_port),
+            "--server.address",
+            "0.0.0.0",
+            "--server.headless",
+            "true",
         ],
     }
+
+
+def _workbench_url(port: int) -> str | None:
+    """Return Posit Workbench's session-proxied URL when running in Workbench."""
+    if not os.getenv("RS_SERVER_URL"):
+        return None
+
+    candidates = [
+        shutil.which("rserver-url"),
+        "/usr/lib/rstudio-server/bin/rserver-url",
+    ]
+    for candidate in candidates:
+        if not candidate or not Path(candidate).is_file():
+            continue
+        result = subprocess.run(
+            [candidate, "-l", str(port)],
+            capture_output=True,
+            check=False,
+            text=True,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    return None
 
 
 def _start(command: list[str], env: dict[str, str]) -> subprocess.Popen[bytes]:
@@ -108,8 +135,16 @@ def main() -> int:
             processes[name] = _start(command, env)
 
         print(f"FastAPI:   http://127.0.0.1:{api_port} (docs: /docs)")
-        print(f"Streamlit: http://127.0.0.1:{streamlit_port}")
-        print("Press Ctrl+C to stop both services.")
+        workbench_url = _workbench_url(streamlit_port)
+        if workbench_url:
+            print(f"Streamlit (Posit Workbench): {workbench_url}")
+            print(
+                "For Posit Connect, deploy posit_app.py as a Streamlit app; "
+                "publishing this notebook would create a notebook document instead."
+            )
+        else:
+            print(f"Streamlit: http://127.0.0.1:{streamlit_port}")
+        print("Press Ctrl+C to stop both services.", flush=True)
 
         while True:
             for name, process in processes.items():
