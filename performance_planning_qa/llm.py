@@ -1,4 +1,4 @@
-"""OpenAI-compatible client wrapper for the STC LiteLLM gateway."""
+"""Direct HTTP client for OpenAI-compatible GLM and MiniMax endpoints."""
 
 from __future__ import annotations
 
@@ -50,102 +50,52 @@ class LiteLLMClient:
         if self._client is None:
             try:
                 import httpx
-                from openai import OpenAI
             except ImportError as exc:
                 raise RuntimeError(
                     "Missing LLM dependencies. Install project dependencies with `uv sync`."
                 ) from exc
 
-            self._client = OpenAI(
-                base_url=self.settings.base_url,
-                api_key=self.settings.api_key,
-                http_client=httpx.Client(
-                    verify=self.settings.verify_ssl,
-                    timeout=self.settings.timeout_seconds,
-                ),
+            self._client = httpx.Client(
+                verify=self.settings.verify_ssl,
+                timeout=self.settings.timeout_seconds,
             )
         return self._client
 
     def complete(self, messages: list[ChatMessage], *, temperature: float) -> str:
-        stream = self.client.chat.completions.create(
-            model=self.settings.model,
-            messages=_with_current_date_context(messages),
-            temperature=temperature,
-            max_tokens=self.settings.max_tokens,
-            stream=True,
-        )
-        parts: list[str] = []
-        diagnostics: dict[str, Any] = {
+        request_payload = {
+            "model": self.settings.model,
+            "messages": _with_current_date_context(messages),
+            "temperature": temperature,
+            "max_tokens": self.settings.max_tokens,
+            "stream": False,
+        }
+        diagnostics = {
             "provider": self.settings.provider,
             "model": self.settings.model,
-            "chunk_count": 0,
-            "choice_count": 0,
-            "chunks_without_choices": 0,
-            "content_fragments": 0,
-            "content_characters": 0,
-            "reasoning_characters": 0,
-            "refusal_characters": 0,
-            "tool_call_chunks": 0,
-            "finish_reasons": [],
-            "response_ids": [],
-            "usage": None,
+            "endpoint": _completion_url(self.settings.endpoint),
         }
-        finish_reasons: set[str] = set()
-        response_ids: set[str] = set()
 
         try:
-            for chunk in stream:
-                diagnostics["chunk_count"] += 1
-
-                response_id = getattr(chunk, "id", None)
-                if response_id:
-                    response_ids.add(str(response_id))
-
-                usage = getattr(chunk, "usage", None)
-                if usage is not None:
-                    diagnostics["usage"] = _model_payload(usage)
-
-                choices = getattr(chunk, "choices", None) or []
-                if not choices:
-                    diagnostics["chunks_without_choices"] += 1
-                    continue
-
-                diagnostics["choice_count"] += len(choices)
-                for choice in choices:
-                    finish_reason = getattr(choice, "finish_reason", None)
-                    if finish_reason:
-                        finish_reasons.add(str(finish_reason))
-
-                    delta = getattr(choice, "delta", None)
-                    if delta is None:
-                        continue
-
-                    content = getattr(delta, "content", None)
-                    if content:
-                        parts.append(content)
-                        diagnostics["content_fragments"] += 1
-                        diagnostics["content_characters"] += len(content)
-
-                    reasoning = getattr(delta, "reasoning_content", None)
-                    if reasoning:
-                        diagnostics["reasoning_characters"] += len(reasoning)
-
-                    refusal = getattr(delta, "refusal", None)
-                    if refusal:
-                        diagnostics["refusal_characters"] += len(refusal)
-
-                    if getattr(delta, "tool_calls", None):
-                        diagnostics["tool_call_chunks"] += 1
-        except Exception:
-            diagnostics["finish_reasons"] = sorted(finish_reasons)
-            diagnostics["response_ids"] = sorted(response_ids)
-            logger.exception("LLM stream failed; diagnostics=%s", diagnostics)
+            response = self.client.post(
+                diagnostics["endpoint"],
+                headers={
+                    "Authorization": f"Bearer {self.settings.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=request_payload,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            content = _completion_content(payload)
+        except Exception as exc:
+            response = getattr(exc, "response", None)
+            if response is not None:
+                diagnostics["status_code"] = response.status_code
+                diagnostics["response"] = _safe_error_response(response)
+            logger.exception("Direct LLM HTTP request failed; diagnostics=%s", diagnostics)
             raise
 
-        content = "".join(parts)
         if not content.strip():
-            diagnostics["finish_reasons"] = sorted(finish_reasons)
-            diagnostics["response_ids"] = sorted(response_ids)
             logger.error("LLM returned an empty response; diagnostics=%s", diagnostics)
             raise RuntimeError("LLM returned an empty response.")
         return content.strip()
@@ -161,13 +111,44 @@ class LiteLLMClient:
         return extract_json_object(text, fallback_key=fallback_key)
 
 
-def _model_payload(value: Any) -> Any:
-    """Convert SDK metadata to a log-friendly value without response content."""
+def _completion_url(endpoint: str) -> str:
+    endpoint = endpoint.rstrip("/")
+    if endpoint.endswith("/chat/completions"):
+        return endpoint
+    return f"{endpoint}/chat/completions"
 
-    model_dump = getattr(value, "model_dump", None)
-    if callable(model_dump):
-        return model_dump()
-    return str(value)
+
+def _completion_content(payload: Any) -> str:
+    """Extract assistant text from an OpenAI-compatible HTTP response."""
+
+    if not isinstance(payload, dict):
+        raise RuntimeError("LLM response must be a JSON object.")
+    choices = payload.get("choices")
+    if not isinstance(choices, list) or not choices:
+        raise RuntimeError("LLM response did not contain any choices.")
+    first_choice = choices[0]
+    if not isinstance(first_choice, dict):
+        raise RuntimeError("LLM response contained an invalid choice.")
+    message = first_choice.get("message")
+    if not isinstance(message, dict):
+        raise RuntimeError("LLM response did not contain an assistant message.")
+
+    content = message.get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, dict) and isinstance(item.get("text"), str):
+                parts.append(item["text"])
+        return "".join(parts)
+    raise RuntimeError("LLM assistant message did not contain text content.")
+
+
+def _safe_error_response(response: Any) -> str:
+    """Return a bounded response excerpt for diagnostics without request secrets."""
+
+    return response.text[:1000]
 
 
 def extract_json_object(text: str, fallback_key: str | None = None) -> dict[str, Any]:

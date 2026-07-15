@@ -8,7 +8,6 @@ dependencies = [
     "fastapi",
     "httpx",
     "json-repair>=0.61.2",
-    "openai",
     "psycopg[binary]",
     "python-dotenv",
     "requests",
