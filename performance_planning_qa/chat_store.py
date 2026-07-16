@@ -110,7 +110,8 @@ class ChatStore:
             from psycopg.rows import dict_row
         except ImportError as exc:
             raise ChatStoreError(
-                "Missing PostgreSQL dependency. Install project dependencies with `uv sync`."
+                "Missing PostgreSQL dependency. Install it with "
+                "`python -m pip install -r requirements.txt`."
             ) from exc
 
         connection = psycopg.connect(
@@ -133,7 +134,8 @@ class ChatStore:
             import teradatasql
         except ImportError as exc:
             raise ChatStoreError(
-                "Missing Teradata dependency. Install project dependencies with `uv sync`."
+                "Missing Teradata dependency. Install it with "
+                "`python -m pip install -r requirements.txt`."
             ) from exc
 
         kwargs: dict[str, Any] = {

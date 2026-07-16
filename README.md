@@ -90,7 +90,13 @@ PPQA_ALLOW_API_URL_EDIT=false
 ## Install
 
 ```bash
-uv sync
+python -m pip install -r requirements.txt
+```
+
+To install the optional `performance-planning-qa` command-line entry point, run:
+
+```bash
+python -m pip install -e .
 ```
 
 ## Usage
@@ -98,7 +104,7 @@ uv sync
 Start the FastAPI backend and Streamlit frontend together:
 
 ```bash
-uv run python run_app.py
+python run_app.py
 ```
 
 The launcher uses ports 8000 and 8501 when available. If either port is already
@@ -108,19 +114,19 @@ the FastAPI port it selected.
 Run the focused frontend regression suite with:
 
 ```bash
-uv run python -m unittest discover -s tests -v
+python -m unittest discover -s tests -v
 ```
 
 Start the FastAPI server:
 
 ```bash
-uv run uvicorn main:app --reload
+python -m uvicorn main:app --reload
 ```
 
 Or run the same server through `main.py`:
 
 ```bash
-uv run python main.py
+python main.py
 ```
 
 Ask a question:
@@ -152,7 +158,7 @@ API docs are available at `http://127.0.0.1:8000/docs`.
 Start the API, then run:
 
 ```bash
-uv run streamlit run frontend/app.py
+python -m streamlit run frontend/app.py
 ```
 
 Open `http://127.0.0.1:8501`. The sidebar can create, select, and delete chat
@@ -324,31 +330,31 @@ For local storage, the API also runs the PostgreSQL schema at startup with
 The original CLI remains available through the package script. Generate SQL and execute it:
 
 ```bash
-uv run performance-planning-qa "What is monthly total revenue by REF_DATE for 2024?"
+performance-planning-qa "What is monthly total revenue by REF_DATE for 2024?"
 ```
 
 Show the SQL:
 
 ```bash
-uv run performance-planning-qa --show-sql "Show churn count by churn type for June 2026"
+performance-planning-qa --show-sql "Show churn count by churn type for June 2026"
 ```
 
 Generate and validate SQL without executing:
 
 ```bash
-uv run performance-planning-qa --dry-run "Top 10 sales channels by completed orders in 2026"
+performance-planning-qa --dry-run "Top 10 sales channels by completed orders in 2026"
 ```
 
 Interactive mode:
 
 ```bash
-uv run performance-planning-qa
+performance-planning-qa
 ```
 
 JSON output:
 
 ```bash
-uv run performance-planning-qa --json --show-sql "Average line revenue by value segment"
+performance-planning-qa --json --show-sql "Average line revenue by value segment"
 ```
 
 Prompt logging is currently disabled in the pipeline and CLI. The logger code remains in the repo for debugging, but normal runs do not write prompt `.txt` files or print prompt log paths.

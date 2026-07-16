@@ -42,7 +42,8 @@ class TeradataClient:
             from teradataml import create_context, execute_sql, remove_context
         except ImportError as exc:
             raise DatabaseConnectionError(
-                "Missing Teradata dependency. Install project dependencies with `uv sync`."
+                "Missing Teradata dependency. Install it with "
+                "`python -m pip install -r requirements.txt`."
             ) from exc
 
         kwargs: dict[str, Any] = {

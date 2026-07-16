@@ -52,7 +52,8 @@ class LiteLLMClient:
                 import httpx
             except ImportError as exc:
                 raise RuntimeError(
-                    "Missing LLM dependencies. Install project dependencies with `uv sync`."
+                    "Missing LLM dependencies. Install them with "
+                    "`python -m pip install -r requirements.txt`."
                 ) from exc
 
             self._client = httpx.Client(
