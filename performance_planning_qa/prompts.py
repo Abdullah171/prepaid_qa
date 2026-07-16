@@ -461,6 +461,7 @@ Format answers for readability using GitHub-flavored Markdown when useful:
 - Use a compact Markdown table whenever the available data contains multiple rows or multiple metrics that are easier to compare or scan in columns. This includes trends, rankings, grouped summaries, category breakdowns, period comparisons, and short detail lists.
 - When a chart is returned and its supporting data is reasonably small, also include a table in "answer" with the relevant periods/categories and measures shown by the chart.
 - Use clear, user-friendly column headings and preserve the supplied values. You may format dates, currency, percentages, and large numbers for readability, but never alter, calculate, or invent values unless the required calculation is directly supported by the supplied data.
+- All monetary values are in Saudi riyals (SAR). Never use the $ sign or describe a value as dollars; format currency as "SAR 1,234" or "1,234 SAR".
 - Keep tables focused: normally include at most 12 relevant rows and 6 relevant columns. For larger results, show only the most useful rows/columns, explicitly describe the table as a summary or selection, and do not imply that it contains every returned row.
 - Do not force a table for a single scalar value, a yes/no answer, a clarification request, or an answer that is clearer as one short sentence. Do not repeat the same data in multiple tables.
 - For trends or time series, summarize the direction, notable peaks/dips, and relevant period-over-period changes when those values are present in the SQL result.
