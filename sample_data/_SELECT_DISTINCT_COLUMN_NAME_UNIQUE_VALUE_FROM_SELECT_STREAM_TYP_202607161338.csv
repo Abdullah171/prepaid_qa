@@ -1,0 +1,640 @@
+"COLUMN_NAME","UNIQUE_VALUE"
+ACCESS_DAYS,"0"
+ACCESS_DAYS,"0-7"
+ACCESS_DAYS,"15-21"
+ACCESS_DAYS,"22-30"
+ACCESS_DAYS,"31-60"
+ACCESS_DAYS,"60+"
+ACCESS_DAYS,"8-14"
+AGE_BRACKET,"18-25"
+AGE_BRACKET,"26-35"
+AGE_BRACKET,"36-55"
+AGE_BRACKET,<18
+AGE_BRACKET,>55
+AGE_BRACKET,NA
+AREA,Abha
+AREA,Abu Arish
+AREA,Ad Dammam
+AREA,Ad Dawadimi
+AREA,Ad Diriyah
+AREA,Adam
+AREA,Addair
+AREA,Addammam
+AREA,Adduwadimi
+AREA,Afif
+AREA,Ahad almusarihah
+AREA,Ahad Rifaydah
+AREA,Al Aradeyyat
+AREA,Al Baha
+AREA,Al Birk
+AREA,Al Darb
+AREA,Al Hada
+AREA,Al Hofuf
+AREA,Al Kharj
+AREA,Al Lith
+AREA,Al Majmaah
+AREA,Al Maweeh
+AREA,Al Qunfudhah
+AREA,Al Wajh
+AREA,Al Zulfi
+AREA,Alaflaj
+AREA,Alahsa
+AREA,Alaqiq
+AREA,Alaridah
+AREA,Alasyah
+AREA,Albadai
+AREA,Albaha
+AREA,Albukayriyah
+AREA,Alghat
+AREA,Alghazalah
+AREA,AlHanakeiah
+AREA,Alhariq
+AREA,Alharth
+AREA,Alidabi
+AREA,Aljubayl
+AREA,Aljumum
+AREA,Alkamil
+AREA,Alkhafji
+AREA,Alkharj
+AREA,Alkharkhir
+AREA,Alkhubar
+AREA,Alkhurmah
+AREA,Allith
+AREA,Almadinah almunawwarah
+AREA,Almahd
+AREA,Almajardah
+AREA,Almajmaah
+AREA,Almandaq
+AREA,AlMozanab
+AREA,Almukhwah
+AREA,Almuzahimiyah
+AREA,Alnuayriyah
+AREA,Alqari
+AREA,Alqatif
+AREA,Alqunfidhah
+AREA,Alqurayyat
+AREA,Alquwayiyah
+AREA,Altaif
+AREA,Alula
+AREA,Alwajh
+AREA,Annabhaniyah
+AREA,Annamas
+AREA,Ar Rass
+AREA,Ar-Riyad
+AREA,Arar
+AREA,Arrass
+AREA,Arrayth
+AREA,Ashshimasiyah
+AREA,Asshinan
+AREA,Assulayyil
+AREA,Azzulfi
+AREA,Badr
+AREA,Badr aljanub
+AREA,Balqarn
+AREA,Baqa
+AREA,Baysh
+AREA,Biljurashi
+AREA,Bisha
+AREA,Bishah
+AREA,Buqayq
+AREA,Buraydah
+AREA,Damad
+AREA,Dariah
+AREA,Dawamat aljandal
+AREA,Dhahran
+AREA,Duba
+AREA,Duruma
+AREA,Farasan
+AREA,Fiji
+AREA,Hafar Al Batin
+AREA,Hafar albatin
+AREA,Hail
+AREA,Haqil
+AREA,Hawtat Bani Tamim
+AREA,Hubuna
+AREA,Huraymila
+AREA,Jazan
+AREA,Jeddah
+AREA,Jiddah
+AREA,Jizan
+AREA,Jubail
+AREA,Khafji
+AREA,Khamis Mushait
+AREA,Khamis Mushayt
+AREA,Khaybar
+AREA,Khobar
+AREA,Khubash
+AREA,Khulays
+AREA,King Khalid Military City
+AREA,Maisan
+AREA,Makkah almukarramah
+AREA,Maratt
+AREA,Mecca
+AREA,Medina
+AREA,Muhayil
+AREA,Najran
+AREA,Out of KSA Boundaries
+AREA,Qaisumah
+AREA,Qaryah alulya
+AREA,Qatif
+AREA,Qilwah
+AREA,Qurayyat
+AREA,Rabigh
+AREA,Rafha
+AREA,Rafhah
+AREA,Ranyah
+AREA,Ras Al Khair
+AREA,Ras Tannurah
+AREA,Ras Tanura
+AREA,Rijal Alma
+AREA,Riyadh
+AREA,Riyadh alkhabra
+AREA,Rumah
+AREA,Sabya
+AREA,Saihat
+AREA,Sakaka
+AREA,Sakakah
+AREA,Samtah
+AREA,Sarat Abidah
+AREA,Shaqra
+AREA,Sharurah
+AREA,Simira
+AREA,Tabuk
+AREA,Taif
+AREA,Tanumah
+AREA,Tathlith
+AREA,Tayma
+AREA,Thadiq
+AREA,Thar
+AREA,Turaif
+AREA,Turayf
+AREA,Turubah
+AREA,Umluj
+AREA,Unaizah
+AREA,Unayzah
+AREA,Uqlat Al Suqur
+AREA,Uyun aljiwa
+AREA,Wadi ad Dawasir
+AREA,Wadi addawasir
+AREA,Yadamah
+AREA,Yanbu
+AREA,Yanbu albahr
+AREA,Zahran aljanub
+CHURN_CHANN,"900 - CC"
+CHURN_CHANN,B2
+CHURN_CHANN,B2B CRM
+CHURN_CHANN,B2C CRM
+CHURN_CHANN,Bu
+CHURN_CHANN,Bulk Order
+CHURN_CHANN,IR
+CHURN_CHANN,IRB
+CHURN_CHANN,IVR
+CHURN_CHANN,MySTC
+CHURN_CHANN,MySTC iPhone
+CHURN_CHANN,MySTC Mobile
+CHURN_CHANN,MySTC Portal
+CHURN_CHANN,NA
+CHURN_CHANN,Outlet
+CHURN_CHANN,Si
+CHURN_CHANN,Siebel
+CHURN_CHANN,SSM
+CHURN_CHANN,Support Function
+CHURN_TYPE,CustomerInitiated
+CHURN_TYPE,DowngradetoPrepaid
+CHURN_TYPE,MNPPortIn
+CHURN_TYPE,MNPPortOut
+CHURN_TYPE,Ownership Across BU
+CHURN_TYPE,PostpaidToFlex
+CHURN_TYPE,PrepaidtoPrepaid
+CHURN_TYPE,SMBB-NA
+CHURN_TYPE,SOFT CHURN
+CHURN_TYPE,SystemInitiated
+CHURN_TYPE,Termination - Dunning
+CHURN_TYPE,Transfer
+CHURN_TYPE,Transfer Across BU
+CITY,Ad Dammam
+CITY,Ahsa
+CITY,Al-Baha
+CITY,Al-Jouf
+CITY,Al-Madinah Al-Monawarah
+CITY,Al-Qaseem
+CITY,All
+CITY,Ar-Riyad
+CITY,Aseer
+CITY,Asir
+CITY,Baha
+CITY,Dammam
+CITY,Eastern District
+CITY,Eastern Region
+CITY,Hail
+CITY,Jazan
+CITY,Jeddah
+CITY,Jizan
+CITY,Jouf
+CITY,Jubail
+CITY,Madinah
+CITY,Makkah
+CITY,Makkah Al-Mokarramah
+CITY,Najran
+CITY,Northern Border
+CITY,Northern Borders
+CITY,Other Country
+CITY,Out of KSA Boundaries
+CITY,Qassim
+CITY,Riyadh City
+CITY,Riyadh District
+CITY,Tabouk
+CITY,Tabuk
+CITY,Taif
+CITY,Yanbu
+EXCLUSION_S,Border_Churn
+EXCLUSION_S,CITC_Blocking
+EXCLUSION_S,FingerPrint
+EXCLUSION_S,Fraud
+EXCLUSION_S,Gross_Normalized_Churn
+EXCLUSION_S,Migration_to_Jawwy
+EXCLUSION_S,Migration_to_Postpaid
+EXCLUSION_S,Migration_to_Prepaid
+EXCLUSION_S,Rotational
+EXCLUSION_S,ROTATIONAL_CHURN_PP_LS
+EXCLUSION_S,ROTATIONAL_CHURN_PP_SS
+EXCLUSION_S,ROTATIONAL_CHURN_PS_LS
+EXCLUSION_S,ROTATIONAL_CHURN_PS_SS
+GENDER,FEMALE
+GENDER,MALE
+GENDER,SMBB-NA
+GENDER,UNKNOWN
+LAST_ACTIVI,CALL
+LAST_ACTIVI,DATA
+LAST_ACTIVI,OTHER
+LAST_ACTIVI,RECHARGE
+LAST_ACTIVI,SMS
+NATIONALITY,
+NATIONALITY,
+NATIONALITY,
+NATIONALITY,
+NATIONALITY, 
+NATIONALITY,
+NATIONALITY,"131"
+NATIONALITY,"133"
+NATIONALITY,"48"
+NATIONALITY,Afghanistan
+NATIONALITY,African contries - Other
+NATIONALITY,Al Saaeer Tribe
+NATIONALITY,Alaska
+NATIONALITY,Albania
+NATIONALITY,Algeria
+NATIONALITY,Alien  KSA Passprt
+NATIONALITY,Alien KSA Passprt
+NATIONALITY,Alnsi Tribe
+NATIONALITY,American Samoa
+NATIONALITY,American Virgin Islands
+NATIONALITY,Andorra
+NATIONALITY,Angola
+NATIONALITY,Anguilla
+NATIONALITY,Antarctica
+NATIONALITY,Antigua
+NATIONALITY,Arabs 84
+NATIONALITY,Argentina
+NATIONALITY,Armenia
+NATIONALITY,Aruba
+NATIONALITY,Australia
+NATIONALITY,Austria
+NATIONALITY,Azerbaijan
+NATIONALITY,Ba Ebeed Tribe
+NATIONALITY,Bahamas
+NATIONALITY,Bahrain
+NATIONALITY,Balearic Islands
+NATIONALITY,Baloushi
+NATIONALITY,Baluchistan
+NATIONALITY,Bangladesh
+NATIONALITY,Barbados
+NATIONALITY,Barbuda
+NATIONALITY,Belarus
+NATIONALITY,Belgium
+NATIONALITY,Belize
+NATIONALITY,Belo
+NATIONALITY,Benin
+NATIONALITY,Bermuda
+NATIONALITY,Bhutan
+NATIONALITY,Bolivia
+NATIONALITY,Bonaire
+NATIONALITY,Bosnia and Herzegovina
+NATIONALITY,Botswana
+NATIONALITY,Bovthatswana
+NATIONALITY,Brazil
+NATIONALITY,British Guyana
+NATIONALITY,British Virgin Islands
+NATIONALITY,Brunei
+NATIONALITY,Bulgaria
+NATIONALITY,Burkina Faso
+NATIONALITY,Burundi
+NATIONALITY,Caledonia
+NATIONALITY,Cambodia
+NATIONALITY,Cameroon
+NATIONALITY,Canada
+NATIONALITY,Canary Islands
+NATIONALITY,Cape Verde
+NATIONALITY,Cayman Islands
+NATIONALITY,Central African Republic
+NATIONALITY,Chad
+NATIONALITY,Chechnya
+NATIONALITY,Chile
+NATIONALITY,China
+NATIONALITY,Christmas Island
+NATIONALITY,Christmas Islands
+NATIONALITY,Cocos Islands
+NATIONALITY,code to Montenegro
+NATIONALITY,Colombia
+NATIONALITY,Comorian island
+NATIONALITY,Comoros
+NATIONALITY,Comoros Islands
+NATIONALITY,Congo
+NATIONALITY,Cook Islands
+NATIONALITY,Costa Rica
+NATIONALITY,Cote De Voire
+NATIONALITY,Croatia
+NATIONALITY,Cuba
+NATIONALITY,Cyprus
+NATIONALITY,Czech Republic
+NATIONALITY,Czechoslovakia
+NATIONALITY,Dagestan
+NATIONALITY,Denmark
+NATIONALITY,Diego Garcia
+NATIONALITY,Djibouti
+NATIONALITY,Document Industry
+NATIONALITY,document Syria
+NATIONALITY,Dominica
+NATIONALITY,Dominican Republic
+NATIONALITY,East Timor
+NATIONALITY,Ecuador
+NATIONALITY,Egypt
+NATIONALITY,El Salvador
+NATIONALITY,Equatorial Guinea
+NATIONALITY,Eritrea
+NATIONALITY,Estonia
+NATIONALITY,Ethiopia
+NATIONALITY,Falkland islands
+NATIONALITY,Faroe Islands
+NATIONALITY,Fiji
+NATIONALITY,Finland
+NATIONALITY,France
+NATIONALITY,French Guiana
+NATIONALITY,French Polynesia
+NATIONALITY,Gabon
+NATIONALITY,Gambia
+NATIONALITY,Georgia
+NATIONALITY,Germany
+NATIONALITY,Ghana
+NATIONALITY,Gibraltar
+NATIONALITY,Greece
+NATIONALITY,Greenland
+NATIONALITY,Grenada
+NATIONALITY,Guadeloupe
+NATIONALITY,Guam
+NATIONALITY,Guatemala
+NATIONALITY,Guinea
+NATIONALITY,Guinea Bissau
+NATIONALITY,Guyana
+NATIONALITY,Haiti
+NATIONALITY,Hawaii
+NATIONALITY,Holland
+NATIONALITY,Honduras
+NATIONALITY,Hong Kong
+NATIONALITY,Hungary
+NATIONALITY,Iceland
+NATIONALITY,India
+NATIONALITY,Indian
+NATIONALITY,Indonesia
+NATIONALITY,Iran
+NATIONALITY,Iraq
+NATIONALITY,Ireland
+NATIONALITY,Italy
+NATIONALITY,Jamaica
+NATIONALITY,Japan
+NATIONALITY,Joanna
+NATIONALITY,Jordan
+NATIONALITY,Kazakhstan
+NATIONALITY,Kenya
+NATIONALITY,Kiribati Gilbert Islands
+NATIONALITY,Kosovo
+NATIONALITY,Kuwait
+NATIONALITY,Kuwait - without
+NATIONALITY,Kyrgyzstan
+NATIONALITY,Laos
+NATIONALITY,Latvia
+NATIONALITY,Lebanon
+NATIONALITY,Lesotho
+NATIONALITY,Liberia
+NATIONALITY,Libya
+NATIONALITY,Liechtenstein
+NATIONALITY,Lithuania
+NATIONALITY,Luxembourg
+NATIONALITY,Macau
+NATIONALITY,Macedonia
+NATIONALITY,Madagascar
+NATIONALITY,Madeira Islands
+NATIONALITY,Malawi
+NATIONALITY,Malaysia
+NATIONALITY,Maldives islands
+NATIONALITY,Mali
+NATIONALITY,Malta
+NATIONALITY,Marshall Islands
+NATIONALITY,Mauritania
+NATIONALITY,Mauritius
+NATIONALITY,Member of the tribes
+NATIONALITY,Mexico
+NATIONALITY,Micronesia
+NATIONALITY,Moldova
+NATIONALITY,Monaco
+NATIONALITY,Mongolia
+NATIONALITY,Montenegro
+NATIONALITY,Montserrat
+NATIONALITY,Morocco
+NATIONALITY,Mozambique
+NATIONALITY,Myanmar
+NATIONALITY,Myanmar Bangladesh Passport
+NATIONALITY,Myanmar Pakistan Passport
+NATIONALITY,Myanmar Resident
+NATIONALITY,Namibia
+NATIONALITY,Nauru
+NATIONALITY,Nepal
+NATIONALITY,Netherlands Antilles islands
+NATIONALITY,New Caledonia
+NATIONALITY,New Guinea
+NATIONALITY,New Zealand
+NATIONALITY,Next to Ebr Tribes
+NATIONALITY,Nicaragua
+NATIONALITY,Niger
+NATIONALITY,Nigeria
+NATIONALITY,Niue Islands
+NATIONALITY,Norfolk Island
+NATIONALITY,North Korea
+NATIONALITY,Norway
+NATIONALITY,Not Oman
+NATIONALITY,Not Qatar
+NATIONALITY,Not UAE
+NATIONALITY,Oman
+NATIONALITY,Other
+NATIONALITY,Pakistan
+NATIONALITY,Palau
+NATIONALITY,Palestine
+NATIONALITY,Palestinian
+NATIONALITY,Palestinian Egyptian
+NATIONALITY,Palestinian Iraqi
+NATIONALITY,Palestinian Jordan
+NATIONALITY,Palestinian Lebanese
+NATIONALITY,Palestinian Syria
+NATIONALITY,Panama
+NATIONALITY,Papua New Guinea
+NATIONALITY,Paragauy
+NATIONALITY,Paraguay
+NATIONALITY,Peru
+NATIONALITY,Philippines
+NATIONALITY,Poland
+NATIONALITY,Portugal
+NATIONALITY,Puerto Rico
+NATIONALITY,Qatar
+NATIONALITY,Resident
+NATIONALITY,Resident Born
+NATIONALITY,Resident Migration
+NATIONALITY,Resident No Id
+NATIONALITY,Resident Tribes
+NATIONALITY,Resident Unknown
+NATIONALITY,ResidentRequesting Nationality
+NATIONALITY,Residents of Bahrain
+NATIONALITY,Restriction D 1
+NATIONALITY,Restriction H 1
+NATIONALITY,Restriction J 1
+NATIONALITY,Restriction J 2
+NATIONALITY,Restriction J 3
+NATIONALITY,Restriction L 1
+NATIONALITY,Restriction N 1
+NATIONALITY,Restriction S 1
+NATIONALITY,Restriction SH 1
+NATIONALITY,Restriction Y 1
+NATIONALITY,Reunion
+NATIONALITY,Romania
+NATIONALITY,Russia Federal
+NATIONALITY,Russian
+NATIONALITY,Rwanda
+NATIONALITY,Saba
+NATIONALITY,Saint Helena
+NATIONALITY,Saint Kitts and Nevis
+NATIONALITY,Saint Lucia
+NATIONALITY,Saint Pierre and Miquelon
+NATIONALITY,Saintt Vincent
+NATIONALITY,Samoa
+NATIONALITY,San Cristovernivz
+NATIONALITY,San Marino
+NATIONALITY,Sao Tome/FranceBank
+NATIONALITY,Saudi
+NATIONALITY,Saudi Arabia
+NATIONALITY,Saudi Citizen
+NATIONALITY,Saudi Citizen_bkp
+NATIONALITY,Senegal
+NATIONALITY,Serbia
+NATIONALITY,Seychelles Islands
+NATIONALITY,Sierra Leone
+NATIONALITY,Singapore
+NATIONALITY,Slovakia
+NATIONALITY,Slovenia
+NATIONALITY,SMBB-NA
+NATIONALITY,Solomon Islands
+NATIONALITY,Somalia
+NATIONALITY,South Africa
+NATIONALITY,South Korea
+NATIONALITY,South Sudan
+NATIONALITY,Southern Yemen
+NATIONALITY,Spain
+NATIONALITY,Sri Lanka
+NATIONALITY,Suadan
+NATIONALITY,Sudan
+NATIONALITY,Suriname
+NATIONALITY,Swaziland
+NATIONALITY,Sweden
+NATIONALITY,Switzerland
+NATIONALITY,Syria
+NATIONALITY,Tahiti
+NATIONALITY,Taiwan
+NATIONALITY,Taiwan China
+NATIONALITY,Tajikistan
+NATIONALITY,Tanzania
+NATIONALITY,Tatarstan
+NATIONALITY,Thailand
+NATIONALITY,The document EMIRIAN
+NATIONALITY,The document Omani
+NATIONALITY,Togo
+NATIONALITY,Togolaise
+NATIONALITY,Tonga Islands
+NATIONALITY,Tribes adj to Ataf
+NATIONALITY,Tribes emigrated
+NATIONALITY,Tribes Migration AlHalifah
+NATIONALITY,Tribes Migration Kuwait
+NATIONALITY,Trinidad and Tobago
+NATIONALITY,Tunisia
+NATIONALITY,Turkey
+NATIONALITY,Turkistan
+NATIONALITY,Turkistani Resident
+NATIONALITY,Turkmenistan
+NATIONALITY,Turks and Caicos Islands
+NATIONALITY,Tuvalu
+NATIONALITY,U.A.E.
+NATIONALITY,Uganda
+NATIONALITY,Ukraine
+NATIONALITY,United Arab Emirates
+NATIONALITY,United Kingdom
+NATIONALITY,United Nations
+NATIONALITY,United States Of America
+NATIONALITY,UNKNOWN
+NATIONALITY,Uruguay
+NATIONALITY,Uzbekistan
+NATIONALITY,Vanuoto
+NATIONALITY,Vatican City
+NATIONALITY,Venezuela
+NATIONALITY,Vietnam
+NATIONALITY,Wallis and Futuna
+NATIONALITY,Western Samoa
+NATIONALITY,Yemen
+NATIONALITY,Yemen - pilgrimage
+NATIONALITY,Yemeni the sultans
+NATIONALITY,Yugoslavia
+NATIONALITY,Zaire
+NATIONALITY,Zambia
+NATIONALITY,Zimbabwe
+P_SEGMENT,P1
+P_SEGMENT,P2
+P_SEGMENT,P3
+P_SEGMENT,P4
+REGION,CENTRAL
+REGION,Eastern
+REGION,Northern
+REGION,OTHER
+REGION,SOUTHERN
+REGION,WESTERN
+SAUDI_FLAG,Expat
+SAUDI_FLAG,Saudi
+SCREEN_TYPE,LS
+SCREEN_TYPE,NA
+SCREEN_TYPE,SS
+STREAM_TYPE,PP
+STREAM_TYPE,PS
+TAMAYUZ_TYP,Base Tier
+TAMAYUZ_TYP,Diamond
+TAMAYUZ_TYP,Elite
+TAMAYUZ_TYP,Gold
+TAMAYUZ_TYP,Platinum
+TAMAYUZ_TYP,Qitaf - Classic
+TAMAYUZ_TYP,Qitaf - Tamayouz Diamond
+TAMAYUZ_TYP,Qitaf - Tamayouz Gold
+TAMAYUZ_TYP,Qitaf - Tamayouz Platinum
+TAMAYUZ_TYP,Silver
+TAMAYUZ_TYP,SMBB-NA
+VALUE_SEGME,"1. VHV"
+VALUE_SEGME,"2. HV"
+VALUE_SEGME,"3. MHV"
+VALUE_SEGME,"4. MV"
+VALUE_SEGME,"5. LV"
+VALUE_SEGME,"6. VLV"
+VALUE_SEGME,"7. NEW"
+VALUE_SEGME,??????

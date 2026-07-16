@@ -29,7 +29,10 @@ class PromptContext:
             f'<schema_file name="{self.schema.name}">',
             self.schema.text,
             "</schema_file>",
-            "The following sample files are raw extracts. Use them to understand value formats and examples only.",
+            "The following sample files contain raw record extracts and column-level unique-value dictionaries. "
+            "Actively inspect them when mapping user language to columns and categorical filters, and use the "
+            "exact stored value when there is one confident match. Treat the values as evidence and examples, "
+            "not as queryable tables or proof that unlisted values cannot exist.",
         ]
         for sample in self.samples:
             parts.extend(
