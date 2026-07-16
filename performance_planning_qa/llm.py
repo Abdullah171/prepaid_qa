@@ -7,7 +7,7 @@ import json
 import logging
 import re
 import time
-from typing import Any
+from typing import Any, Callable
 
 import json_repair
 
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 RETRYABLE_STATUS_CODES = frozenset({502, 503, 504})
 
 ChatMessage = dict[str, str]
+ReasoningCallback = Callable[[str], None]
 
 
 def _with_current_date_context(messages: list[ChatMessage]) -> list[ChatMessage]:
@@ -71,13 +72,14 @@ class LiteLLMClient:
         *,
         temperature: float,
         max_tokens: int,
+        reasoning_callback: ReasoningCallback | None = None,
     ) -> str:
         request_payload = {
             "model": self.settings.model,
             "messages": _with_current_date_context(messages),
             "temperature": temperature,
             "max_tokens": max_tokens,
-            "stream": False,
+            "stream": self.settings.stream,
         }
         diagnostics = {
             "provider": self.settings.provider,
@@ -87,17 +89,33 @@ class LiteLLMClient:
 
         for attempt in range(self.settings.max_retries + 1):
             try:
-                response = self.client.post(
-                    diagnostics["endpoint"],
-                    headers={
-                        "Authorization": f"Bearer {self.settings.api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json=request_payload,
-                )
-                response.raise_for_status()
-                payload = response.json()
-                content = _completion_content(payload)
+                headers = {
+                    "Authorization": f"Bearer {self.settings.api_key}",
+                    "Content-Type": "application/json",
+                }
+                if self.settings.stream:
+                    with self.client.stream(
+                        "POST",
+                        diagnostics["endpoint"],
+                        headers=headers,
+                        json=request_payload,
+                    ) as response:
+                        if response.status_code >= 400:
+                            response.read()
+                        response.raise_for_status()
+                        content = _stream_completion_content(
+                            response,
+                            reasoning_callback=reasoning_callback,
+                        )
+                else:
+                    response = self.client.post(
+                        diagnostics["endpoint"],
+                        headers=headers,
+                        json=request_payload,
+                    )
+                    response.raise_for_status()
+                    payload = response.json()
+                    content = _completion_content(payload)
                 break
             except Exception as exc:
                 response = getattr(exc, "response", None)
@@ -136,11 +154,13 @@ class LiteLLMClient:
         temperature: float,
         max_tokens: int,
         fallback_key: str | None = None,
+        reasoning_callback: ReasoningCallback | None = None,
     ) -> dict[str, Any]:
         text = self.complete(
             messages,
             temperature=temperature,
             max_tokens=max_tokens,
+            reasoning_callback=reasoning_callback,
         )
         return extract_json_object(text, fallback_key=fallback_key)
 
@@ -183,6 +203,49 @@ def _completion_content(payload: Any) -> str:
                 parts.append(item["text"])
         return "".join(parts)
     raise RuntimeError("LLM assistant message did not contain text content.")
+
+
+def _stream_completion_content(
+    response: Any,
+    *,
+    reasoning_callback: ReasoningCallback | None,
+) -> str:
+    """Collect answer content while forwarding GLM reasoning SSE chunks."""
+
+    content_parts: list[str] = []
+    for line in response.iter_lines():
+        if not line.startswith("data:"):
+            continue
+        data = line[5:].strip()
+        if not data:
+            continue
+        if data == "[DONE]":
+            break
+        try:
+            payload = json.loads(data)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("LLM returned an invalid streaming event.") from exc
+
+        choices = payload.get("choices") if isinstance(payload, dict) else None
+        if not isinstance(choices, list) or not choices:
+            continue
+        first_choice = choices[0]
+        delta = first_choice.get("delta") if isinstance(first_choice, dict) else None
+        if not isinstance(delta, dict):
+            continue
+
+        reasoning = delta.get("reasoning_content")
+        if isinstance(reasoning, str) and reasoning and reasoning_callback is not None:
+            try:
+                reasoning_callback(reasoning)
+            except Exception:
+                logger.debug("Reasoning callback failed", exc_info=True)
+
+        content = delta.get("content")
+        if isinstance(content, str):
+            content_parts.append(content)
+
+    return "".join(content_parts)
 
 
 def _safe_error_response(response: Any) -> str:

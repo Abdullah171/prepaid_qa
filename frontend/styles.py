@@ -234,6 +234,53 @@ div[data-testid="stChatInput"] {
   color: #ffffff;
 }
 
+@keyframes ppqa-thinking-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Stable live-reasoning control. The spinner is CSS-only, so polling reruns do
+   not restart it or switch it between status icons. */
+.st-key-live-thinking .stButton > button {
+  align-items: center;
+  background: linear-gradient(135deg, #ffffff 0%, #f6f0fb 100%);
+  border: 1px solid rgba(79, 0, 140, 0.2);
+  border-radius: 999px;
+  box-shadow: 0 3px 12px rgba(79, 0, 140, 0.08);
+  color: var(--ppqa-stc-purple);
+  display: inline-flex;
+  font-size: 0.86rem;
+  gap: 0.55rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.78rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.st-key-live-thinking [data-testid="stIconMaterial"] {
+  animation: ppqa-thinking-spin 700ms linear infinite !important;
+  display: inline-flex !important;
+  transform-origin: 50% 50% !important;
+  will-change: transform;
+}
+
+.st-key-live-thinking .stButton > button:hover {
+  background: #ffffff;
+  border-color: rgba(79, 0, 140, 0.48);
+  box-shadow: 0 5px 16px rgba(79, 0, 140, 0.14);
+  color: var(--ppqa-stc-purple);
+  transform: translateY(-1px);
+}
+
+.st-key-live-thinking-content {
+  background: linear-gradient(180deg, #ffffff 0%, #fbf9fd 100%);
+  border-radius: 8px;
+  margin-top: 0.2rem;
+}
+
 .stTextInput input,
 .stTextArea textarea {
   border-radius: 6px;

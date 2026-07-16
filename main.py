@@ -283,10 +283,13 @@ async def ask_session_stream(
 
     async def events():
         loop = asyncio.get_running_loop()
-        progress_queue: asyncio.Queue[str] = asyncio.Queue()
+        event_queue: asyncio.Queue[tuple[str, str]] = asyncio.Queue()
 
         def report_progress(message: str) -> None:
-            loop.call_soon_threadsafe(progress_queue.put_nowait, message)
+            loop.call_soon_threadsafe(event_queue.put_nowait, ("progress", message))
+
+        def report_reasoning(content: str) -> None:
+            loop.call_soon_threadsafe(event_queue.put_nowait, ("reasoning", content))
 
         analysis_task = asyncio.create_task(
             _ask_session_impl(
@@ -295,26 +298,29 @@ async def ask_session_stream(
                 dry_run=request_body.dry_run,
                 request=request,
                 progress_callback=report_progress,
+                reasoning_callback=report_reasoning,
             )
         )
         last_event_at = loop.time()
 
         while not analysis_task.done():
             try:
-                message = await asyncio.wait_for(progress_queue.get(), timeout=1.0)
+                event_name, content = await asyncio.wait_for(
+                    event_queue.get(), timeout=1.0
+                )
             except asyncio.TimeoutError:
                 if loop.time() - last_event_at >= 15:
                     yield ": keep-alive\n\n"
                     last_event_at = loop.time()
                 continue
-            yield _sse_event("progress", {"message": message})
+            field = "content" if event_name == "reasoning" else "message"
+            yield _sse_event(event_name, {field: content})
             last_event_at = loop.time()
 
-        while not progress_queue.empty():
-            yield _sse_event(
-                "progress",
-                {"message": progress_queue.get_nowait()},
-            )
+        while not event_queue.empty():
+            event_name, content = event_queue.get_nowait()
+            field = "content" if event_name == "reasoning" else "message"
+            yield _sse_event(event_name, {field: content})
 
         try:
             payload = await analysis_task
@@ -343,6 +349,7 @@ async def _ask_session_impl(
     dry_run: bool,
     request: Request,
     progress_callback: Callable[[str], None] | None = None,
+    reasoning_callback: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     """Run and persist one session question for regular and streaming routes."""
 
@@ -369,6 +376,7 @@ async def _ask_session_impl(
                 chat_history=chat_history,
                 previous_result=previous_result,
                 progress_callback=progress_callback,
+                reasoning_callback=reasoning_callback,
             )
             result_payload = result.to_dict()
             assistant_content = _assistant_content_from_result(result_payload)

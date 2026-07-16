@@ -20,10 +20,9 @@ For each user question it:
 5. Conditionally builds a validated chart from those returned rows for explicit
    visualization requests and time-trend questions.
 
-While an answer is running, the Streamlit interface shows live pipeline phases
-such as fetching relevant information, gathering results, analyzing findings, and
-preparing the final answer. These are operational progress updates, not the model's
-private chain-of-thought.
+When the selected provider has streaming enabled and returns
+`delta.reasoning_content`, the Streamlit interface renders that text live in a
+"Thinking" panel. The current GLM configuration enables this with `GLM_STREAM=true`.
 
 Structured LLM responses are parsed as strict JSON first. If parsing fails, the
 app uses `json-repair` for common issues such as unquoted keys, single quotes,
@@ -74,11 +73,13 @@ Optional keys:
 
 ```env
 LLM_VERIFY_SSL=false
+LLM_STREAM=false
 LLM_TIMEOUT_SECONDS=1200
 LLM_MAX_RETRIES=0
 LLM_RETRY_BACKOFF_SECONDS=2
 # Provider-specific values take precedence over the LLM_* defaults:
 GLM_TIMEOUT_SECONDS=1800
+GLM_STREAM=true
 GLM_MAX_RETRIES=2
 GLM_RETRY_BACKOFF_SECONDS=2
 LLM_SQL_MAX_TOKENS=3000

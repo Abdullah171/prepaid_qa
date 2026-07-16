@@ -57,6 +57,9 @@ def stream_inprocess_session_ask(
     def report_progress(message: str) -> None:
         event_queue.put({"event": "progress", "message": message})
 
+    def report_reasoning(content: str) -> None:
+        event_queue.put({"event": "reasoning", "content": content})
+
     def run_analysis() -> None:
         try:
             from fastapi import HTTPException
@@ -85,6 +88,7 @@ def stream_inprocess_session_ask(
                 dry_run=dry_run,
                 request=request,
                 progress_callback=report_progress,
+                reasoning_callback=report_reasoning,
             )
             payload = client.portal.call(call)
         except HTTPException:

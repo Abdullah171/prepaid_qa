@@ -40,6 +40,7 @@ from performance_planning_qa.user_messages import ANALYSIS_UNAVAILABLE_MESSAGE
 logger = logging.getLogger(__name__)
 
 ProgressCallback = Callable[[str], None]
+ReasoningCallback = Callable[[str], None]
 
 
 @dataclass(frozen=True)
@@ -115,6 +116,7 @@ class NL2SQLPipeline:
         self._current_prompt_logs: list[Path] = []
         self._current_chat_history: list[ChatTurn] = []
         self._progress_callback: ProgressCallback | None = None
+        self._reasoning_callback: ReasoningCallback | None = None
 
     @classmethod
     def from_env(cls) -> NL2SQLPipeline:
@@ -141,10 +143,12 @@ class NL2SQLPipeline:
         chat_history: list[ChatTurn] | None = None,
         previous_result: dict[str, Any] | None = None,
         progress_callback: ProgressCallback | None = None,
+        reasoning_callback: ReasoningCallback | None = None,
     ) -> PipelineResult:
         self._current_prompt_logs = []
         self._current_chat_history = chat_history or []
         self._progress_callback = progress_callback
+        self._reasoning_callback = reasoning_callback
         self._report_progress("Fetching relevant information")
         if not dry_run:
             chart_followup = self._chart_followup_result(question, previous_result)
@@ -591,6 +595,7 @@ class NL2SQLPipeline:
             temperature=temperature,
             max_tokens=max_tokens,
             fallback_key=fallback_key,
+            reasoning_callback=self._reasoning_callback,
         )
 
 

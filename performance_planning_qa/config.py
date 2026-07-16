@@ -81,6 +81,7 @@ class LLMSettings:
     model: str
     api_key: str
     verify_ssl: bool
+    stream: bool
     timeout_seconds: float
     max_retries: int
     retry_backoff_seconds: float
@@ -220,6 +221,10 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
         model=_get_any(f"{llm_prefix}_MODEL", default="") or "",
         api_key=_get_any(f"{llm_prefix}_API_KEY", default="") or "",
         verify_ssl=_get_bool("LLM_VERIFY_SSL", default=False),
+        stream=_get_bool(
+            _first_existing_env(f"{llm_prefix}_STREAM", "LLM_STREAM"),
+            default=False,
+        ),
         timeout_seconds=_get_float(
             _first_existing_env(
                 f"{llm_prefix}_TIMEOUT_SECONDS", "LLM_TIMEOUT_SECONDS"

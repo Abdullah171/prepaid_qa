@@ -491,6 +491,7 @@ def _render_assistant_artifacts(
     sql = metadata.get("sql")
     query_result = metadata.get("query_result")
 
+    _render_reasoning(metadata.get("reasoning"))
     _render_chart(metadata.get("chart"), chart_key=chart_key)
     if not st.session_state.get("show_source", False):
         return
@@ -520,6 +521,14 @@ def _render_assistant_artifacts(
                     f"Showing {len(preview_rows):,} of {len(rows):,} returned rows "
                     "to keep the browser responsive."
                 )
+
+
+def _render_reasoning(value: Any) -> None:
+    if not isinstance(value, str) or not value.strip():
+        return
+    with st.expander("Thinking — click to view", expanded=False):
+        with st.container(height=280, border=False):
+            st.markdown(value)
 
 
 def _render_chart(chart: Any, *, chart_key: str | None = None) -> None:
@@ -897,7 +906,11 @@ def _render_active_analysis() -> None:
     if snapshot.done:
         try:
             response = job.result()
-            _apply_analysis_response(response, expected_session_id=snapshot.session_id)
+            _apply_analysis_response(
+                response,
+                expected_session_id=snapshot.session_id,
+                reasoning=snapshot.reasoning,
+            )
         except Exception as exc:
             _record_failed_analysis(
                 snapshot.session_id,
@@ -907,18 +920,37 @@ def _render_active_analysis() -> None:
             )
         finally:
             runner.clear(snapshot.job_id)
+            st.session_state.pop(f"thinking-expanded-{snapshot.job_id}", None)
+            st.session_state.pop(f"thinking-toggle-{snapshot.job_id}", None)
         st.rerun()
 
     with st.chat_message("user", avatar=_message_avatar("user")):
         st.markdown(snapshot.question)
 
     with st.chat_message("assistant", avatar=_message_avatar("assistant")):
-        st.status(
-            snapshot.progress,
-            expanded=True,
-            state="running",
-            type="compact",
-        )
+        with st.container(key="live-thinking"):
+            expanded_key = f"thinking-expanded-{snapshot.job_id}"
+            is_expanded = bool(st.session_state.get(expanded_key, False))
+            if st.button(
+                "Click to hide thinking" if is_expanded else "Click to view thinking",
+                key=f"thinking-toggle-{snapshot.job_id}",
+                help="Click to show or hide live reasoning",
+                type="tertiary",
+                icon=":material/progress_activity:",
+            ):
+                is_expanded = not is_expanded
+                st.session_state[expanded_key] = is_expanded
+            if is_expanded:
+                with st.container(
+                    key="live-thinking-content",
+                    height=280,
+                    border=True,
+                    autoscroll=True,
+                ):
+                    if snapshot.reasoning:
+                        st.markdown(snapshot.reasoning)
+                    else:
+                        st.write("Waiting for reasoning…")
 
     with st.bottom:
         st.chat_input(
@@ -942,6 +974,7 @@ def _apply_analysis_response(
     response: dict[str, Any],
     *,
     expected_session_id: str,
+    reasoning: str = "",
 ) -> None:
     session = response.get("session")
     user_message = response.get("user_message")
@@ -951,6 +984,12 @@ def _apply_analysis_response(
         for item in (session, user_message, assistant_message)
     ):
         raise ApiError("API returned an incomplete analysis response")
+
+    if reasoning.strip():
+        assistant_message = dict(assistant_message)
+        metadata = dict(assistant_message.get("metadata") or {})
+        metadata["reasoning"] = reasoning
+        assistant_message["metadata"] = metadata
 
     session_id = str(session.get("id") or "")
     if not session_id or session_id != expected_session_id:

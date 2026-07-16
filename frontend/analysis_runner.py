@@ -18,6 +18,7 @@ class AnalysisSnapshot:
     session_id: str
     question: str
     progress: str
+    reasoning: str
     elapsed_seconds: float
     done: bool
 
@@ -33,6 +34,7 @@ class AnalysisJob:
     dry_run: bool
     started_at: float = field(default_factory=time.monotonic)
     _progress: str = field(default="Connecting to the analysis service", init=False)
+    _reasoning_parts: list[str] = field(default_factory=list, init=False, repr=False)
     _future: Future[dict[str, Any]] | None = field(
         default=None,
         init=False,
@@ -56,15 +58,23 @@ class AnalysisJob:
             if cleaned != self._progress:
                 self._progress = cleaned[:240]
 
+    def append_reasoning(self, content: str) -> None:
+        if not content:
+            return
+        with self._lock:
+            self._reasoning_parts.append(content)
+
     def snapshot(self) -> AnalysisSnapshot:
         with self._lock:
             progress = self._progress
+            reasoning = "".join(self._reasoning_parts)
             future = self._future
         return AnalysisSnapshot(
             job_id=self.job_id,
             session_id=self.session_id,
             question=self.question,
             progress=progress,
+            reasoning=reasoning,
             elapsed_seconds=max(0.0, time.monotonic() - self.started_at),
             done=future.done() if future is not None else False,
         )
@@ -140,6 +150,8 @@ def _run_analysis(job: AnalysisJob) -> dict[str, Any]:
             event_type = event.get("event")
             if event_type == "progress":
                 job.update_progress(str(event.get("message") or "Running analysis"))
+            elif event_type == "reasoning":
+                job.append_reasoning(str(event.get("content") or ""))
             elif event_type == "result":
                 response = event
             elif event_type == "error":
