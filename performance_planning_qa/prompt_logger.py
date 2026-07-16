@@ -38,6 +38,11 @@ class PromptLogger:
         now = datetime.now(timezone.utc)
         filename = f"{now.strftime('%Y%m%dT%H%M%S%fZ')}_{_slug(phase)}.txt"
         path = self.settings.directory / filename
+        max_tokens = (
+            self.llm_settings.answer_max_tokens
+            if phase == "answer_generation"
+            else self.llm_settings.sql_max_tokens
+        )
 
         lines = [
             "LLM Prompt Log",
@@ -47,7 +52,7 @@ class PromptLogger:
             f"model: {self.llm_settings.model}",
             f"base_url: {self.llm_settings.base_url}",
             f"temperature: {temperature}",
-            f"max_tokens: {self.llm_settings.max_tokens}",
+            f"max_tokens: {max_tokens}",
         ]
         if extra:
             for key, value in extra.items():

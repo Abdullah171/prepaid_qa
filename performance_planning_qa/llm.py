@@ -62,12 +62,18 @@ class LiteLLMClient:
             )
         return self._client
 
-    def complete(self, messages: list[ChatMessage], *, temperature: float) -> str:
+    def complete(
+        self,
+        messages: list[ChatMessage],
+        *,
+        temperature: float,
+        max_tokens: int,
+    ) -> str:
         request_payload = {
             "model": self.settings.model,
             "messages": _with_current_date_context(messages),
             "temperature": temperature,
-            "max_tokens": self.settings.max_tokens,
+            "max_tokens": max_tokens,
             "stream": False,
         }
         diagnostics = {
@@ -106,9 +112,14 @@ class LiteLLMClient:
         messages: list[ChatMessage],
         *,
         temperature: float,
+        max_tokens: int,
         fallback_key: str | None = None,
     ) -> dict[str, Any]:
-        text = self.complete(messages, temperature=temperature)
+        text = self.complete(
+            messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
         return extract_json_object(text, fallback_key=fallback_key)
 
     def close(self) -> None:

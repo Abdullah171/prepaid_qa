@@ -84,7 +84,8 @@ class LLMSettings:
     timeout_seconds: float
     sql_temperature: float
     answer_temperature: float
-    max_tokens: int
+    sql_max_tokens: int
+    answer_max_tokens: int
 
     @property
     def base_url(self) -> str:
@@ -212,7 +213,8 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
         timeout_seconds=_get_float("LLM_TIMEOUT_SECONDS", default=1200.0),
         sql_temperature=_get_float("NL2SQL_TEMPERATURE", default=0.0),
         answer_temperature=_get_float("ANSWER_TEMPERATURE", default=0.2),
-        max_tokens=_get_int("LLM_MAX_TOKENS", default=10000),
+        sql_max_tokens=_get_int("LLM_SQL_MAX_TOKENS", default=3000),
+        answer_max_tokens=_get_int("LLM_ANSWER_MAX_TOKENS", default=5000),
     )
 
     teradata = TeradataSettings(
