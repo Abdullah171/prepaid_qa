@@ -1,0 +1,14 @@
+What is the total active customer base, and how is it changing over time?
+What percentage of the customer base is active, suspended, barred, blocked, inactive, or deleted?
+Which product families contribute the most customers and estimated revenue?
+Is the business growing through new customer acquisition, migrations, transfers, or reconnections?
+Is churn increasing or decreasing compared with previous months or quarters?
+What are the largest causes of churn?
+How much churn is customer-initiated versus system-initiated or caused by payment collection?
+Which customer value segments contribute the highest share of revenue?
+What proportion of high-value and very-high-value customers are at risk of churn?
+Are digital channels increasing their share of sales and customer servicing?
+Which regions, cities, or customer segments offer the greatest growth opportunity?
+Which products should the company invest in, simplify, reposition, or retire?
+How successful is the transition from older products to newer 5G, eSIM, and digital products?
+What are the major data-quality risks affecting executive reporting?

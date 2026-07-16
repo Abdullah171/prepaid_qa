@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import atexit
 from functools import partial
+import logging
 import queue
 import threading
 from typing import Any, Iterator
 
+from performance_planning_qa.user_messages import ANALYSIS_UNAVAILABLE_MESSAGE
+
+
+logger = logging.getLogger(__name__)
 
 _client: Any | None = None
 _client_lock = threading.Lock()
@@ -82,10 +87,15 @@ def stream_inprocess_session_ask(
                 progress_callback=report_progress,
             )
             payload = client.portal.call(call)
-        except HTTPException as exc:
-            event_queue.put({"event": "error", "message": str(exc.detail)})
-        except Exception as exc:
-            event_queue.put({"event": "error", "message": str(exc)})
+        except HTTPException:
+            event_queue.put(
+                {"event": "error", "message": ANALYSIS_UNAVAILABLE_MESSAGE}
+            )
+        except Exception:
+            logger.exception("In-process session analysis failed")
+            event_queue.put(
+                {"event": "error", "message": ANALYSIS_UNAVAILABLE_MESSAGE}
+            )
         else:
             event_queue.put({"event": "result", **payload})
         finally:

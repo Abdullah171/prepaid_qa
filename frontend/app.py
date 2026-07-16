@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 import time
@@ -11,8 +12,14 @@ import streamlit as st
 
 from analysis_runner import AnalysisRunner
 from api_client import ApiClient, ApiError
+from user_messages import (
+    ANALYSIS_UNAVAILABLE_MESSAGE,
+    SERVICE_UNAVAILABLE_MESSAGE,
+)
 from styles import APP_CSS
 
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_API_BASE_URL = "http://127.0.0.1:8000"
 MAX_RENDERED_CHART_ROWS = 500
@@ -75,8 +82,8 @@ def main() -> None:
     try:
         client = _get_api_client(st.session_state.api_base_url)
     except ApiError as exc:
-        st.error(str(exc))
-        st.caption("Set PPQA_API_BASE_URL to the deployed FastAPI service.")
+        _log_frontend_error("Could not create the API client", exc)
+        st.warning(SERVICE_UNAVAILABLE_MESSAGE)
         return
 
     runner = _get_analysis_runner()
@@ -89,7 +96,7 @@ def main() -> None:
         and session_detail is None
         and st.session_state.get("connection_error")
     ):
-        st.error(st.session_state.connection_error)
+        st.warning(SERVICE_UNAVAILABLE_MESSAGE)
 
     _render_header(session_detail, analysis_running=active_job is not None)
 
@@ -161,7 +168,8 @@ def _load_sessions(
         ):
             raise ApiError("API returned an invalid chat history")
     except ApiError as exc:
-        st.session_state.connection_error = str(exc)
+        _log_frontend_error("Could not load chat sessions", exc)
+        st.session_state.connection_error = SERVICE_UNAVAILABLE_MESSAGE
         if cached is None:
             st.session_state.sessions_cache = []
         return cached or []
@@ -190,7 +198,8 @@ def _load_active_session(client: ApiClient) -> dict[str, Any] | None:
         ):
             raise ApiError("API returned an invalid chat session")
     except ApiError as exc:
-        st.session_state.connection_error = str(exc)
+        _log_frontend_error("Could not load the active chat session", exc)
+        st.session_state.connection_error = SERVICE_UNAVAILABLE_MESSAGE
         st.session_state.active_session_id = None
         return None
 
@@ -224,7 +233,8 @@ def _delete_session(client: ApiClient, session_id: str) -> None:
     try:
         client.delete_session(session_id)
     except ApiError as exc:
-        st.session_state.sidebar_action_error = str(exc)
+        _log_frontend_error("Could not delete a chat session", exc)
+        st.session_state.sidebar_action_error = SERVICE_UNAVAILABLE_MESSAGE
         return
 
     sessions = st.session_state.get("sessions_cache") or []
@@ -295,14 +305,14 @@ def _sidebar(client: ApiClient, *, analysis_running: bool) -> None:
                 '<div class="ppqa-health-bad">API unavailable</div>',
                 unsafe_allow_html=True,
             )
-            st.caption(connection_error)
+            st.caption(SERVICE_UNAVAILABLE_MESSAGE)
         else:
             st.markdown(
                 '<div class="ppqa-health-ok">API connected</div>',
                 unsafe_allow_html=True,
             )
         if st.session_state.get("sidebar_action_error"):
-            st.error(st.session_state.sidebar_action_error)
+            st.warning(SERVICE_UNAVAILABLE_MESSAGE)
 
         st.divider()
 
@@ -458,11 +468,17 @@ def _render_messages(
 
     for message in messages[-limit:]:
         role = message.get("role", "assistant")
+        metadata = message.get("metadata") or {}
+        content = message.get("content") or ""
+        if role == "assistant" and metadata.get("error"):
+            # Older persisted messages may contain technical failure details in
+            # their content. Never replay those details to the user.
+            content = ANALYSIS_UNAVAILABLE_MESSAGE
         with st.chat_message(role, avatar=_message_avatar(role)):
-            st.markdown(message.get("content") or "")
+            st.markdown(content)
             if role == "assistant":
                 _render_assistant_artifacts(
-                    message.get("metadata") or {},
+                    metadata,
                     chart_key=message.get("id"),
                 )
 
@@ -473,11 +489,8 @@ def _render_assistant_artifacts(
     chart_key: str | None = None,
 ) -> None:
     sql = metadata.get("sql")
-    error = metadata.get("error")
     query_result = metadata.get("query_result")
 
-    if error:
-        st.error(error)
     _render_chart(metadata.get("chart"), chart_key=chart_key)
     if not st.session_state.get("show_source", False):
         return
@@ -974,12 +987,12 @@ def _record_failed_analysis(
     dry_run: bool,
     error: Exception,
 ) -> None:
+    _log_frontend_error("Analysis request failed", error)
     st.session_state.failed_analysis = {
         "session_id": session_id,
         "question": question,
         "dry_run": dry_run,
-        "error": " ".join(str(error).split())[:1000]
-        or "The analysis could not be completed.",
+        "error": ANALYSIS_UNAVAILABLE_MESSAGE,
     }
 
 
@@ -990,10 +1003,15 @@ def _render_failed_analysis() -> None:
     with st.chat_message("user", avatar=_message_avatar("user")):
         st.markdown(str(failure.get("question") or ""))
     with st.chat_message("assistant", avatar=_message_avatar("assistant")):
-        st.error(str(failure.get("error") or "The analysis could not be completed."))
-        st.caption(
-            "The chat is still available. You can adjust the question and try again."
-        )
+        st.markdown(ANALYSIS_UNAVAILABLE_MESSAGE)
+
+
+def _log_frontend_error(context: str, error: Exception) -> None:
+    """Keep technical diagnostics in logs without exposing them in Streamlit."""
+
+    traceback = error.__traceback__
+    exc_info = (type(error), error, traceback) if traceback is not None else False
+    logger.error("%s: %s", context, error, exc_info=exc_info)
 
 
 def _message_avatar(role: str) -> str:

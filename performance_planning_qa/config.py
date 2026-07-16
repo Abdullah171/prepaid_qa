@@ -82,6 +82,8 @@ class LLMSettings:
     api_key: str
     verify_ssl: bool
     timeout_seconds: float
+    max_retries: int
+    retry_backoff_seconds: float
     sql_temperature: float
     answer_temperature: float
     sql_max_tokens: int
@@ -108,6 +110,14 @@ class LLMSettings:
             missing.append(f"{env_prefix}_API_KEY")
         if missing:
             raise ValueError(f"Missing LLM configuration: {', '.join(missing)}")
+        if self.timeout_seconds <= 0:
+            raise ValueError(f"{env_prefix}_TIMEOUT_SECONDS must be greater than zero")
+        if self.max_retries < 0:
+            raise ValueError(f"{env_prefix}_MAX_RETRIES must not be negative")
+        if self.retry_backoff_seconds < 0:
+            raise ValueError(
+                f"{env_prefix}_RETRY_BACKOFF_SECONDS must not be negative"
+            )
 
 
 @dataclass(frozen=True)
@@ -210,7 +220,23 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
         model=_get_any(f"{llm_prefix}_MODEL", default="") or "",
         api_key=_get_any(f"{llm_prefix}_API_KEY", default="") or "",
         verify_ssl=_get_bool("LLM_VERIFY_SSL", default=False),
-        timeout_seconds=_get_float("LLM_TIMEOUT_SECONDS", default=1200.0),
+        timeout_seconds=_get_float(
+            _first_existing_env(
+                f"{llm_prefix}_TIMEOUT_SECONDS", "LLM_TIMEOUT_SECONDS"
+            ),
+            default=1200.0,
+        ),
+        max_retries=_get_int(
+            _first_existing_env(f"{llm_prefix}_MAX_RETRIES", "LLM_MAX_RETRIES"),
+            default=0,
+        ),
+        retry_backoff_seconds=_get_float(
+            _first_existing_env(
+                f"{llm_prefix}_RETRY_BACKOFF_SECONDS",
+                "LLM_RETRY_BACKOFF_SECONDS",
+            ),
+            default=2.0,
+        ),
         sql_temperature=_get_float("NL2SQL_TEMPERATURE", default=0.0),
         answer_temperature=_get_float("ANSWER_TEMPERATURE", default=0.2),
         sql_max_tokens=_get_int("LLM_SQL_MAX_TOKENS", default=3000),

@@ -75,12 +75,18 @@ Optional keys:
 ```env
 LLM_VERIFY_SSL=false
 LLM_TIMEOUT_SECONDS=1200
+LLM_MAX_RETRIES=0
+LLM_RETRY_BACKOFF_SECONDS=2
+# Provider-specific values take precedence over the LLM_* defaults:
+GLM_TIMEOUT_SECONDS=1800
+GLM_MAX_RETRIES=2
+GLM_RETRY_BACKOFF_SECONDS=2
 LLM_SQL_MAX_TOKENS=3000
 LLM_ANSWER_MAX_TOKENS=5000
 TERADATA_DATABASE="DP_EDW_PPF"
 TERADATA_LOGMECH="LDAP"
 SQL_REPAIR_ATTEMPTS=1
-LLM_PROMPT_LOG_ENABLED=false
+LLM_PROMPT_LOG_ENABLED=false # Set true to write LLM inputs to logs/llm_prompts/*.txt
 LLM_PROMPT_LOG_DIR="logs/llm_prompts"
 CHAT_DB_SCHEMA_PATH="sql/chat_memory_schema.sql"
 CHAT_DB_LOCAL_SCHEMA_PATH="sql/chat_memory_schema_postgres.sql"
@@ -358,7 +364,8 @@ JSON output:
 performance-planning-qa --json --show-sql "Average line revenue by value segment"
 ```
 
-Prompt logging is currently disabled in the pipeline and CLI. The logger code remains in the repo for debugging, but normal runs do not write prompt `.txt` files or print prompt log paths.
+Prompt logging is controlled by `LLM_PROMPT_LOG_ENABLED`. When enabled, each LLM
+input is written to a timestamped `.txt` file in `LLM_PROMPT_LOG_DIR`.
 
 ## Architecture
 
@@ -367,7 +374,7 @@ Prompt logging is currently disabled in the pipeline and CLI. The logger code re
 - `performance_planning_qa/context_loader.py`: loads `performance.sql` and all raw sample files.
 - `performance_planning_qa/prompts.py`: SQL-generation, repair, and answer prompts.
 - `performance_planning_qa/llm.py`: STC LiteLLM OpenAI-compatible client.
-- `performance_planning_qa/prompt_logger.py`: optional prompt logging helper, currently disabled in the pipeline.
+- `performance_planning_qa/prompt_logger.py`: optional prompt logging helper.
 - `performance_planning_qa/sql_safety.py`: read-only SQL validation and table allow-list.
 - `performance_planning_qa/database.py`: Teradata connection and query execution via `teradataml`.
 - `performance_planning_qa/charting.py`: conditional chart intent, result-field validation,

@@ -27,6 +27,7 @@ from performance_planning_qa.chat_store import (
 from performance_planning_qa.config import load_environment, load_settings
 from performance_planning_qa.pipeline import NL2SQLPipeline
 from performance_planning_qa.prompts import ChatTurn
+from performance_planning_qa.user_messages import ANALYSIS_UNAVAILABLE_MESSAGE
 
 
 logger = logging.getLogger(__name__)
@@ -185,7 +186,10 @@ async def ask(request_body: AskRequest, request: Request) -> dict[str, Any]:
             result = await run_in_threadpool(pipeline.ask, question, dry_run=request_body.dry_run)
     except Exception as exc:
         logger.exception("Failed to answer question")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=500,
+            detail=ANALYSIS_UNAVAILABLE_MESSAGE,
+        ) from exc
 
     return result.to_dict()
 
@@ -314,11 +318,11 @@ async def ask_session_stream(
 
         try:
             payload = await analysis_task
-        except HTTPException as exc:
-            yield _sse_event("error", {"message": str(exc.detail)})
-        except Exception as exc:
+        except HTTPException:
+            yield _sse_event("error", {"message": ANALYSIS_UNAVAILABLE_MESSAGE})
+        except Exception:
             logger.exception("Failed to stream session answer")
-            yield _sse_event("error", {"message": str(exc)})
+            yield _sse_event("error", {"message": ANALYSIS_UNAVAILABLE_MESSAGE})
         else:
             yield _sse_event("result", payload)
 
@@ -406,7 +410,10 @@ async def _ask_session_impl(
         raise
     except Exception as exc:
         logger.exception("Failed to answer session question")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=500,
+            detail=ANALYSIS_UNAVAILABLE_MESSAGE,
+        ) from exc
 
     return {
         "session": session.to_payload(),
@@ -515,7 +522,7 @@ def _assistant_content_from_result(result_payload: dict[str, Any]) -> str:
     if result_payload.get("direct_answer"):
         return str(result_payload["direct_answer"])
     if result_payload.get("error"):
-        return f"I could not complete the request: {result_payload['error']}"
+        return ANALYSIS_UNAVAILABLE_MESSAGE
     if result_payload.get("sql"):
         return "I generated SQL for this request."
     return "I could not produce an answer for this request."

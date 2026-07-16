@@ -526,8 +526,35 @@ Rules:
 - Preserve the analytical metric, grain, dimensions, filters, comparisons, and supporting information while repairing. Ignore presentation-only chart types when deciding the result shape. Return SQL only; never return plotting code or chart markup.
 - If the query cannot be repaired from the provided schema, return a direct_answer saying it cannot be answered from the provided database context, with needs_clarification false and sql null.
 - Do not introduce tables or columns outside the supplied schema.
-"""
 
+"""
+# - For Teradata SQL, never use COUNT, SUM, AVG, MIN, MAX, or GROUP BY in the same SELECT block as QUALIFY ROW_NUMBER().
+# Always use two query levels:
+# 1. Inner CTE: select detail rows and apply QUALIFY ROW_NUMBER().
+# 2. Outer CTE: aggregate the deduplicated rows.
+# Do not apply QUALIFY to a SELECT that returns aggregated values.
+
+# A sample query repair:
+# WITH DEDUPED AS
+# (
+#     SELECT
+#         customer_id,
+#         category
+#     FROM source_table
+#     QUALIFY ROW_NUMBER() OVER
+#     (
+#         PARTITION BY customer_id
+#         ORDER BY update_date DESC
+#     ) = 1
+# ),
+# AGGREGATED AS
+# (
+#     SELECT
+#         COUNT(DISTINCT customer_id) AS customer_count
+#     FROM DEDUPED
+# )
+# SELECT customer_count
+# FROM AGGREGATED;
 
 def build_sql_messages(
     question: str,

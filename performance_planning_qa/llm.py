@@ -6,6 +6,7 @@ from datetime import datetime
 import json
 import logging
 import re
+import time
 from typing import Any
 
 import json_repair
@@ -14,6 +15,8 @@ from performance_planning_qa.config import LLMSettings
 
 
 logger = logging.getLogger(__name__)
+
+RETRYABLE_STATUS_CODES = frozenset({502, 503, 504})
 
 ChatMessage = dict[str, str]
 
@@ -82,25 +85,44 @@ class LiteLLMClient:
             "endpoint": _completion_url(self.settings.endpoint),
         }
 
-        try:
-            response = self.client.post(
-                diagnostics["endpoint"],
-                headers={
-                    "Authorization": f"Bearer {self.settings.api_key}",
-                    "Content-Type": "application/json",
-                },
-                json=request_payload,
-            )
-            response.raise_for_status()
-            payload = response.json()
-            content = _completion_content(payload)
-        except Exception as exc:
-            response = getattr(exc, "response", None)
-            if response is not None:
-                diagnostics["status_code"] = response.status_code
-                diagnostics["response"] = _safe_error_response(response)
-            logger.exception("Direct LLM HTTP request failed; diagnostics=%s", diagnostics)
-            raise
+        for attempt in range(self.settings.max_retries + 1):
+            try:
+                response = self.client.post(
+                    diagnostics["endpoint"],
+                    headers={
+                        "Authorization": f"Bearer {self.settings.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=request_payload,
+                )
+                response.raise_for_status()
+                payload = response.json()
+                content = _completion_content(payload)
+                break
+            except Exception as exc:
+                response = getattr(exc, "response", None)
+                if response is not None:
+                    diagnostics["status_code"] = response.status_code
+                    diagnostics["response"] = _safe_error_response(response)
+
+                if attempt < self.settings.max_retries and _is_retryable_error(exc):
+                    delay = self.settings.retry_backoff_seconds * (2**attempt)
+                    logger.warning(
+                        "Transient LLM request failure; retrying in %.1f seconds "
+                        "(attempt %d/%d); diagnostics=%s",
+                        delay,
+                        attempt + 1,
+                        self.settings.max_retries,
+                        diagnostics,
+                    )
+                    time.sleep(delay)
+                    continue
+
+                diagnostics["attempts"] = attempt + 1
+                logger.exception(
+                    "Direct LLM HTTP request failed; diagnostics=%s", diagnostics
+                )
+                raise
 
         if not content.strip():
             logger.error("LLM returned an empty response; diagnostics=%s", diagnostics)
@@ -167,6 +189,20 @@ def _safe_error_response(response: Any) -> str:
     """Return a bounded response excerpt for diagnostics without request secrets."""
 
     return response.text[:1000]
+
+
+def _is_retryable_error(exc: Exception) -> bool:
+    """Return whether a failed request is safe to retry automatically."""
+
+    response = getattr(exc, "response", None)
+    if response is not None:
+        return response.status_code in RETRYABLE_STATUS_CODES
+
+    try:
+        import httpx
+    except ImportError:
+        return False
+    return isinstance(exc, httpx.TransportError)
 
 
 def extract_json_object(text: str, fallback_key: str | None = None) -> dict[str, Any]:

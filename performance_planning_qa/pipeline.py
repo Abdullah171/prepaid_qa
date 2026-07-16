@@ -34,6 +34,7 @@ from performance_planning_qa.sql_safety import (
     SQLValidationResult,
     validate_readonly_sql,
 )
+from performance_planning_qa.user_messages import ANALYSIS_UNAVAILABLE_MESSAGE
 
 
 logger = logging.getLogger(__name__)
@@ -577,15 +578,7 @@ class NL2SQLPipeline:
         phase: str,
         temperature: float,
     ) -> dict[str, Any]:
-        # Prompt logging is disabled for normal runs. Keep this block available
-        # for debugging, but do not write full schema/sample prompts by default.
-        # record = self.prompt_logger.log(
-        #     phase=phase,
-        #     messages=messages,
-        #     temperature=temperature,
-        # )
-        # if record is not None:
-        #     self._current_prompt_logs.append(record.path)
+        # self.prompt_logger.log(phase=phase, messages=messages, temperature=temperature)  # DEBUG: comment out this line to stop writing LLM input files.
         is_answer_generation = phase == "answer_generation"
         fallback_key = "answer" if is_answer_generation else "direct_answer"
         max_tokens = (
@@ -673,11 +666,7 @@ def _sanitize_error(error: str | None) -> str | None:
 
 def _sql_failure_message(error: str | None, *, phase: str) -> tuple[str, bool]:
     if not error:
-        return (
-            "I could not build a valid SQL query for that question. Please clarify the "
-            "metric, time period, and filters you want analyzed.",
-            True,
-        )
+        return ANALYSIS_UNAVAILABLE_MESSAGE, True
 
     lowered = error.lower()
     if any(
@@ -694,55 +683,41 @@ def _sql_failure_message(error: str | None, *, phase: str) -> tuple[str, bool]:
         )
     ):
         return (
-            "I could not execute the query because the database rejected a generated "
-            "table or field reference. Please clarify the exact metric, dimension, or "
-            "filter you want using the available performance planning data.",
+            "I couldn't match part of the question confidently to the available "
+            "information. Please clarify the metric, category, or filter you want and "
+            "ask again.",
             True,
         )
 
     if any(token in lowered for token in ("date", "timestamp", "invalid time")):
         return (
-            "I could not execute the query because the database rejected a date or "
-            "time expression. Please clarify the exact date, month, year, or date "
-            "range you want analyzed.",
+            "I couldn't determine the reporting period confidently. Please specify the "
+            "exact date, month, year, or date range and ask again.",
             True,
         )
 
     if any(token in lowered for token in ("ambiguous", "ambig")):
         return (
-            "I could not execute the query because part of the generated SQL was "
-            "ambiguous. Please clarify the metric and grouping you want.",
+            "Part of the question could have more than one meaning. Please clarify the "
+            "metric and how you want it grouped, then ask again.",
             True,
         )
 
     if any(token in lowered for token in ("timeout", "spool", "memory", "exceeded")):
         return (
-            "I could not execute the query after the repair attempt because it still "
-            "looks too broad or expensive for the database. Please narrow the date "
-            "range, filters, or grouping.",
+            "I wasn't able to fetch the information because the request is too broad. "
+            "Please narrow the date range, customer segment, filters, or grouping and "
+            "ask again.",
             True,
         )
 
     if any(token in lowered for token in ("permission", "access", "authorized", "logon")):
-        return (
-            "The database rejected the query after the repair attempt because of an "
-            f"access or connection issue: {error}",
-            False,
-        )
+        return ANALYSIS_UNAVAILABLE_MESSAGE, False
 
     if phase == "validation":
-        return (
-            "I could not produce a SQL query that passed the read-only safety checks "
-            "after the repair attempt. Please rephrase the question with a clear "
-            "metric, time period, and filters.",
-            True,
-        )
+        return ANALYSIS_UNAVAILABLE_MESSAGE, True
 
-    return (
-        "I could not execute a valid SQL query after the repair attempt. Database "
-        f"error: {error}",
-        False,
-    )
+    return ANALYSIS_UNAVAILABLE_MESSAGE, False
 
 
 def _scoped_direct_answer() -> str:
