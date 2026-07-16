@@ -9,7 +9,7 @@ from performance_planning_qa.config import LLMSettings
 from performance_planning_qa.llm import LiteLLMClient
 
 
-class GLMStreamingTests(unittest.TestCase):
+class LLMStreamingTests(unittest.TestCase):
     def test_streams_reasoning_and_collects_answer_content(self) -> None:
         stream_body = "\n\n".join(
             [
@@ -57,6 +57,51 @@ class GLMStreamingTests(unittest.TestCase):
 
         self.assertEqual("".join(reasoning_parts), "Plan first.")
         self.assertEqual(content, '{"answer":"done"}')
+
+    def test_streams_minimax_reasoning_field(self) -> None:
+        stream_body = "\n\n".join(
+            [
+                'data: {"choices":[{"delta":{"reasoning":"Check"}}]}',
+                'data: {"choices":[{"delta":{"reasoning":" data."}}]}',
+                'data: {"choices":[{"delta":{"content":"done"}}]}',
+                "data: [DONE]",
+            ]
+        )
+
+        def handle_request(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, text=stream_body, request=request)
+
+        settings = LLMSettings(
+            provider="minmax",
+            endpoint="https://minimax.example/v1",
+            model="MiniMaxAI/MiniMax-M2.7",
+            api_key="not-needed",
+            verify_ssl=False,
+            stream=True,
+            timeout_seconds=30.0,
+            max_retries=0,
+            retry_backoff_seconds=0.0,
+            sql_temperature=0.0,
+            answer_temperature=0.2,
+            sql_max_tokens=100,
+            answer_max_tokens=100,
+        )
+        client = LiteLLMClient(settings)
+        client._client = httpx.Client(transport=httpx.MockTransport(handle_request))
+        reasoning_parts: list[str] = []
+
+        try:
+            content = client.complete(
+                [{"role": "user", "content": "test"}],
+                temperature=0.0,
+                max_tokens=100,
+                reasoning_callback=reasoning_parts.append,
+            )
+        finally:
+            client.close()
+
+        self.assertEqual("".join(reasoning_parts), "Check data.")
+        self.assertEqual(content, "done")
 
 
 if __name__ == "__main__":

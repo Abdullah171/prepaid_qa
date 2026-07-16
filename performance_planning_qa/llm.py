@@ -235,6 +235,8 @@ def _stream_completion_content(
             continue
 
         reasoning = delta.get("reasoning_content")
+        if not isinstance(reasoning, str):
+            reasoning = delta.get("reasoning")
         if isinstance(reasoning, str) and reasoning and reasoning_callback is not None:
             try:
                 reasoning_callback(reasoning)
