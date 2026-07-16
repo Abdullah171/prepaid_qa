@@ -6,7 +6,7 @@ from dataclasses import dataclass, replace
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from performance_planning_qa.charting import (
     ALLOWED_CHART_TYPES,
@@ -37,6 +37,8 @@ from performance_planning_qa.sql_safety import (
 
 
 logger = logging.getLogger(__name__)
+
+ProgressCallback = Callable[[str], None]
 
 
 @dataclass(frozen=True)
@@ -111,6 +113,7 @@ class NL2SQLPipeline:
         self.prompt_logger = PromptLogger(settings.prompt_log, settings.llm)
         self._current_prompt_logs: list[Path] = []
         self._current_chat_history: list[ChatTurn] = []
+        self._progress_callback: ProgressCallback | None = None
 
     @classmethod
     def from_env(cls) -> NL2SQLPipeline:
@@ -136,14 +139,19 @@ class NL2SQLPipeline:
         dry_run: bool = False,
         chat_history: list[ChatTurn] | None = None,
         previous_result: dict[str, Any] | None = None,
+        progress_callback: ProgressCallback | None = None,
     ) -> PipelineResult:
         self._current_prompt_logs = []
         self._current_chat_history = chat_history or []
+        self._progress_callback = progress_callback
+        self._report_progress("Fetching relevant information")
         if not dry_run:
             chart_followup = self._chart_followup_result(question, previous_result)
             if chart_followup is not None:
+                self._report_progress("Preparing the requested view")
                 return chart_followup
 
+        self._report_progress("Reviewing the available data")
         generated = self.generate_sql(question, chat_history=self._current_chat_history)
         direct_result = self._direct_generated_result(
             question=question,
@@ -154,6 +162,7 @@ class NL2SQLPipeline:
         if direct_result is not None:
             return direct_result
 
+        self._report_progress("Checking the information")
         prepared = self._validate_or_repair(question, generated)
         direct_result = self._direct_generated_result(
             question=question,
@@ -183,6 +192,7 @@ class NL2SQLPipeline:
                 dry_run=True,
             )
 
+        self._report_progress("Gathering the requested results")
         executed = self._execute_or_repair(
             question=question,
             generated=generated,
@@ -208,6 +218,7 @@ class NL2SQLPipeline:
         inherited_intent, inherited_candidate, chart_context = (
             self._inherited_chart_context(question, previous_result)
         )
+        self._report_progress("Analyzing the findings")
         answer_payload = self._answer_from_result(
             question,
             executed.validation.sql,
@@ -225,6 +236,7 @@ class NL2SQLPipeline:
             chart_candidate: Any = merged_candidate
         else:
             chart_candidate = answer_candidate
+        self._report_progress("Preparing the final answer")
         chart = self._build_chart(
             question,
             executed.query_result,
@@ -243,7 +255,20 @@ class NL2SQLPipeline:
         )
 
     def close(self) -> None:
-        self.db.close()
+        try:
+            self.db.close()
+        finally:
+            self.llm.close()
+
+    def _report_progress(self, message: str) -> None:
+        callback = self._progress_callback
+        if callback is None:
+            return
+        try:
+            callback(message)
+        except Exception:
+            # Progress reporting is best-effort and must never fail an analysis.
+            logger.debug("Progress callback failed", exc_info=True)
 
     def _chart_followup_result(
         self,
@@ -504,6 +529,7 @@ class NL2SQLPipeline:
         )
 
     def _repair_sql(self, *, question: str, generated: GeneratedSQL, error: str) -> GeneratedSQL:
+        self._report_progress("Refining the analysis")
         payload = self._complete_json(
             build_sql_repair_messages(
                 question=question,
@@ -541,7 +567,7 @@ class NL2SQLPipeline:
             phase="answer_generation",
             temperature=self.settings.llm.answer_temperature,
         )
-        print("Final LLM answer response:\n", json.dumps(final_llm_response, ensure_ascii=False, indent=2))
+        # print("Final LLM answer response:\n", json.dumps(final_llm_response, ensure_ascii=False, indent=2))
         return final_llm_response
 
     def _complete_json(

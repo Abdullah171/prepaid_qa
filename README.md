@@ -20,6 +20,11 @@ For each user question it:
 5. Conditionally builds a validated chart from those returned rows for explicit
    visualization requests and time-trend questions.
 
+While an answer is running, the Streamlit interface shows live pipeline phases
+such as fetching relevant information, gathering results, analyzing findings, and
+preparing the final answer. These are operational progress updates, not the model's
+private chain-of-thought.
+
 Structured LLM responses are parsed as strict JSON first. If parsing fails, the
 app uses `json-repair` for common issues such as unquoted keys, single quotes,
 trailing commas, surrounding prose, or an unterminated final object.
@@ -70,7 +75,7 @@ Optional keys:
 ```env
 LLM_VERIFY_SSL=false
 LLM_TIMEOUT_SECONDS=1200
-LLM_MAX_TOKENS=70000
+LLM_MAX_TOKENS=40000
 TERADATA_DATABASE="DP_EDW_PPF"
 TERADATA_LOGMECH="LDAP"
 SQL_REPAIR_ATTEMPTS=1
@@ -79,6 +84,7 @@ LLM_PROMPT_LOG_DIR="logs/llm_prompts"
 CHAT_DB_SCHEMA_PATH="sql/chat_memory_schema.sql"
 CHAT_DB_LOCAL_SCHEMA_PATH="sql/chat_memory_schema_postgres.sql"
 PPQA_API_BASE_URL="http://127.0.0.1:8000"
+PPQA_ALLOW_API_URL_EDIT=false
 ```
 
 ## Install
@@ -98,6 +104,12 @@ uv run python run_app.py
 The launcher uses ports 8000 and 8501 when available. If either port is already
 occupied, it selects the next available port and configures the frontend to use
 the FastAPI port it selected.
+
+Run the focused frontend regression suite with:
+
+```bash
+uv run python -m unittest discover -s tests -v
+```
 
 Start the FastAPI server:
 
@@ -146,6 +158,17 @@ uv run streamlit run frontend/app.py
 Open `http://127.0.0.1:8501`. The sidebar can create, select, and delete chat
 sessions. Deleting a session removes it from the selected chat database through the
 FastAPI API.
+
+The frontend keeps one pooled API client per browser session, caches chat metadata
+until an explicit mutation or refresh, and runs long analyses outside Streamlit's
+render thread. While an answer runs, only its compact progress panel refreshes;
+saved messages and charts are left mounted. Recent chats/messages are rendered
+first, with controls for loading older history, to keep long-running sessions fast.
+
+For production, set `PPQA_API_BASE_URL` in the deployment environment and leave
+`PPQA_ALLOW_API_URL_EDIT` unset or false. This prevents browser users from directing
+the Streamlit server to arbitrary API hosts. Enable that override only for trusted
+local development.
 
 ## Posit Workbench and Posit Connect
 

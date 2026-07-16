@@ -25,7 +25,14 @@ APP_CSS = """
 [data-testid="stSidebar"] {
   background: var(--ppqa-surface);
   border-right: 1px solid var(--ppqa-border);
-  box-shadow: 12px 0 28px rgba(29, 37, 45, 0.04);
+  box-shadow: 8px 0 20px rgba(29, 37, 45, 0.035);
+}
+
+/* Long-running work is communicated by st.status. Keep already-rendered chat
+   content readable while Streamlit replaces stale elements during a rerun. */
+.stMain [data-testid="stElementContainer"][data-stale="true"] {
+  opacity: 1 !important;
+  transition: none !important;
 }
 
 [data-testid="stSidebar"] h1,
@@ -118,7 +125,7 @@ APP_CSS = """
   background: var(--ppqa-surface);
   border: 1px solid var(--ppqa-border);
   border-radius: 8px;
-  box-shadow: 0 18px 42px rgba(29, 37, 45, 0.06);
+  box-shadow: 0 8px 24px rgba(29, 37, 45, 0.05);
   display: flex;
   min-height: 46vh;
   justify-content: flex-start;
@@ -155,7 +162,7 @@ APP_CSS = """
 
 .ppqa-session-meta {
   color: var(--ppqa-muted);
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   margin-top: -0.28rem;
   margin-bottom: 0.42rem;
   padding-left: 0.12rem;
@@ -185,7 +192,7 @@ div[data-testid="stChatMessage"] {
   background: var(--ppqa-surface);
   border: 1px solid var(--ppqa-border);
   border-radius: 8px;
-  box-shadow: 0 10px 28px rgba(29, 37, 45, 0.045);
+  box-shadow: 0 1px 2px rgba(29, 37, 45, 0.04);
   margin-bottom: 0.72rem;
   padding: 0.42rem 0.62rem;
 }
@@ -206,6 +213,13 @@ div[data-testid="stChatInput"] {
 .stButton > button:hover {
   border-color: var(--ppqa-stc-purple);
   color: var(--ppqa-stc-purple);
+}
+
+.stButton > button:focus-visible,
+.stTextInput input:focus-visible,
+.stTextArea textarea:focus-visible {
+  outline: 3px solid rgba(79, 0, 140, 0.22);
+  outline-offset: 2px;
 }
 
 .stButton > button[kind="primary"] {
@@ -241,6 +255,26 @@ div[data-testid="stChatInput"] {
 div[data-testid="stExpander"] {
   border-color: var(--ppqa-border);
   border-radius: 8px;
+}
+
+@media (max-width: 720px) {
+  .block-container {
+    padding-top: 0.8rem;
+  }
+
+  .ppqa-empty {
+    min-height: 30vh;
+    padding: 1.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 </style>
 """

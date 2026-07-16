@@ -110,6 +110,12 @@ class LiteLLMClient:
         text = self.complete(messages, temperature=temperature)
         return extract_json_object(text, fallback_key=fallback_key)
 
+    def close(self) -> None:
+        if self._client is None:
+            return
+        self._client.close()
+        self._client = None
+
 
 def _completion_url(endpoint: str) -> str:
     endpoint = endpoint.rstrip("/")

@@ -4,16 +4,31 @@ from __future__ import annotations
 
 import os
 import re
+import time
 from typing import Any
 
 import streamlit as st
 
+from analysis_runner import AnalysisRunner
 from api_client import ApiClient, ApiError
 from styles import APP_CSS
 
 
 DEFAULT_API_BASE_URL = "http://127.0.0.1:8000"
 MAX_RENDERED_CHART_ROWS = 500
+MAX_RENDERED_RESULT_ROWS = 200
+INITIAL_RENDERED_MESSAGES = 24
+MESSAGE_RENDER_BATCH = 20
+INITIAL_SIDEBAR_SESSIONS = 30
+SIDEBAR_SESSION_BATCH = 30
+FAILED_CONNECTION_RETRY_SECONDS = 15.0
+MAX_QUESTION_CHARS = 4_000
+ALLOW_API_URL_EDIT = os.getenv("PPQA_ALLOW_API_URL_EDIT", "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 STC_CHART_COLORS = (
     "#4F008C",
     "#00C2C7",
@@ -27,6 +42,27 @@ _ISO_TEMPORAL_RE = re.compile(
 )
 
 
+@st.cache_resource(
+    scope="session",
+    max_entries=4,
+    show_spinner=False,
+    on_release=lambda client: client.close(),
+)
+def _get_api_client(base_url: str) -> ApiClient:
+    """Reuse HTTP connections without sharing mutable clients across users."""
+
+    return ApiClient(base_url)
+
+
+@st.cache_resource(
+    scope="session",
+    show_spinner=False,
+    on_release=lambda runner: runner.close(),
+)
+def _get_analysis_runner() -> AnalysisRunner:
+    return AnalysisRunner()
+
+
 def main() -> None:
     st.set_page_config(
         page_title="Performance Planning Q&A",
@@ -36,27 +72,40 @@ def main() -> None:
     st.markdown(APP_CSS, unsafe_allow_html=True)
     _init_state()
 
-    client = _sidebar()
-    active_session_id = st.session_state.get("active_session_id")
+    try:
+        client = _get_api_client(st.session_state.api_base_url)
+    except ApiError as exc:
+        st.error(str(exc))
+        st.caption("Set PPQA_API_BASE_URL to the deployed FastAPI service.")
+        return
 
-    session_detail = None
-    if active_session_id:
-        try:
-            session_detail = client.get_session(active_session_id)
-        except ApiError as exc:
-            st.session_state.active_session_id = None
-            st.error(str(exc))
+    runner = _get_analysis_runner()
+    active_job = runner.active_job()
+    _sidebar(client, analysis_running=active_job is not None)
+    requested_session_id = st.session_state.get("active_session_id")
+    session_detail = _load_active_session(client)
+    if (
+        requested_session_id
+        and session_detail is None
+        and st.session_state.get("connection_error")
+    ):
+        st.error(st.session_state.connection_error)
 
-    _render_header(session_detail)
+    _render_header(session_detail, analysis_running=active_job is not None)
 
-    if session_detail:
-        _render_messages(session_detail.get("messages", []))
-    else:
+    if session_detail and session_detail.get("messages"):
+        _render_messages(
+            session_detail.get("messages", []),
+            session_id=session_detail["session"]["id"],
+        )
+    elif active_job is None and st.session_state.get("failed_analysis") is None:
         _render_empty_state()
 
-    prompt = _render_question_composer()
-    if prompt:
-        _submit_prompt(client, prompt)
+    _render_failed_analysis()
+    if active_job is None:
+        _render_question_composer()
+    else:
+        _render_active_analysis()
 
 
 def _init_state() -> None:
@@ -67,9 +116,145 @@ def _init_state() -> None:
     st.session_state.setdefault("active_session_id", None)
     st.session_state.setdefault("dry_run", False)
     st.session_state.setdefault("show_source", False)
+    st.session_state.setdefault("sessions_cache", None)
+    st.session_state.setdefault("sessions_loaded_at", 0.0)
+    st.session_state.setdefault("connection_error", None)
+    st.session_state.setdefault("session_details", {})
+    st.session_state.setdefault("sidebar_session_limit", INITIAL_SIDEBAR_SESSIONS)
+    st.session_state.setdefault("message_render_limits", {})
+    st.session_state.setdefault("failed_analysis", None)
+    st.session_state.setdefault("sidebar_action_error", None)
 
 
-def _sidebar() -> ApiClient:
+def _reset_frontend_cache() -> None:
+    st.session_state.sessions_cache = None
+    st.session_state.sessions_loaded_at = 0.0
+    st.session_state.connection_error = None
+    st.session_state.session_details = {}
+    st.session_state.active_session_id = None
+    st.session_state.sidebar_session_limit = INITIAL_SIDEBAR_SESSIONS
+    st.session_state.message_render_limits = {}
+    st.session_state.failed_analysis = None
+    st.session_state.sidebar_action_error = None
+
+
+def _load_sessions(
+    client: ApiClient,
+    *,
+    force: bool = False,
+) -> list[dict[str, Any]]:
+    cached = st.session_state.get("sessions_cache")
+    last_attempt = float(st.session_state.get("sessions_loaded_at", 0.0))
+    retry_due = time.monotonic() - last_attempt >= FAILED_CONNECTION_RETRY_SECONDS
+    should_load = force or cached is None
+    if st.session_state.get("connection_error") and retry_due:
+        should_load = True
+    if not should_load:
+        return cached or []
+
+    st.session_state.sessions_loaded_at = time.monotonic()
+    try:
+        sessions = client.list_sessions()
+        if not isinstance(sessions, list) or not all(
+            isinstance(session, dict) and session.get("id")
+            for session in sessions
+        ):
+            raise ApiError("API returned an invalid chat history")
+    except ApiError as exc:
+        st.session_state.connection_error = str(exc)
+        if cached is None:
+            st.session_state.sessions_cache = []
+        return cached or []
+
+    st.session_state.sessions_cache = sessions
+    st.session_state.connection_error = None
+    return sessions
+
+
+def _load_active_session(client: ApiClient) -> dict[str, Any] | None:
+    session_id = st.session_state.get("active_session_id")
+    if not session_id:
+        return None
+
+    details = st.session_state.get("session_details", {})
+    cached = details.get(session_id)
+    if cached is not None:
+        return cached
+
+    try:
+        detail = client.get_session(session_id)
+        if (
+            not isinstance(detail, dict)
+            or not isinstance(detail.get("session"), dict)
+            or not isinstance(detail.get("messages"), list)
+        ):
+            raise ApiError("API returned an invalid chat session")
+    except ApiError as exc:
+        st.session_state.connection_error = str(exc)
+        st.session_state.active_session_id = None
+        return None
+
+    details = dict(details)
+    details[session_id] = detail
+    st.session_state.session_details = details
+    st.session_state.connection_error = None
+    return detail
+
+
+def _refresh_sessions(client: ApiClient) -> None:
+    st.session_state.sidebar_action_error = None
+    _load_sessions(client, force=True)
+    if st.session_state.get("connection_error") is None:
+        st.session_state.session_details = {}
+
+
+def _start_new_chat() -> None:
+    st.session_state.active_session_id = None
+    st.session_state.failed_analysis = None
+    st.session_state.sidebar_action_error = None
+
+
+def _select_session(session_id: str) -> None:
+    st.session_state.active_session_id = session_id
+    st.session_state.failed_analysis = None
+    st.session_state.sidebar_action_error = None
+
+
+def _delete_session(client: ApiClient, session_id: str) -> None:
+    try:
+        client.delete_session(session_id)
+    except ApiError as exc:
+        st.session_state.sidebar_action_error = str(exc)
+        return
+
+    sessions = st.session_state.get("sessions_cache") or []
+    st.session_state.sessions_cache = [
+        session for session in sessions if session.get("id") != session_id
+    ]
+    details = dict(st.session_state.get("session_details", {}))
+    details.pop(session_id, None)
+    st.session_state.session_details = details
+    if st.session_state.get("active_session_id") == session_id:
+        st.session_state.active_session_id = None
+    st.session_state.failed_analysis = None
+    st.session_state.sidebar_action_error = None
+
+
+def _show_more_sessions() -> None:
+    st.session_state.sidebar_session_limit = (
+        int(st.session_state.sidebar_session_limit) + SIDEBAR_SESSION_BATCH
+    )
+
+
+def _show_more_messages(session_id: str) -> None:
+    limits = dict(st.session_state.get("message_render_limits", {}))
+    limits[session_id] = int(
+        limits.get(session_id, INITIAL_RENDERED_MESSAGES)
+    ) + MESSAGE_RENDER_BATCH
+    st.session_state.message_render_limits = limits
+
+
+def _sidebar(client: ApiClient, *, analysis_running: bool) -> None:
     with st.sidebar:
         st.markdown(
             """
@@ -83,42 +268,90 @@ def _sidebar() -> ApiClient:
             """,
             unsafe_allow_html=True,
         )
-        api_base_url = st.text_input("API URL", key="api_base_url")
-        st.toggle("Dry run", key="dry_run", help="Generate SQL without executing it.")
+        if ALLOW_API_URL_EDIT:
+            st.text_input(
+                "API URL",
+                key="api_base_url",
+                disabled=analysis_running,
+                on_change=_reset_frontend_cache,
+                help="Development override. Configure PPQA_API_BASE_URL in production.",
+            )
+        st.toggle(
+            "Dry run",
+            key="dry_run",
+            disabled=analysis_running,
+            help="Generate SQL without executing it.",
+        )
         st.toggle(
             "See source",
             key="show_source",
             help="Show generated SQL, query metrics, and returned rows.",
         )
-        client = ApiClient(api_base_url)
 
-        try:
-            client.health()
-            st.markdown('<div class="ppqa-health-ok">API connected</div>', unsafe_allow_html=True)
-        except ApiError as exc:
-            st.markdown('<div class="ppqa-health-bad">API unavailable</div>', unsafe_allow_html=True)
-            st.caption(str(exc))
+        sessions = _load_sessions(client)
+        connection_error = st.session_state.get("connection_error")
+        if connection_error:
+            st.markdown(
+                '<div class="ppqa-health-bad">API unavailable</div>',
+                unsafe_allow_html=True,
+            )
+            st.caption(connection_error)
+        else:
+            st.markdown(
+                '<div class="ppqa-health-ok">API connected</div>',
+                unsafe_allow_html=True,
+            )
+        if st.session_state.get("sidebar_action_error"):
+            st.error(st.session_state.sidebar_action_error)
 
         st.divider()
 
-        if st.button("New chat", width="stretch", type="primary"):
-            st.session_state.active_session_id = None
-            st.rerun()
+        st.button(
+            "New chat",
+            width="stretch",
+            type="primary",
+            disabled=analysis_running,
+            on_click=_start_new_chat,
+        )
 
-        st.caption("Chat history")
-        try:
-            sessions = client.list_sessions()
-        except ApiError as exc:
-            st.error(str(exc))
-            sessions = []
+        history_cols = st.columns([0.65, 0.35], vertical_alignment="center")
+        history_cols[0].caption("Chat history")
+        history_cols[1].button(
+            "Refresh",
+            key="refresh-sessions",
+            icon=":material/refresh:",
+            type="tertiary",
+            disabled=analysis_running,
+            on_click=_refresh_sessions,
+            args=(client,),
+            width="stretch",
+        )
 
-        for session in sessions:
-            _render_session_row(client, session)
+        session_limit = int(st.session_state.sidebar_session_limit)
+        for session in sessions[:session_limit]:
+            _render_session_row(
+                client,
+                session,
+                disabled=analysis_running,
+            )
 
-    return client
+        if len(sessions) > session_limit:
+            remaining = len(sessions) - session_limit
+            st.button(
+                f"Show more ({remaining})",
+                key="show-more-sessions",
+                width="stretch",
+                disabled=analysis_running,
+                on_click=_show_more_sessions,
+            )
 
 
-def _render_session_row(client: ApiClient, session: dict[str, Any]) -> None:
+def _render_session_row(
+    client: ApiClient,
+    session: dict[str, Any],
+    *,
+    disabled: bool,
+) -> None:
     session_id = session["id"]
     is_active = st.session_state.active_session_id == session_id
     title = session.get("title") or "New chat"
@@ -131,32 +364,49 @@ def _render_session_row(client: ApiClient, session: dict[str, Any]) -> None:
     if is_active:
         label = f"Active: {label}"
 
-    cols = st.sidebar.columns([0.78, 0.22], gap="small")
-    if cols[0].button(label, key=f"select-{session_id}", width="stretch"):
-        st.session_state.active_session_id = session_id
-        st.rerun()
-    if cols[1].button("x", key=f"delete-{session_id}", help="Delete session"):
-        try:
-            client.delete_session(session_id)
-            if is_active:
-                st.session_state.active_session_id = None
-            st.rerun()
-        except ApiError as exc:
-            st.sidebar.error(str(exc))
+    cols = st.sidebar.columns([0.72, 0.28], gap="small")
+    cols[0].button(
+        label,
+        key=f"select-{session_id}",
+        help=title,
+        width="stretch",
+        disabled=disabled,
+        on_click=_select_session,
+        args=(session_id,),
+    )
+    cols[1].button(
+        "Delete",
+        key=f"delete-{session_id}",
+        help=f"Delete {title}",
+        icon=":material/delete:",
+        type="tertiary",
+        width="stretch",
+        disabled=disabled,
+        on_click=_delete_session,
+        args=(client, session_id),
+    )
     st.sidebar.markdown(
         f'<div class="ppqa-session-meta">{session.get("message_count", 0)} messages</div>',
         unsafe_allow_html=True,
     )
 
 
-def _render_header(session_detail: dict[str, Any] | None) -> None:
+def _render_header(
+    session_detail: dict[str, Any] | None,
+    *,
+    analysis_running: bool,
+) -> None:
     if session_detail:
         session = session_detail["session"]
         title = session.get("title") or "New chat"
-        subtitle = _message_count_label(session.get("message_count", 0))
+        subtitle = (
+            "Analysis in progress"
+            if analysis_running
+            else _message_count_label(session.get("message_count", 0))
+        )
     else:
         title = "New chat"
-        subtitle = "Draft session"
+        subtitle = "Analysis in progress" if analysis_running else "Draft session"
     st.markdown(
         f"""
         <div class="ppqa-header">
@@ -185,12 +435,28 @@ def _render_empty_state() -> None:
     )
 
 
-def _render_messages(messages: list[dict[str, Any]]) -> None:
-    if not messages:
-        _render_empty_state()
-        return
+def _render_messages(
+    messages: list[dict[str, Any]],
+    *,
+    session_id: str,
+) -> None:
+    limit = int(
+        st.session_state.message_render_limits.get(
+            session_id,
+            INITIAL_RENDERED_MESSAGES,
+        )
+    )
+    hidden_count = max(0, len(messages) - limit)
+    if hidden_count:
+        st.button(
+            f"Show {min(hidden_count, MESSAGE_RENDER_BATCH)} earlier messages",
+            key=f"show-earlier-{session_id}-{limit}",
+            type="tertiary",
+            on_click=_show_more_messages,
+            args=(session_id,),
+        )
 
-    for message in messages:
+    for message in messages[-limit:]:
         role = message.get("role", "assistant")
         with st.chat_message(role, avatar=_message_avatar(role)):
             st.markdown(message.get("content") or "")
@@ -234,7 +500,13 @@ def _render_assistant_artifacts(
 
     if rows:
         with st.expander("Result rows", expanded=False):
-            st.dataframe(rows, width="stretch", hide_index=True)
+            preview_rows = rows[:MAX_RENDERED_RESULT_ROWS]
+            st.dataframe(preview_rows, width="stretch", hide_index=True)
+            if len(rows) > len(preview_rows):
+                st.caption(
+                    f"Showing {len(preview_rows):,} of {len(rows):,} returned rows "
+                    "to keep the browser responsive."
+                )
 
 
 def _render_chart(chart: Any, *, chart_key: str | None = None) -> None:
@@ -542,48 +814,186 @@ def _vega_x_kind(
     return "ordinal", ordered_values
 
 
-def _render_question_composer() -> str | None:
-    submission = st.chat_input("Ask a performance planning question")
+@st.fragment
+def _render_question_composer() -> None:
+    """Rerun only the composer when the user submits a question."""
+
+    with st.bottom:
+        submission = st.chat_input(
+            "Ask a performance planning question",
+            key="question-composer",
+            max_chars=MAX_QUESTION_CHARS,
+            submit_mode="disable",
+        )
     if submission is None:
-        return None
+        return
     prompt = submission.strip()
-    return prompt or None
+    if not prompt:
+        return
+    _begin_analysis(prompt)
 
 
-def _submit_prompt(client: ApiClient, prompt: str) -> None:
-    session_id = st.session_state.active_session_id
+def _begin_analysis(prompt: str) -> None:
+    client = _get_api_client(st.session_state.api_base_url)
+    runner = _get_analysis_runner()
+    if runner.active_job() is not None:
+        st.rerun()
+    session_id = st.session_state.get("active_session_id")
+    dry_run = bool(st.session_state.get("dry_run", False))
+    st.session_state.failed_analysis = None
+
     if not session_id:
         try:
             session = client.create_session()
-            session_id = session["id"]
-            st.session_state.active_session_id = session_id
         except ApiError as exc:
-            st.error(str(exc))
-            return
+            _record_failed_analysis(None, prompt, dry_run, exc)
+            st.rerun()
+        if not isinstance(session, dict) or not session.get("id"):
+            _record_failed_analysis(
+                None,
+                prompt,
+                dry_run,
+                ApiError("API returned an invalid chat session"),
+            )
+            st.rerun()
+        session_id = str(session["id"])
+        _cache_new_session(session)
+
+    try:
+        runner.start(
+            base_url=client.base_url,
+            session_id=session_id,
+            question=prompt,
+            dry_run=dry_run,
+        )
+    except Exception as exc:
+        _record_failed_analysis(session_id, prompt, dry_run, exc)
+    st.rerun()
+
+
+@st.fragment(run_every=0.75)
+def _render_active_analysis() -> None:
+    """Poll a background request without rebuilding the saved conversation."""
+
+    runner = _get_analysis_runner()
+    job = runner.active_job()
+    if job is None:
+        st.rerun()
+
+    snapshot = job.snapshot()
+    if snapshot.done:
+        try:
+            response = job.result()
+            _apply_analysis_response(response, expected_session_id=snapshot.session_id)
+        except Exception as exc:
+            _record_failed_analysis(
+                snapshot.session_id,
+                snapshot.question,
+                job.dry_run,
+                exc,
+            )
+        finally:
+            runner.clear(snapshot.job_id)
+        st.rerun()
 
     with st.chat_message("user", avatar=_message_avatar("user")):
-        st.markdown(prompt)
+        st.markdown(snapshot.question)
 
     with st.chat_message("assistant", avatar=_message_avatar("assistant")):
-        with st.spinner("Running analysis"):
-            try:
-                response = client.ask_session(
-                    session_id,
-                    prompt,
-                    dry_run=bool(st.session_state.get("dry_run", False)),
-                )
-            except ApiError as exc:
-                st.error(str(exc))
-                return
-
-        assistant_message = response["assistant_message"]
-        st.markdown(assistant_message.get("content") or "")
-        _render_assistant_artifacts(
-            assistant_message.get("metadata") or {},
-            chart_key=assistant_message.get("id"),
+        st.status(
+            snapshot.progress,
+            expanded=True,
+            state="running",
+            type="compact",
         )
 
-    st.rerun()
+    with st.bottom:
+        st.chat_input(
+            "Analysis in progress…",
+            key="active-question-composer",
+            disabled=True,
+        )
+
+
+def _cache_new_session(session: dict[str, Any]) -> None:
+    session_id = str(session["id"])
+    st.session_state.active_session_id = session_id
+    details = dict(st.session_state.get("session_details", {}))
+    details[session_id] = {"session": session, "messages": []}
+    st.session_state.session_details = details
+    st.session_state.connection_error = None
+    _upsert_session_summary(session)
+
+
+def _apply_analysis_response(
+    response: dict[str, Any],
+    *,
+    expected_session_id: str,
+) -> None:
+    session = response.get("session")
+    user_message = response.get("user_message")
+    assistant_message = response.get("assistant_message")
+    if not all(
+        isinstance(item, dict)
+        for item in (session, user_message, assistant_message)
+    ):
+        raise ApiError("API returned an incomplete analysis response")
+
+    session_id = str(session.get("id") or "")
+    if not session_id or session_id != expected_session_id:
+        raise ApiError("API returned an analysis for the wrong chat session")
+
+    details = dict(st.session_state.get("session_details", {}))
+    current_detail = details.get(session_id) or {"session": session, "messages": []}
+    messages = list(current_detail.get("messages") or [])
+    existing_ids = {message.get("id") for message in messages}
+    for message in (user_message, assistant_message):
+        if message.get("id") not in existing_ids:
+            messages.append(message)
+            existing_ids.add(message.get("id"))
+    details[session_id] = {"session": session, "messages": messages}
+    st.session_state.session_details = details
+    st.session_state.active_session_id = session_id
+    st.session_state.failed_analysis = None
+    st.session_state.connection_error = None
+    _upsert_session_summary(session)
+
+
+def _upsert_session_summary(session: dict[str, Any]) -> None:
+    session_id = session.get("id")
+    sessions = st.session_state.get("sessions_cache") or []
+    st.session_state.sessions_cache = [
+        session,
+        *[item for item in sessions if item.get("id") != session_id],
+    ]
+
+
+def _record_failed_analysis(
+    session_id: str | None,
+    question: str,
+    dry_run: bool,
+    error: Exception,
+) -> None:
+    st.session_state.failed_analysis = {
+        "session_id": session_id,
+        "question": question,
+        "dry_run": dry_run,
+        "error": " ".join(str(error).split())[:1000]
+        or "The analysis could not be completed.",
+    }
+
+
+def _render_failed_analysis() -> None:
+    failure = st.session_state.get("failed_analysis")
+    if not isinstance(failure, dict):
+        return
+    with st.chat_message("user", avatar=_message_avatar("user")):
+        st.markdown(str(failure.get("question") or ""))
+    with st.chat_message("assistant", avatar=_message_avatar("assistant")):
+        st.error(str(failure.get("error") or "The analysis could not be completed."))
+        st.caption(
+            "The chat is still available. You can adjust the question and try again."
+        )
 
 
 def _message_avatar(role: str) -> str:

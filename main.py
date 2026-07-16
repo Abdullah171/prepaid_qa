@@ -5,13 +5,16 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 import asyncio
 from datetime import datetime
+import json
 import logging
 import os
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.concurrency import run_in_threadpool
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from performance_planning_qa.chat_store import (
@@ -39,7 +42,7 @@ DEFAULT_CORS_ORIGINS = (
 
 
 class AskRequest(BaseModel):
-    question: str = Field(..., min_length=1)
+    question: str = Field(..., min_length=1, max_length=4_000)
     dry_run: bool = False
 
 
@@ -254,6 +257,91 @@ async def ask_session(
     if not question:
         raise HTTPException(status_code=422, detail="question must not be empty")
 
+    return await _ask_session_impl(
+        session_id,
+        question,
+        dry_run=request_body.dry_run,
+        request=request,
+    )
+
+
+@app.post("/sessions/{session_id}/ask/stream")
+async def ask_session_stream(
+    session_id: str,
+    request_body: AskRequest,
+    request: Request,
+) -> StreamingResponse:
+    """Stream analysis phases, followed by the ordinary session response."""
+
+    question = request_body.question.strip()
+    if not question:
+        raise HTTPException(status_code=422, detail="question must not be empty")
+
+    async def events():
+        loop = asyncio.get_running_loop()
+        progress_queue: asyncio.Queue[str] = asyncio.Queue()
+
+        def report_progress(message: str) -> None:
+            loop.call_soon_threadsafe(progress_queue.put_nowait, message)
+
+        analysis_task = asyncio.create_task(
+            _ask_session_impl(
+                session_id,
+                question,
+                dry_run=request_body.dry_run,
+                request=request,
+                progress_callback=report_progress,
+            )
+        )
+        last_event_at = loop.time()
+
+        while not analysis_task.done():
+            try:
+                message = await asyncio.wait_for(progress_queue.get(), timeout=1.0)
+            except asyncio.TimeoutError:
+                if loop.time() - last_event_at >= 15:
+                    yield ": keep-alive\n\n"
+                    last_event_at = loop.time()
+                continue
+            yield _sse_event("progress", {"message": message})
+            last_event_at = loop.time()
+
+        while not progress_queue.empty():
+            yield _sse_event(
+                "progress",
+                {"message": progress_queue.get_nowait()},
+            )
+
+        try:
+            payload = await analysis_task
+        except HTTPException as exc:
+            yield _sse_event("error", {"message": str(exc.detail)})
+        except Exception as exc:
+            logger.exception("Failed to stream session answer")
+            yield _sse_event("error", {"message": str(exc)})
+        else:
+            yield _sse_event("result", payload)
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+async def _ask_session_impl(
+    session_id: str,
+    question: str,
+    *,
+    dry_run: bool,
+    request: Request,
+    progress_callback: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    """Run and persist one session question for regular and streaming routes."""
+
     pipeline = _get_pipeline(request)
     chat_store = _get_chat_store(request)
     pipeline_lock: asyncio.Lock = request.app.state.pipeline_lock
@@ -261,6 +349,11 @@ async def ask_session(
     try:
         # Keep load -> analysis -> persistence ordered so simultaneous follow-ups
         # cannot both reuse the same stale session result.
+        if pipeline_lock.locked() and progress_callback is not None:
+            try:
+                progress_callback("Waiting for the current analysis to finish")
+            except Exception:
+                logger.debug("Queue progress callback failed", exc_info=True)
         async with pipeline_lock:
             session, messages = await _load_session_with_messages(request, session_id)
             chat_history = _pipeline_history_from_messages(messages)
@@ -268,9 +361,10 @@ async def ask_session(
             result = await run_in_threadpool(
                 pipeline.ask,
                 question,
-                dry_run=request_body.dry_run,
+                dry_run=dry_run,
                 chat_history=chat_history,
                 previous_result=previous_result,
+                progress_callback=progress_callback,
             )
             result_payload = result.to_dict()
             assistant_content = _assistant_content_from_result(result_payload)
@@ -280,7 +374,7 @@ async def ask_session(
                 session_id=session_id,
                 role="user",
                 content=question,
-                dry_run=request_body.dry_run,
+                dry_run=dry_run,
             )
             assistant_message = await _run_chat_store(
                 request,
@@ -288,7 +382,7 @@ async def ask_session(
                 session_id=session_id,
                 role="assistant",
                 content=assistant_content,
-                dry_run=request_body.dry_run,
+                dry_run=dry_run,
                 metadata=result_payload,
             )
             if session.message_count == 0 and session.title == DEFAULT_SESSION_TITLE:
@@ -320,6 +414,14 @@ async def ask_session(
         "assistant_message": assistant_message.to_payload(),
         "result": result_payload,
     }
+
+
+def _sse_event(event: str, payload: dict[str, Any]) -> str:
+    serializable_payload = jsonable_encoder(payload)
+    return (
+        f"event: {event}\n"
+        f"data: {json.dumps(serializable_payload, ensure_ascii=False)}\n\n"
+    )
 
 
 def _get_pipeline(request: Request) -> NL2SQLPipeline:

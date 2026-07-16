@@ -11,7 +11,7 @@ dependencies = [
     "psycopg[binary]",
     "python-dotenv",
     "requests",
-    "streamlit",
+    "streamlit>=1.59.1,<1.60",
     "teradataml",
     "uvicorn[standard]",
     "watchdogs>=1.9.9",

@@ -954,7 +954,7 @@ requires-dist = [
     { name = "psycopg", extras = ["binary"] },
     { name = "python-dotenv" },
     { name = "requests" },
-    { name = "streamlit" },
+    { name = "streamlit", specifier = ">=1.59.1,<1.60" },
     { name = "teradataml" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "watchdogs", specifier = ">=1.9.9" },
