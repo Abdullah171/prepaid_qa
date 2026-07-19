@@ -26,6 +26,11 @@ Conditional charts are rendered from the versioned `chart` payload stored with
 each assistant message. They appear both immediately and after reopening a chat,
 independently of the **See source** toggle.
 
+Requested CSV exports are rendered from the exact displayed Markdown table stored
+with the assistant message, rather than from every internal result row. The buttons
+are independent of **See source** and remain available when the conversation is
+reopened.
+
 Charts use an STC-themed palette. Line charts use a focused non-zero value scale
 and monthly date results use month-level ticks, making small changes visible
 without filling the x-axis with daily labels.

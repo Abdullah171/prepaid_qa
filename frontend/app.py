@@ -4,14 +4,41 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 import re
+import sys
 import time
 from typing import Any
 
+# PyArrow 25 defaults to mimalloc. On this macOS/Python build its per-thread
+# heap initialization can segfault while Streamlit serializes Vega chart data.
+# Select Arrow's system allocator before Streamlit/PyArrow are loaded.
+os.environ.setdefault("ARROW_DEFAULT_MEMORY_POOL", "system")
+
 import streamlit as st
+
+try:
+    import pyarrow as pa
+
+    if pa.default_memory_pool().backend_name != "system":
+        pa.set_memory_pool(pa.system_memory_pool())
+except Exception:
+    # Streamlit owns PyArrow; if its import contract changes, keep the app
+    # usable and let ordinary chart error handling report the problem.
+    logging.getLogger(__name__).warning(
+        "Could not select PyArrow's system memory pool",
+        exc_info=True,
+    )
+
+# Support both documented project-root launches and `streamlit run app.py`
+# from inside the frontend directory.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from analysis_runner import AnalysisRunner
 from api_client import ApiClient, ApiError
+from performance_planning_qa.csv_export import csv_export_to_bytes
 from user_messages import (
     ANALYSIS_UNAVAILABLE_MESSAGE,
     SERVICE_UNAVAILABLE_MESSAGE,
@@ -493,6 +520,10 @@ def _render_assistant_artifacts(
 
     _render_reasoning(metadata.get("reasoning"))
     _render_chart(metadata.get("chart"), chart_key=chart_key)
+    _render_csv_download(
+        metadata.get("csv_export"),
+        artifact_key=chart_key,
+    )
     if not st.session_state.get("show_source", False):
         return
     if sql:
@@ -521,6 +552,38 @@ def _render_assistant_artifacts(
                     f"Showing {len(preview_rows):,} of {len(rows):,} returned rows "
                     "to keep the browser responsive."
                 )
+
+
+def _render_csv_download(
+    export: Any,
+    *,
+    artifact_key: str | None,
+) -> None:
+    """Render a persistent download button only after CSV was requested."""
+
+    if not isinstance(export, dict) or export.get("status") != "ready":
+        return
+    try:
+        csv_data = csv_export_to_bytes(export)
+    except (TypeError, ValueError):
+        logger.warning("Could not serialize persisted result as CSV", exc_info=True)
+        return
+
+    filename = str(export.get("filename") or "performance-planning-data.csv").strip()
+    if not filename.lower().endswith(".csv"):
+        filename = "performance-planning-data.csv"
+    rows = export.get("rows")
+    row_count = len(rows) if isinstance(rows, list) else 0
+    label = f"Download CSV ({row_count:,} rows)"
+    st.download_button(
+        label,
+        data=csv_data,
+        file_name=filename,
+        mime="text/csv",
+        key=f"csv-download-{artifact_key or filename}",
+        icon=":material/download:",
+        on_click="ignore",
+    )
 
 
 def _render_reasoning(value: Any) -> None:
