@@ -25,6 +25,8 @@ resync chat history changed by another browser.
 Conditional charts are rendered from the versioned `chart` payload stored with
 each assistant message. They appear both immediately and after reopening a chat,
 independently of the **See source** toggle.
+Every chart row in the backend payload is passed to the renderer; the frontend
+does not truncate or sample chart data.
 
 Requested CSV exports are rendered from the exact displayed Markdown table stored
 with the assistant message, rather than from every internal result row. The buttons

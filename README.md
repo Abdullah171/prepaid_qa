@@ -281,8 +281,10 @@ A presentation-intent layer also handles typos, missing spaces, slang, and
 indirect requests such as “i need agraph for it” or “picture those numbers”.
 High-confidence phrases use a fast local path; other wording is classified
 semantically as a chart of the previous result, CSV of the displayed table, a
-CSV decline, or a genuinely new analysis. Requests that introduce a new metric,
-period, filter, grouping, or comparison never reuse stale rows.
+combined chart-and-CSV request, a CSV decline, or a genuinely new analysis. A
+message such as “yes, CSV and also graph it” returns both artifacts without
+rerunning the analysis. Requests that introduce a new metric, period, filter,
+grouping, or comparison never reuse stale rows.
 For a new analytical question, the answer model can also establish semantic
 chart intent with a complete chart plan when flexible wording is not recognized
 by the local detector. Python still validates every selected field and builds
@@ -321,10 +323,11 @@ the response includes a renderer-neutral payload such as:
 }
 ```
 
-Chart data is capped at 200 rows; long time ranges are sampled across the full
-period while keeping complete selected time buckets. Known row-level identifier
-columns and common identifier aliases are rejected as chart dimensions or
-measures, while aggregate fields such as `NUMBER_OF_LINES` remain usable.
+Chart payloads and frontend rendering retain every row returned for the selected
+chart fields; the application does not truncate or sample chart data. Known
+row-level identifier columns and common identifier aliases are rejected as chart
+dimensions or measures, while aggregate fields such as `NUMBER_OF_LINES` remain
+usable.
 Multiple selected measures are rendered in separate panels with independent
 value scales. The frontend uses the STC purple/cyan/magenta palette, focused
 line-chart value scales, and period-aware date ticks so small trend changes and

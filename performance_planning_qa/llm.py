@@ -72,6 +72,7 @@ class LiteLLMClient:
         *,
         temperature: float,
         max_tokens: int,
+        log_empty_response: bool = True,
         reasoning_callback: ReasoningCallback | None = None,
     ) -> str:
         request_payload = {
@@ -143,7 +144,8 @@ class LiteLLMClient:
                 raise
 
         if not content.strip():
-            logger.error("LLM returned an empty response; diagnostics=%s", diagnostics)
+            if log_empty_response:
+                logger.error("LLM returned an empty response; diagnostics=%s", diagnostics)
             raise RuntimeError("LLM returned an empty response.")
         return content.strip()
 
@@ -154,12 +156,14 @@ class LiteLLMClient:
         temperature: float,
         max_tokens: int,
         fallback_key: str | None = None,
+        log_empty_response: bool = True,
         reasoning_callback: ReasoningCallback | None = None,
     ) -> dict[str, Any]:
         text = self.complete(
             messages,
             temperature=temperature,
             max_tokens=max_tokens,
+            log_empty_response=log_empty_response,
             reasoning_callback=reasoning_callback,
         )
         return extract_json_object(text, fallback_key=fallback_key)

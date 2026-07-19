@@ -131,6 +131,8 @@ def is_csv_followup(
     if normalized.startswith(("yes ", "yeah ", "yep ", "sure ")):
         remaining = normalized.split()[1:]
         allowed_words = {
+            "a",
+            "an",
             "please",
             "sure",
             "do",
@@ -154,8 +156,16 @@ def is_csv_followup(
             "as",
             "in",
             "format",
+            "also",
+            "show",
+            "graph",
+            "chart",
+            "plot",
+            "visualization",
+            "of",
+            "for",
         }
-        if len(remaining) <= 8 and set(remaining) <= allowed_words:
+        if len(remaining) <= 20 and set(remaining) <= allowed_words:
             return True
     return bool(_CSV_FOLLOWUP_COMMAND_RE.fullmatch(normalized))
 

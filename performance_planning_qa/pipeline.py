@@ -27,6 +27,7 @@ from performance_planning_qa.csv_export import (
     build_csv_export_spec,
     build_ready_csv_export_spec,
     extract_displayed_table,
+    has_explicit_csv_request,
     has_offered_csv,
     is_csv_followup,
     strip_embedded_csv_dump,
@@ -324,25 +325,37 @@ class NL2SQLPipeline:
         if not isinstance(previous_result, dict):
             return None
 
+        csv_was_offered = has_offered_csv(previous_result)
         chart_result = self._chart_followup_result(question, previous_result)
         if chart_result is not None:
+            if csv_was_offered and (
+                is_csv_followup(question, previous_result)
+                or has_explicit_csv_request(question)
+            ):
+                return self._add_ready_csv(
+                    chart_result,
+                    previous_result,
+                )
             return chart_result
-        if has_offered_csv(previous_result) and is_csv_followup(
+        if csv_was_offered and is_csv_followup(
             question,
             previous_result,
         ):
             return self._ready_csv_followup_result(question, previous_result)
 
         has_rows = _query_result_from_payload(previous_result.get("query_result")) is not None
-        if not has_rows and not has_offered_csv(previous_result):
+        if not has_rows and not csv_was_offered:
             return None
 
         intent, requested_type = self._classify_presentation_followup(
             question,
             previous_result,
         )
-        if intent == "chart_previous_result" and has_rows:
-            return self._chart_followup_result(
+        if intent in {
+            "chart_previous_result",
+            "chart_and_csv_previous_result",
+        } and has_rows:
+            chart_result = self._chart_followup_result(
                 question,
                 previous_result,
                 forced_intent=ChartIntent(
@@ -350,9 +363,16 @@ class NL2SQLPipeline:
                     requested_type=requested_type,
                 ),
             )
-        if intent == "csv_previous_table" and has_offered_csv(previous_result):
+            if (
+                chart_result is not None
+                and intent == "chart_and_csv_previous_result"
+                and csv_was_offered
+            ):
+                return self._add_ready_csv(chart_result, previous_result)
+            return chart_result
+        if intent == "csv_previous_table" and csv_was_offered:
             return self._ready_csv_followup_result(question, previous_result)
-        if intent == "decline_csv" and has_offered_csv(previous_result):
+        if intent == "decline_csv" and csv_was_offered:
             return PipelineResult(
                 question=question,
                 generated_sql=GeneratedSQL(sql=None),
@@ -361,6 +381,28 @@ class NL2SQLPipeline:
                 dry_run=False,
             )
         return None
+
+    def _add_ready_csv(
+        self,
+        chart_result: PipelineResult,
+        previous_result: dict[str, Any],
+    ) -> PipelineResult:
+        """Return a chart and the previously offered table as one response."""
+
+        previous_export = previous_result.get("csv_export")
+        csv_export = (
+            build_ready_csv_export_spec(previous_export)
+            if isinstance(previous_export, dict)
+            else None
+        )
+        if csv_export is None:
+            return chart_result
+        answer = append_csv_message(chart_result.answer, csv_export)
+        return replace(
+            chart_result,
+            answer=answer,
+            csv_export=csv_export,
+        )
 
     def _ready_csv_followup_result(
         self,
@@ -404,18 +446,23 @@ class NL2SQLPipeline:
                     previous_answer=str(previous_result.get("answer") or ""),
                 ),
                 temperature=0.0,
-                max_tokens=80,
+                max_tokens=256,
+                log_empty_response=False,
                 reasoning_callback=None,
             )
-        except Exception:
+        except Exception as exc:
             # Classification is optional. Falling through lets the ordinary
             # analytical pipeline handle the message instead of failing chat.
-            logger.warning("Presentation follow-up classification failed", exc_info=True)
+            logger.debug(
+                "Presentation follow-up classification was unavailable: %s",
+                exc,
+            )
             return "new_request", None
 
         intent = str(payload.get("intent") or "").strip().lower()
         if intent not in {
             "chart_previous_result",
+            "chart_and_csv_previous_result",
             "csv_previous_table",
             "decline_csv",
             "new_request",

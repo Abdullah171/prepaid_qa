@@ -49,7 +49,6 @@ from styles import APP_CSS
 logger = logging.getLogger(__name__)
 
 DEFAULT_API_BASE_URL = "http://127.0.0.1:8000"
-MAX_RENDERED_CHART_ROWS = 500
 MAX_RENDERED_RESULT_ROWS = 200
 INITIAL_RENDERED_MESSAGES = 24
 MESSAGE_RENDER_BATCH = 20
@@ -611,9 +610,7 @@ def _render_chart(chart: Any, *, chart_key: str | None = None) -> None:
     raw_data = chart.get("data")
     if not isinstance(raw_data, list):
         return
-    valid_rows = [row for row in raw_data if isinstance(row, dict)]
-    frontend_truncated = len(valid_rows) > MAX_RENDERED_CHART_ROWS
-    rows = valid_rows[:MAX_RENDERED_CHART_ROWS]
+    rows = [row for row in raw_data if isinstance(row, dict)]
     if not rows:
         return
 
@@ -846,8 +843,6 @@ def _render_chart(chart: Any, *, chart_key: str | None = None) -> None:
             f"Shown as a {chart_type} chart because these values do not support "
             f"a {requested_type} chart."
         )
-    if chart.get("truncated") is True or frontend_truncated:
-        notes.append("Chart data was truncated to keep the visualization readable.")
     if notes:
         st.caption(" ".join(notes))
 

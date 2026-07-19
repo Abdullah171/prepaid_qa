@@ -283,9 +283,6 @@ _FOLLOWUP_TRANSFORM_RE = re.compile(
     r")",
     re.IGNORECASE,
 )
-_MAX_Y_FIELDS = 4
-_MAX_INFERRED_SERIES_VALUES = 20
-_MAX_PIE_CATEGORIES = 20
 _MONTH_NUMBERS = {
     "jan": 1,
     "january": 1,
@@ -317,6 +314,7 @@ _PRESENTATION_ONLY_TOKENS = frozenset(
     {
         "a",
         "again",
+        "also",
         "an",
         "area",
         "as",
@@ -328,17 +326,27 @@ _PRESENTATION_ONLY_TOKENS = frozenset(
         "column",
         "convert",
         "could",
+        "csv",
+        "data",
         "display",
         "donut",
         "doughnut",
+        "download",
         "draw",
+        "export",
+        "file",
+        "format",
+        "give",
         "graph",
+        "i",
+        "in",
         "instead",
         "into",
         "it",
         "line",
         "make",
         "me",
+        "need",
         "now",
         "of",
         "pie",
@@ -355,6 +363,7 @@ _PRESENTATION_ONLY_TOKENS = frozenset(
         "same",
         "scatter",
         "scatterplot",
+        "send",
         "show",
         "switch",
         "that",
@@ -374,6 +383,9 @@ _PRESENTATION_ONLY_TOKENS = frozenset(
         "visualise",
         "with",
         "would",
+        "want",
+        "yeah",
+        "yes",
         "you",
     }
 )
@@ -544,10 +556,15 @@ def is_chart_only_followup(question: str) -> bool:
     if not has_reference:
         return False
 
+    if _FOLLOWUP_TRANSFORM_RE.search(text):
+        return False
+
     natural_same_result_request = bool(
         re.search(
-            r"\b(?:i\s+)?(?:need|want|would\s+like|can\s+i\s+(?:see|have))\s+"
-            r"(?:an?\s*)?(?:chart|graph|plot|visualization)\s+"
+            r"\b(?:"
+            r"(?:i\s+)?(?:need|want|would\s+like|can\s+i\s+(?:see|have))|"
+            r"(?:show|give|display|draw|make|create|generate|render)(?:\s+me)?"
+            r")\s+(?:an?\s*)?(?:chart|graph|plot|visualization)\s+"
             r"(?:of|for)\s+(?:it|that|this|those|these)\b",
             text,
             re.IGNORECASE,
@@ -555,8 +572,6 @@ def is_chart_only_followup(question: str) -> bool:
     )
     if natural_same_result_request:
         return True
-    if _FOLLOWUP_TRANSFORM_RE.search(text):
-        return False
 
     words = re.findall(r"[a-z]+", text.casefold())
     if not words or any(word not in _PRESENTATION_ONLY_TOKENS for word in words):
@@ -595,7 +610,6 @@ def build_chart_spec(
     question: str,
     result: QueryResult,
     candidate: Mapping[str, Any] | None = None,
-    max_rows: int = 200,
     *,
     inherited_intent: ChartIntent | None = None,
 ) -> ChartSpec | None:
@@ -610,12 +624,7 @@ def build_chart_spec(
     intent = detect_chart_intent(question)
     if intent is None and inherited_intent is not None and not chart_output_suppressed(question):
         intent = inherited_intent
-    if (
-        intent is None
-        or isinstance(max_rows, bool)
-        or not isinstance(max_rows, int)
-        or max_rows < 1
-    ):
+    if intent is None:
         return None
 
     try:
@@ -682,8 +691,6 @@ def build_chart_spec(
     if candidate_series is not None and (
         profiles[candidate_series].kind != "nominal"
         or not _is_usable_chart_field(candidate_series)
-        or profiles[candidate_series].distinct_count > _MAX_INFERRED_SERIES_VALUES
-        or profiles[candidate_series].distinct_count >= profiles[candidate_series].non_null_count
     ):
         candidate_series = None
     if plan.get("series") and candidate_series is None:
@@ -708,15 +715,35 @@ def build_chart_spec(
     if x_kind == "temporal":
         sorted_rows.sort(key=lambda row: _temporal_sort_key(_row_value(row, x), name=x))
 
-    truncated = len(sorted_rows) > max_rows
-    selected_rows = _select_chart_rows(
-        sorted_rows,
-        x=x,
-        y=y,
-        x_kind=x_kind,
-        max_rows=max_rows,
-    )
-    data = _materialize_data(selected_rows, x=x, y=y, series=series)
+    data = _materialize_data(sorted_rows, x=x, y=y, series=series)
+    if (
+        series is not None
+        and desired_type not in {"pie", "donut"}
+        and _has_duplicate_coordinates(data, x=x, y=y, series=series)
+    ):
+        grouping_fields = (
+            series,
+            *(
+                column
+                for column in columns
+                if column not in {x, *y, series}
+                and profiles[column].kind == "nominal"
+                and profiles[column].distinct_count >= 2
+                and _is_usable_chart_field(column)
+            ),
+        )
+        if len(grouping_fields) > 1:
+            series = _composite_series_name(grouping_fields, columns)
+            data = _materialize_data(
+                sorted_rows,
+                x=x,
+                y=y,
+                series=series,
+                series_fields=grouping_fields,
+            )
+            fallback_notes.append(
+                "Multiple grouping fields were combined into one chart series."
+            )
     if _useful_mark_count(data, x=x, y=y) < 2:
         return None
 
@@ -770,7 +797,7 @@ def build_chart_spec(
         trigger=intent.trigger,
         requested_type=intent.requested_type,
         fallback_reason=" ".join(fallback_notes) or None,
-        truncated=truncated,
+        truncated=False,
         data=data,
     )
 
@@ -865,7 +892,7 @@ def _resolve_y_fields(
         field_name = _resolve_field(item, columns)
         if field_name and field_name not in exclude and field_name not in resolved:
             resolved.append(field_name)
-    return tuple(resolved[:_MAX_Y_FIELDS])
+    return tuple(resolved)
 
 
 def _profile_field(name: str, rows: Sequence[Mapping[str, Any]]) -> _FieldProfile:
@@ -941,7 +968,7 @@ def _infer_y_fields(
         and profiles[column].numeric_count > 0
         and _is_usable_chart_field(column)
     ]
-    return tuple(numeric[:1])
+    return tuple(numeric)
 
 
 def _infer_series_field(
@@ -957,8 +984,7 @@ def _infer_series_field(
         if (
             _is_usable_chart_field(column)
             and profile.kind == "nominal"
-            and 2 <= profile.distinct_count <= _MAX_INFERRED_SERIES_VALUES
-            and profile.distinct_count < profile.non_null_count
+            and profile.distinct_count >= 2
         ):
             return column
     return None
@@ -979,64 +1005,45 @@ def _materialize_data(
     x: str,
     y: tuple[str, ...],
     series: str | None,
+    series_fields: Sequence[str] | None = None,
 ) -> list[dict[str, Any]]:
     data: list[dict[str, Any]] = []
     for row in rows:
         item: dict[str, Any] = {x: _json_safe_value(_row_value(row, x))}
         if series is not None:
-            item[series] = _json_safe_value(_row_value(row, series))
+            if series_fields:
+                item[series] = " · ".join(
+                    _series_value_label(_row_value(row, field_name))
+                    for field_name in series_fields
+                )
+            else:
+                item[series] = _json_safe_value(_row_value(row, series))
         for field_name in y:
             item[field_name] = _finite_number(_row_value(row, field_name))
         data.append(item)
     return data
 
 
-def _select_chart_rows(
-    rows: Sequence[Mapping[str, Any]],
-    *,
-    x: str,
-    y: Sequence[str],
-    x_kind: XKind,
-    max_rows: int,
-) -> list[Mapping[str, Any]]:
-    """Cap chart rows while retaining the full time range and complete periods."""
+def _composite_series_name(
+    fields: Sequence[str],
+    columns: Sequence[str],
+) -> str:
+    """Create a collision-free display field for multiple grouping dimensions."""
 
-    if len(rows) <= max_rows:
-        return list(rows)
+    base = " / ".join(fields)
+    candidate = base
+    suffix = 2
+    while candidate in columns:
+        candidate = f"{base} ({suffix})"
+        suffix += 1
+    return candidate
 
-    usable_rows = [
-        row
-        for row in rows
-        if any(_finite_number(_row_value(row, field_name)) is not None for field_name in y)
-    ]
-    candidates = usable_rows or list(rows)
-    if len(candidates) <= max_rows:
-        return candidates
-    if x_kind != "temporal":
-        return candidates[:max_rows]
 
-    groups: list[list[Mapping[str, Any]]] = []
-    group_keys: list[Any] = []
-    for row in candidates:
-        key = _hashable_value(_json_safe_value(_row_value(row, x)))
-        if not groups or key != group_keys[-1]:
-            groups.append([])
-            group_keys.append(key)
-        groups[-1].append(row)
-
-    largest_group = max(len(group) for group in groups)
-    group_count = min(len(groups), max_rows // largest_group)
-    if group_count < 1:
-        return candidates[-max_rows:]
-    if group_count == 1:
-        return list(groups[-1])[:max_rows]
-
-    indexes = {
-        round(position * (len(groups) - 1) / (group_count - 1))
-        for position in range(group_count)
-    }
-    selected = [row for index in sorted(indexes) for row in groups[index]]
-    return selected[:max_rows]
+def _series_value_label(value: Any) -> str:
+    safe_value = _json_safe_value(value)
+    if safe_value is None:
+        return "Unknown"
+    return str(safe_value)
 
 
 def _useful_mark_count(data: Sequence[Mapping[str, Any]], *, x: str, y: Sequence[str]) -> int:
@@ -1085,7 +1092,6 @@ def _is_compatible_type(
             len(values) >= 2
             and len(categories) >= 2
             and len(categories) == len(values)
-            and len(categories) <= _MAX_PIE_CATEGORIES
             and all(value is not None and value >= 0 for value in values)
             and sum(value for value in values if value is not None) > 0
         )
