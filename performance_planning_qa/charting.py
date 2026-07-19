@@ -30,6 +30,11 @@ _EXPLICIT_CHART_RE = re.compile(
     r"visuali[sz](?:e|ed|ing|ation|ations)|diagrams?)\b",
     re.IGNORECASE,
 )
+_CHART_TERM_TYPO_RE = re.compile(
+    r"\b(?:agraph|achart|aplot|garph|grahp|graoph|grapgh|grpah|grph|grah|charth|chartt|"
+    r"visulization|visulisation|visualiztion|visualisaton)\b",
+    re.IGNORECASE,
+)
 _TREND_RE = re.compile(
     r"(?:"
     r"\btrend(?:s|ing|ed)?\b|\btime[\s-]*series\b|\bover\s+time\b|\btrajectory\b|"
@@ -335,6 +340,7 @@ _PRESENTATION_ONLY_TOKENS = frozenset(
         "make",
         "me",
         "now",
+        "of",
         "pie",
         "please",
         "plot",
@@ -434,7 +440,7 @@ def detect_chart_intent(question: str) -> ChartIntent | None:
     same question also contains a trend phrase.
     """
 
-    text = str(question or "").strip()
+    text = _normalize_chart_term_typos(str(question or "").strip())
     if not text or chart_output_suppressed(text):
         return None
 
@@ -461,7 +467,7 @@ def detect_chart_intent(question: str) -> ChartIntent | None:
 def chart_output_suppressed(question: str) -> bool:
     """Return whether the current turn explicitly asks not to show a chart."""
 
-    text = str(question or "").strip()
+    text = _normalize_chart_term_typos(str(question or "").strip())
     if not text or _NO_CHART_RE.search(text):
         return True
     return bool(
@@ -481,7 +487,9 @@ def is_anaphoric_chart_followup(question: str) -> bool:
     result contains a valid chart before passing inherited intent to the builder.
     """
 
-    text = " ".join(str(question or "").strip().split())
+    text = _normalize_chart_term_typos(
+        " ".join(str(question or "").strip().split())
+    )
     current_intent = detect_chart_intent(text)
     if (
         not text
@@ -519,7 +527,9 @@ def is_anaphoric_chart_followup(question: str) -> bool:
 def is_chart_only_followup(question: str) -> bool:
     """Identify an anaphoric, presentation-only restyle of a previous result."""
 
-    text = " ".join(str(question or "").strip().split())
+    text = _normalize_chart_term_typos(
+        " ".join(str(question or "").strip().split())
+    )
     intent = detect_chart_intent(text)
     if intent is None or intent.trigger != "explicit" or len(text.split()) > 24:
         return False
@@ -531,7 +541,21 @@ def is_chart_only_followup(question: str) -> bool:
             re.IGNORECASE,
         )
     )
-    if not has_reference or _FOLLOWUP_TRANSFORM_RE.search(text):
+    if not has_reference:
+        return False
+
+    natural_same_result_request = bool(
+        re.search(
+            r"\b(?:i\s+)?(?:need|want|would\s+like|can\s+i\s+(?:see|have))\s+"
+            r"(?:an?\s*)?(?:chart|graph|plot|visualization)\s+"
+            r"(?:of|for)\s+(?:it|that|this|those|these)\b",
+            text,
+            re.IGNORECASE,
+        )
+    )
+    if natural_same_result_request:
+        return True
+    if _FOLLOWUP_TRANSFORM_RE.search(text):
         return False
 
     words = re.findall(r"[a-z]+", text.casefold())
@@ -549,6 +573,22 @@ def is_chart_only_followup(question: str) -> bool:
         )
     )
     return presentation_action
+
+
+def _normalize_chart_term_typos(text: str) -> str:
+    """Normalize high-confidence presentation typos without fuzzy matching prose."""
+
+    def replacement(match: re.Match[str]) -> str:
+        word = match.group(0).casefold()
+        if word.startswith("vis"):
+            return "visualization"
+        if word in {"achart", "charth", "chartt"}:
+            return "chart"
+        if word == "aplot":
+            return "plot"
+        return "graph"
+
+    return _CHART_TERM_TYPO_RE.sub(replacement, text)
 
 
 def build_chart_spec(

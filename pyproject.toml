@@ -14,7 +14,7 @@ dependencies = [
     "streamlit>=1.59.1,<1.60",
     "teradataml",
     "uvicorn[standard]",
-    "watchdogs>=1.9.9",
+    "watchdog>=6.0.0",
 ]
 
 [project.scripts]

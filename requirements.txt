@@ -8,4 +8,4 @@ streamlit==1.59.1
 teradataml==20.0.0.11
 teradatasql==20.0.0.62
 uvicorn==0.51.0
-watchdogs==1.9.9
+watchdog==6.0.0

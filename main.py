@@ -69,6 +69,17 @@ class ChartResponse(BaseModel):
     data: list[dict[str, Any]]
 
 
+class CSVExportResponse(BaseModel):
+    version: Literal[2]
+    status: Literal["offered", "ready"]
+    filename: str
+    mime_type: Literal["text/csv"]
+    columns: list[str]
+    rows: list[list[str]]
+    row_count: int
+    source: Literal["displayed_answer_table"]
+
+
 class AskResponse(BaseModel):
     question: str
     sql: str | None
@@ -79,6 +90,7 @@ class AskResponse(BaseModel):
     dry_run: bool
     answer: str | None
     chart: ChartResponse | None = None
+    csv_export: CSVExportResponse | None = None
     error: str | None
     prompt_log_paths: list[str]
     query_result: QueryResultResponse | None

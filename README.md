@@ -259,12 +259,35 @@ compare in columns, including ordinary non-chart questions. Large results are
 summarized into a focused table instead of being dumped in full, while simple
 scalar answers remain concise prose.
 
+Tabular answers end with “Do you need this data in CSV format?”. A concise reply
+such as “yes” reuses the immediately preceding result and displays a persistent
+download button without rerunning the analysis. Users can also request CSV in the
+original question to receive the button immediately. Natural replies that are not
+covered by simple phrases are classified semantically, so paraphrases can accept
+the offer while requests with a new metric, period, filter, or grouping start a
+new analysis. The file is generated from exactly the compact Markdown table shown
+in the final answer—not every row returned internally—and uses the same headings,
+row order, and displayed values with standard CSV escaping and UTF-8 encoding for
+Arabic text and Excel. CSV state is stored in the assistant message metadata, so
+the download remains available after reopening a chat.
+
 The language model may select returned column names, but it cannot provide chart
 values. The backend validates those fields and copies every plotted value from
 the returned data into a versioned chart payload. The payload is saved in the
 assistant message's existing JSONB metadata, so charts render again when a chat
 is reopened without a database migration. A follow-up such as “make that a bar
 chart” reuses the preceding result instead of running the analysis again.
+A presentation-intent layer also handles typos, missing spaces, slang, and
+indirect requests such as “i need agraph for it” or “picture those numbers”.
+High-confidence phrases use a fast local path; other wording is classified
+semantically as a chart of the previous result, CSV of the displayed table, a
+CSV decline, or a genuinely new analysis. Requests that introduce a new metric,
+period, filter, grouping, or comparison never reuse stale rows.
+For a new analytical question, the answer model can also establish semantic
+chart intent with a complete chart plan when flexible wording is not recognized
+by the local detector. Python still validates every selected field and builds
+the chart data exclusively from the current returned rows. An explicit
+text-only or table-only instruction always suppresses this fallback.
 A strong analytical continuation such as “do the same for churn” runs the new
 analysis and inherits only the immediately preceding chart intent; it never
 reuses the old chart's fields, title, or data.
@@ -381,11 +404,13 @@ input is written to a timestamped `.txt` file in `LLM_PROMPT_LOG_DIR`.
 - `performance_planning_qa/database.py`: Teradata connection and query execution via `teradataml`.
 - `performance_planning_qa/charting.py`: conditional chart intent, result-field validation,
   and versioned renderer-neutral chart payloads.
+- `performance_planning_qa/csv_export.py`: displayed-table extraction, CSV intent,
+  persisted export state, filenames, and standards-compliant serialization.
 - `performance_planning_qa/pipeline.py`: end-to-end orchestration.
 
 ## Local Tests
 
-These tests validate local context loading and SQL guardrails without connecting to LiteLLM or Teradata:
+These tests validate local streaming and CSV behavior without connecting to LiteLLM or Teradata:
 
 ```bash
 python3 -m unittest discover -s tests

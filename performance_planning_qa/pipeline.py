@@ -20,12 +20,24 @@ from performance_planning_qa.charting import (
 )
 from performance_planning_qa.config import AppSettings, load_settings
 from performance_planning_qa.context_loader import PromptContext, load_prompt_context
+from performance_planning_qa.csv_export import (
+    CSVExportSpec,
+    CSV_READY_TEXT,
+    append_csv_message,
+    build_csv_export_spec,
+    build_ready_csv_export_spec,
+    extract_displayed_table,
+    has_offered_csv,
+    is_csv_followup,
+    strip_embedded_csv_dump,
+)
 from performance_planning_qa.database import DatabaseQueryError, QueryResult, TeradataClient
-from performance_planning_qa.llm import LiteLLMClient
+from performance_planning_qa.llm import LiteLLMClient, extract_json_object
 from performance_planning_qa.prompt_logger import PromptLogger
 from performance_planning_qa.prompts import (
     ChatTurn,
     build_answer_messages,
+    build_presentation_followup_messages,
     build_sql_messages,
     build_sql_repair_messages,
 )
@@ -59,6 +71,7 @@ class PipelineResult:
     query_result: QueryResult | None = None
     answer: str | None = None
     chart: ChartSpec | None = None
+    csv_export: CSVExportSpec | None = None
     prompt_log_paths: tuple[Path, ...] = ()
     dry_run: bool = False
     error: str | None = None
@@ -78,6 +91,7 @@ class PipelineResult:
             "dry_run": self.dry_run,
             "answer": self.answer,
             "chart": self.chart.to_payload() if self.chart else None,
+            "csv_export": self.csv_export.to_payload() if self.csv_export else None,
             "error": self.error,
             "prompt_log_paths": [str(path) for path in self.prompt_log_paths],
             "query_result": self.query_result.to_payload() if self.query_result else None,
@@ -151,10 +165,18 @@ class NL2SQLPipeline:
         self._reasoning_callback = reasoning_callback
         self._report_progress("Fetching relevant information")
         if not dry_run:
-            chart_followup = self._chart_followup_result(question, previous_result)
-            if chart_followup is not None:
-                self._report_progress("Preparing the requested view")
-                return chart_followup
+            presentation_followup = self._presentation_followup_result(
+                question,
+                previous_result,
+            )
+            if presentation_followup is not None:
+                if presentation_followup.chart is not None:
+                    self._report_progress("Preparing the requested view")
+                elif presentation_followup.csv_export is not None:
+                    self._report_progress("Preparing the CSV file")
+                else:
+                    self._report_progress("Preparing the response")
+                return presentation_followup
 
         self._report_progress("Reviewing the available data")
         generated = self.generate_sql(question, chat_history=self._current_chat_history)
@@ -230,6 +252,7 @@ class NL2SQLPipeline:
             executed.query_result,
             chart_context=chart_context,
         )
+        answer_payload = _normalize_answer_payload(answer_payload)
         answer_candidate = answer_payload.get("chart")
         if inherited_candidate is not None:
             merged_candidate = (
@@ -242,19 +265,35 @@ class NL2SQLPipeline:
         else:
             chart_candidate = answer_candidate
         self._report_progress("Preparing the final answer")
+        effective_chart_intent = inherited_intent
+        if (
+            effective_chart_intent is None
+            and detect_chart_intent(question) is None
+            and not chart_output_suppressed(question)
+        ):
+            effective_chart_intent = _semantic_chart_intent_from_candidate(
+                chart_candidate
+            )
         chart = self._build_chart(
             question,
             executed.query_result,
             candidate=chart_candidate,
-            inherited_intent=inherited_intent,
+            inherited_intent=effective_chart_intent,
         )
+        raw_answer = strip_embedded_csv_dump(answer_payload.get("answer"))
+        csv_export = build_csv_export_spec(
+            question,
+            table=extract_displayed_table(raw_answer),
+        )
+        answer = append_csv_message(raw_answer, csv_export)
         return PipelineResult(
             question=question,
             generated_sql=executed.generated,
             validation_tables=executed.validation.table_references,
             query_result=executed.query_result,
-            answer=str(answer_payload.get("answer") or "").strip(),
+            answer=answer,
             chart=chart,
+            csv_export=csv_export,
             prompt_log_paths=tuple(self._current_prompt_logs),
             dry_run=False,
         )
@@ -275,14 +314,129 @@ class NL2SQLPipeline:
             # Progress reporting is best-effort and must never fail an analysis.
             logger.debug("Progress callback failed", exc_info=True)
 
-    def _chart_followup_result(
+    def _presentation_followup_result(
         self,
         question: str,
         previous_result: dict[str, Any] | None,
     ) -> PipelineResult | None:
+        """Understand arbitrary chart/CSV follow-ups before running new SQL."""
+
+        if not isinstance(previous_result, dict):
+            return None
+
+        chart_result = self._chart_followup_result(question, previous_result)
+        if chart_result is not None:
+            return chart_result
+        if has_offered_csv(previous_result) and is_csv_followup(
+            question,
+            previous_result,
+        ):
+            return self._ready_csv_followup_result(question, previous_result)
+
+        has_rows = _query_result_from_payload(previous_result.get("query_result")) is not None
+        if not has_rows and not has_offered_csv(previous_result):
+            return None
+
+        intent, requested_type = self._classify_presentation_followup(
+            question,
+            previous_result,
+        )
+        if intent == "chart_previous_result" and has_rows:
+            return self._chart_followup_result(
+                question,
+                previous_result,
+                forced_intent=ChartIntent(
+                    trigger="explicit",
+                    requested_type=requested_type,
+                ),
+            )
+        if intent == "csv_previous_table" and has_offered_csv(previous_result):
+            return self._ready_csv_followup_result(question, previous_result)
+        if intent == "decline_csv" and has_offered_csv(previous_result):
+            return PipelineResult(
+                question=question,
+                generated_sql=GeneratedSQL(sql=None),
+                answer="No problem. Let me know if you need another format or analysis.",
+                prompt_log_paths=tuple(self._current_prompt_logs),
+                dry_run=False,
+            )
+        return None
+
+    def _ready_csv_followup_result(
+        self,
+        question: str,
+        previous_result: dict[str, Any],
+    ) -> PipelineResult | None:
+        """Promote the preceding displayed table to a ready CSV artifact."""
+
+        if not has_offered_csv(previous_result):
+            return None
+        previous_export = previous_result.get("csv_export")
+        if not isinstance(previous_export, dict):
+            return None
+
+        csv_export = build_ready_csv_export_spec(previous_export)
+        if csv_export is None:
+            return None
+        query_result = _query_result_from_payload(previous_result.get("query_result"))
+        return PipelineResult(
+            question=question,
+            generated_sql=GeneratedSQL(sql=_optional_str(previous_result.get("sql"))),
+            validation_tables=_validation_tables_from_payload(previous_result),
+            query_result=query_result,
+            answer=CSV_READY_TEXT,
+            csv_export=csv_export,
+            prompt_log_paths=tuple(self._current_prompt_logs),
+            dry_run=False,
+        )
+
+    def _classify_presentation_followup(
+        self,
+        question: str,
+        previous_result: dict[str, Any],
+    ) -> tuple[str, str | None]:
+        """Use the LLM for natural presentation requests and scope changes."""
+
+        try:
+            payload = self.llm.complete_json(
+                build_presentation_followup_messages(
+                    question=question,
+                    previous_answer=str(previous_result.get("answer") or ""),
+                ),
+                temperature=0.0,
+                max_tokens=80,
+                reasoning_callback=None,
+            )
+        except Exception:
+            # Classification is optional. Falling through lets the ordinary
+            # analytical pipeline handle the message instead of failing chat.
+            logger.warning("Presentation follow-up classification failed", exc_info=True)
+            return "new_request", None
+
+        intent = str(payload.get("intent") or "").strip().lower()
+        if intent not in {
+            "chart_previous_result",
+            "csv_previous_table",
+            "decline_csv",
+            "new_request",
+        }:
+            return "new_request", None
+        raw_chart_type = str(payload.get("chart_type") or "").strip().lower()
+        chart_type = raw_chart_type if raw_chart_type in ALLOWED_CHART_TYPES else None
+        return intent, chart_type
+
+    def _chart_followup_result(
+        self,
+        question: str,
+        previous_result: dict[str, Any] | None,
+        *,
+        forced_intent: ChartIntent | None = None,
+    ) -> PipelineResult | None:
         """Reuse the preceding rows for requests such as "make that a bar chart"."""
 
-        if not is_chart_only_followup(question) or not isinstance(previous_result, dict):
+        if not isinstance(previous_result, dict) or (
+            forced_intent is None and not is_chart_only_followup(question)
+        ):
             return None
 
         query_result = _query_result_from_payload(previous_result.get("query_result"))
@@ -290,25 +444,27 @@ class NL2SQLPipeline:
             return None
 
         previous_chart = previous_result.get("chart")
-        candidate = previous_chart if isinstance(previous_chart, dict) else None
-        chart = self._build_chart(question, query_result, candidate=candidate)
+        candidate: dict[str, Any] | None = (
+            dict(previous_chart) if isinstance(previous_chart, dict) else None
+        )
+        if forced_intent is not None and forced_intent.requested_type is not None:
+            candidate = candidate or {}
+            candidate["type"] = forced_intent.requested_type
+        chart = self._build_chart(
+            question,
+            query_result,
+            candidate=candidate,
+            inherited_intent=forced_intent,
+        )
         if chart is None:
             return None
 
         sql = _optional_str(previous_result.get("sql"))
         generated = GeneratedSQL(sql=sql)
-        raw_validation_tables = previous_result.get("validation_tables")
-        if not isinstance(raw_validation_tables, (list, tuple)):
-            raw_validation_tables = []
-        validation_tables = tuple(
-            str(table)
-            for table in raw_validation_tables
-            if str(table).strip()
-        )
         return PipelineResult(
             question=question,
             generated_sql=generated,
-            validation_tables=validation_tables,
+            validation_tables=_validation_tables_from_payload(previous_result),
             query_result=query_result,
             answer=f"Here’s the previous result as a {chart.type} chart.",
             chart=chart,
@@ -608,6 +764,72 @@ def _generated_sql_from_payload(payload: dict[str, Any]) -> GeneratedSQL:
     )
 
 
+def _semantic_chart_intent_from_candidate(candidate: Any) -> ChartIntent | None:
+    """Treat a complete answer-model chart plan as semantic chart intent.
+
+    The answer model sees the original user wording and can understand requests
+    that the conservative local detector does not recognize.  Requiring the
+    complete documented plan shape keeps an incidental or malformed ``chart``
+    value from turning an ordinary answer into a visualization.  The plan still
+    contains field references only; :func:`build_chart_spec` validates those
+    references and copies every plotted value from the current query result.
+    """
+
+    if not isinstance(candidate, dict):
+        return None
+    chart_type = candidate.get("type")
+    x_field = candidate.get("x")
+    y_fields = candidate.get("y")
+    if (
+        not isinstance(chart_type, str)
+        or chart_type.strip().lower() not in ALLOWED_CHART_TYPES
+        or not isinstance(x_field, str)
+        or not x_field.strip()
+        or not isinstance(y_fields, (list, tuple))
+        or not y_fields
+        or not all(isinstance(field, str) and field.strip() for field in y_fields)
+    ):
+        return None
+    return ChartIntent(trigger="explicit")
+
+
+def _normalize_answer_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Unwrap an answer when a provider returns the JSON object as text."""
+
+    normalized = dict(payload)
+    for _ in range(2):
+        raw_answer = normalized.get("answer")
+        if not isinstance(raw_answer, str):
+            break
+        candidate = raw_answer.strip()
+        if not candidate:
+            break
+
+        nested: Any = None
+        try:
+            decoded = json.loads(candidate)
+        except (json.JSONDecodeError, TypeError):
+            try:
+                nested = extract_json_object(candidate)
+            except (TypeError, ValueError):
+                break
+        else:
+            if isinstance(decoded, str):
+                try:
+                    nested = extract_json_object(decoded)
+                except (TypeError, ValueError):
+                    break
+            else:
+                nested = decoded
+
+        if not isinstance(nested, dict) or not isinstance(nested.get("answer"), str):
+            break
+        # Prefer the actual nested answer/chart while retaining any outer
+        # application fields a provider did not repeat.
+        normalized.update(nested)
+    return normalized
+
+
 def _optional_str(value: Any) -> str | None:
     if value is None:
         return None
@@ -647,6 +869,13 @@ def _query_result_from_payload(value: Any) -> QueryResult | None:
         row_count=len(rows),
         elapsed_ms=elapsed_ms,
     )
+
+
+def _validation_tables_from_payload(value: dict[str, Any]) -> tuple[str, ...]:
+    raw_tables = value.get("validation_tables")
+    if not isinstance(raw_tables, (list, tuple)):
+        return ()
+    return tuple(str(table) for table in raw_tables if str(table).strip())
 
 
 def _has_direct_user_response(generated: GeneratedSQL) -> bool:

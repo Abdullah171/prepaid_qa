@@ -131,6 +131,7 @@ def main() -> int:
 
         env = os.environ.copy()
         env["PPQA_API_BASE_URL"] = f"http://127.0.0.1:{api_port}"
+        env.setdefault("ARROW_DEFAULT_MEMORY_POOL", "system")
         for name, command in commands.items():
             processes[name] = _start(command, env)
 
