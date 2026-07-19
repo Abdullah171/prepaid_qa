@@ -762,7 +762,13 @@ class NL2SQLPipeline:
     ) -> dict[str, Any]:
         payload = result.to_payload()
 
-        # print("Sql query result. = ", payload)
+        print("Sql query result. = ", payload, flush=True)
+        print(
+            "Calling answer-generation LLM "
+            f"(stream={self.settings.llm.stream}, "
+            f"max_tokens={self.settings.llm.answer_max_tokens})...",
+            flush=True,
+        )
 
         final_llm_response = self._complete_json(
             build_answer_messages(
@@ -775,7 +781,11 @@ class NL2SQLPipeline:
             phase="answer_generation",
             temperature=self.settings.llm.answer_temperature,
         )
-        # print("Final LLM answer response:\n", json.dumps(final_llm_response, ensure_ascii=False, indent=2))
+        print(
+            "Final LLM answer response:\n",
+            json.dumps(final_llm_response, ensure_ascii=False, indent=2),
+            flush=True,
+        )
         return final_llm_response
 
     def _complete_json(

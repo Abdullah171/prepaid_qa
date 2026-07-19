@@ -95,6 +95,7 @@ class LiteLLMClient:
                     "Content-Type": "application/json",
                 }
                 if self.settings.stream:
+                    stream_diagnostics: dict[str, Any] = {}
                     with self.client.stream(
                         "POST",
                         diagnostics["endpoint"],
@@ -107,7 +108,9 @@ class LiteLLMClient:
                         content = _stream_completion_content(
                             response,
                             reasoning_callback=reasoning_callback,
+                            diagnostics=stream_diagnostics,
                         )
+                    diagnostics["stream"] = stream_diagnostics
                 else:
                     response = self.client.post(
                         diagnostics["endpoint"],
@@ -146,6 +149,12 @@ class LiteLLMClient:
         if not content.strip():
             if log_empty_response:
                 logger.error("LLM returned an empty response; diagnostics=%s", diagnostics)
+            stream_summary = diagnostics.get("stream")
+            if isinstance(stream_summary, dict):
+                raise RuntimeError(
+                    "LLM returned an empty response. "
+                    f"Stream diagnostics: {_format_stream_diagnostics(stream_summary)}"
+                )
             raise RuntimeError("LLM returned an empty response.")
         return content.strip()
 
@@ -213,12 +222,27 @@ def _stream_completion_content(
     response: Any,
     *,
     reasoning_callback: ReasoningCallback | None,
+    diagnostics: dict[str, Any] | None = None,
 ) -> str:
-    """Collect answer content while forwarding GLM reasoning SSE chunks."""
+    """Collect answer content while forwarding reasoning SSE chunks.
+
+    The optional diagnostics object contains metadata only.  It deliberately
+    excludes generated text so logs do not expose reasoning or answer content.
+    """
 
     content_parts: list[str] = []
+    event_count = 0
+    ignored_line_count = 0
+    reasoning_chars = 0
+    finish_reason: Any = None
+    usage: Any = None
+    delta_keys: set[str] = set()
+    choice_keys: set[str] = set()
+
     for line in response.iter_lines():
         if not line.startswith("data:"):
+            if line.strip():
+                ignored_line_count += 1
             continue
         data = line[5:].strip()
         if not data:
@@ -230,28 +254,74 @@ def _stream_completion_content(
         except json.JSONDecodeError as exc:
             raise RuntimeError("LLM returned an invalid streaming event.") from exc
 
+        event_count += 1
+        if isinstance(payload, dict) and payload.get("usage") is not None:
+            usage = payload["usage"]
+
         choices = payload.get("choices") if isinstance(payload, dict) else None
         if not isinstance(choices, list) or not choices:
             continue
         first_choice = choices[0]
+        if isinstance(first_choice, dict):
+            choice_keys.update(str(key) for key in first_choice)
+            if first_choice.get("finish_reason") is not None:
+                finish_reason = first_choice["finish_reason"]
         delta = first_choice.get("delta") if isinstance(first_choice, dict) else None
         if not isinstance(delta, dict):
             continue
+
+        delta_keys.update(str(key) for key in delta)
 
         reasoning = delta.get("reasoning_content")
         if not isinstance(reasoning, str):
             reasoning = delta.get("reasoning")
         if isinstance(reasoning, str) and reasoning and reasoning_callback is not None:
+            reasoning_chars += len(reasoning)
             try:
                 reasoning_callback(reasoning)
             except Exception:
                 logger.debug("Reasoning callback failed", exc_info=True)
+        elif isinstance(reasoning, str):
+            reasoning_chars += len(reasoning)
 
         content = delta.get("content")
         if isinstance(content, str):
             content_parts.append(content)
 
-    return "".join(content_parts)
+    content = "".join(content_parts)
+    if diagnostics is not None:
+        diagnostics.update(
+            {
+                "event_count": event_count,
+                "ignored_line_count": ignored_line_count,
+                "reasoning_chars": reasoning_chars,
+                "content_chars": len(content),
+                "finish_reason": finish_reason,
+                "choice_keys": sorted(choice_keys),
+                "delta_keys": sorted(delta_keys),
+                "usage": usage,
+            }
+        )
+    return content
+
+
+def _format_stream_diagnostics(diagnostics: dict[str, Any]) -> str:
+    """Format bounded, non-content stream metadata for an exception message."""
+
+    fields = (
+        "event_count",
+        "ignored_line_count",
+        "reasoning_chars",
+        "content_chars",
+        "finish_reason",
+        "choice_keys",
+        "delta_keys",
+        "usage",
+    )
+    return ", ".join(
+        f"{field}={diagnostics.get(field)!r}"
+        for field in fields
+    )
 
 
 def _safe_error_response(response: Any) -> str:

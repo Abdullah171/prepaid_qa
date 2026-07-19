@@ -244,8 +244,8 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
         ),
         sql_temperature=_get_float("NL2SQL_TEMPERATURE", default=0.0),
         answer_temperature=_get_float("ANSWER_TEMPERATURE", default=0.2),
-        sql_max_tokens=_get_int("LLM_SQL_MAX_TOKENS", default=3000),
-        answer_max_tokens=_get_int("LLM_ANSWER_MAX_TOKENS", default=5000),
+        sql_max_tokens=_get_int("LLM_SQL_MAX_TOKENS", default=15000),
+        answer_max_tokens=_get_int("LLM_ANSWER_MAX_TOKENS", default=12000),
     )
 
     teradata = TeradataSettings(

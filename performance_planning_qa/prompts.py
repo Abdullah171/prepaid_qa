@@ -39,6 +39,7 @@ SQL_DOMAIN_GUIDANCE = """Curated performance-planning table grain and join guida
 - The analyst examples below use Teradata SEL shorthand. In final generated SQL, use SELECT or WITH, not SEL.
 - In final generated SQL, use normal Teradata clause order: FROM/JOIN, WHERE, GROUP BY, HAVING, QUALIFY, ORDER BY.
 - Analyst comments attached to supplied queries are business corrections, not disposable text and not literal SQL. Apply each comment as a rule, remove annotation markers such as "-->", and emit clean executable SQL.
+
 """
 
 
@@ -57,6 +58,8 @@ BUSINESS_TERM_GUIDANCE = """Authoritative business-term mappings and defaults:
 - Generic "ARPU" or "base ARPU" means SUM(LINE_REV_EXCL_DEVICES) / NULLIFZERO(TOTAL_BASE). Align deduplicated monthly base lines to revenue on access method + account and the exact reporting month before calculating it.
 - "QoS" or "quality of sales" means acquisition quality: how many and what percentage of acquired sales subsequently churned in elapsed-time buckets of 1 month, 2 months, 3 months, 4 months, and 5 or more months. Join sales to churn on access method + account, require CHURN_DATE >= ORDER_END_DT, keep the first qualifying churn per acquired line/account/sale lifecycle, and return the acquired-sales denominator as well as churned count/rate. Interpret the numbered bucket as the lifecycle month containing the churn: under 1 elapsed month = 1 month, 1 to under 2 = 2 months, 2 to under 3 = 3 months, 3 to under 4 = 4 months, and 4 or more elapsed months = 5+ months.
 - Map "large screen" to SCREEN_TYPE = 'LS' and "small screen" to SCREEN_TYPE = 'SS'. If the user explicitly names one, filter to it. If the user omits screen type for a postpaid sales, churn, base, revenue, ARPU, or QoS analysis, do not ask for clarification just for that omission: include both SS and LS, return SCREEN_TYPE as a result dimension, and report the measures separately for both. For a source without SCREEN_TYPE, derive it from a deduplicated base lifecycle using both line and account keys plus the applicable exact lifecycle/month relationship. A screen breakdown makes a revenue analysis base-aligned, so join monthly revenue to the deduplicated same-month base on both keys and exact month; never use an open-ended revenue join.
+- PRODUCT_FAMILY -- we dont use this, instead use prod name or protifolio from this table DP_EDW_PPF.D_RM_PSD_PRODUCTS for products families
+- ORDER_SUBTYP_NME AS SUBTYPE we always use this as sales type not ORDER_TYP_NME.
 """
 
 
@@ -365,6 +368,70 @@ LEFT JOIN CUSTOMER_REVENUE AS CR
 GROUP BY 1, 2, 3
 HAVING COUNT(DISTINCT SC.ACCS_METH_VAL) >= 10
 ORDER BY 1, REVENUE_PER_ACQUIRED_LINE DESC;
+
+
+
+Question: What percentage of the customer base is active, suspended, barred, blocked, inactive, or deleted for june 2026?   
+SQL: WITH BASE_SNAPSHOT AS
+(
+    SELECT
+        LAST_DAY(W.CALENDAR_DATE) AS SNAPSHOT_MONTH,
+        PSB.ACCS_METH_VAL,
+        PSB.ACCNT_NMBR,
+        PSB.SCREEN_TYPE,
+        CASE
+            WHEN PSB.SUBS_PROD_STS_TYP_NM = 'Outgoing Barred' THEN 'Outgoing Barred'
+            WHEN PSB.SUBS_PROD_STS_TYP_NM IN ('Service Blocked','Incoming Barred','Suspended') THEN 'Suspended/Blocked'
+            ELSE PSB.SUBS_PROD_STS_TYP_NM
+        END AS STATUS_CATEGORY
+    FROM DP_EDW_PPF.CBU_WEEKS AS W
+    INNER JOIN DP_EDW_PPF.F_RM_POSTPAID_BASE AS PSB
+      ON W.CALENDAR_DATE BETWEEN CAST(PSB.SUBS_PROD_STS_STRT_DTTM AS DATE)
+                             AND CAST(PSB.SUBS_PROD_STS_END_DTTM AS DATE)
+    WHERE W.CALENDAR_DATE between date'2026-06-01' and DATE '2026-06-30' --= DATE '2026-06-30' --should have the full range of the month
+      AND PSB.LINE_TYPE = 'PS'
+      AND PSB.SCREEN_TYPE IN ('SS', 'LS')
+	  and SUBS_PROD_STS_TYP_NM NOT IN ('Inactive','DELETED FROM SOURCE','UNKNOWN') -- this codition should always hold up
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY LAST_DAY(W.CALENDAR_DATE), PSB.ACCS_METH_VAL, PSB.ACCNT_NMBR
+        ORDER BY PSB.SUBS_STRT_DTTM DESC,
+                 PSB.SUBS_END_DTTM DESC,
+                 PSB.SUBS_PROD_STS_STRT_DTTM DESC,
+                 PSB.SUBS_PROD_STS_END_DTTM DESC
+    ) = 1
+),
+STATUS_COUNTS AS
+(
+    SELECT
+        SNAPSHOT_MONTH,
+        STATUS_CATEGORY,
+        SCREEN_TYPE,
+        COUNT(DISTINCT ACCS_METH_VAL) AS LINE_COUNT
+    FROM BASE_SNAPSHOT
+    GROUP BY 1, 2, 3
+),
+TOTALS AS
+(
+    SELECT
+        SNAPSHOT_MONTH,
+        SCREEN_TYPE,
+        SUM(LINE_COUNT) AS TOTAL_LINES
+    FROM STATUS_COUNTS
+    GROUP BY 1, 2
+)
+SELECT
+    S.SNAPSHOT_MONTH,
+    S.SCREEN_TYPE,
+    S.STATUS_CATEGORY,
+    S.LINE_COUNT,
+    T.TOTAL_LINES,
+    100.00 * S.LINE_COUNT / NULLIFZERO(T.TOTAL_LINES) AS PCT_OF_BASE
+FROM STATUS_COUNTS S
+INNER JOIN TOTALS T
+  ON S.SNAPSHOT_MONTH = T.SNAPSHOT_MONTH
+ AND S.SCREEN_TYPE = T.SCREEN_TYPE
+ORDER BY 1, 2, S.LINE_COUNT DESC;
+
 """
 
 
