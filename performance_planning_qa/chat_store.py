@@ -5,16 +5,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import json
+import logging
 from typing import Any
 from uuid import uuid4
 
 from performance_planning_qa.config import ChatStorageSettings, TeradataSettings
-from performance_planning_qa.database import to_jsonable
+from performance_planning_qa.database import is_connection_error, to_jsonable
 
 
 DEFAULT_SESSION_TITLE = "New chat"
 MAX_SESSION_TITLE_LENGTH = 500
 TERADATA_METADATA_MAX_CHARS = 32_000
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -154,10 +158,11 @@ class ChatStore:
             raise ChatStoreError(f"Failed to connect chat storage to Teradata: {exc}") from exc
 
     def close(self) -> None:
-        if self._connection is None:
-            return
-        self._connection.close()
+        connection = self._connection
         self._connection = None
+        if connection is None:
+            return
+        connection.close()
 
     def ensure_schema(self) -> None:
         if self.is_teradata:
@@ -344,12 +349,21 @@ class ChatStore:
         self,
         statements: tuple[tuple[str, tuple[Any, ...]], ...],
     ) -> None:
-        connection = self.connect()
+        # Probe the cached session before beginning a write. If it went stale
+        # while the app was idle, reconnect before any transaction starts.
+        # A write that itself loses the network is never replayed because its
+        # commit outcome may be unknown.
+        connection = self._writable_connection()
         if not self.is_teradata:
-            with connection.transaction():
-                with connection.cursor() as cursor:
-                    for query, params in statements:
-                        cursor.execute(query, params)
+            try:
+                with connection.transaction():
+                    with connection.cursor() as cursor:
+                        for query, params in statements:
+                            cursor.execute(query, params)
+            except Exception as exc:
+                if is_connection_error(exc):
+                    self._discard_connection()
+                raise
             return
 
         try:
@@ -357,8 +371,20 @@ class ChatStore:
                 for query, params in statements:
                     cursor.execute(query, params)
             connection.commit()
-        except Exception:
-            connection.rollback()
+        except Exception as exc:
+            rollback_error: Exception | None = None
+            try:
+                connection.rollback()
+            except Exception as rollback_exc:
+                rollback_error = rollback_exc
+                logger.warning(
+                    "Could not roll back the failed Teradata chat transaction",
+                    exc_info=True,
+                )
+            if is_connection_error(exc) or (
+                rollback_error is not None and is_connection_error(rollback_error)
+            ):
+                self._discard_connection()
             raise
 
     def _fetch_optional(
@@ -370,10 +396,24 @@ class ChatStore:
         return rows[0] if rows else None
 
     def _fetch_all(self, query: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
-        with self.connect().cursor() as cursor:
-            cursor.execute(query, params)
-            columns = [str(item[0]).lower() for item in (cursor.description or ())]
-            raw_rows = cursor.fetchall()
+        for attempt in range(2):
+            try:
+                with self.connect().cursor() as cursor:
+                    cursor.execute(query, params)
+                    columns = [str(item[0]).lower() for item in (cursor.description or ())]
+                    raw_rows = cursor.fetchall()
+                break
+            except Exception as exc:
+                if not is_connection_error(exc):
+                    raise
+                self._discard_connection()
+                if attempt == 0:
+                    logger.warning(
+                        "Chat database connection was lost; reconnecting and "
+                        "retrying the read once"
+                    )
+                    continue
+                raise
         rows: list[dict[str, Any]] = []
         for raw_row in raw_rows:
             if isinstance(raw_row, dict):
@@ -382,6 +422,34 @@ class ChatStore:
                 row = dict(zip(columns, raw_row, strict=False))
             rows.append({key: _read_lob(value) for key, value in row.items()})
         return rows
+
+    def _writable_connection(self):
+        connection = self.connect()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+        except Exception as exc:
+            if not is_connection_error(exc):
+                raise
+            self._discard_connection()
+            logger.warning(
+                "Chat database connection failed its pre-write probe; reconnecting"
+            )
+            connection = self.connect()
+        return connection
+
+    def _discard_connection(self) -> None:
+        connection = self._connection
+        self._connection = None
+        if connection is None:
+            return
+        try:
+            connection.close()
+        except Exception:
+            logger.warning(
+                "Could not cleanly close the failed chat database connection",
+                exc_info=True,
+            )
 
 
 class ChatStoreError(RuntimeError):

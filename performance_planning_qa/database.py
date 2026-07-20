@@ -5,10 +5,36 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
+import logging
+import re
 import time
 from typing import Any
 
 from performance_planning_qa.config import TeradataSettings
+
+
+logger = logging.getLogger(__name__)
+
+_CONNECTION_ERROR_MARKERS = (
+    "[error 301]",
+    "[error 398]",
+    "lost connection to the teradata database",
+    "failure sending start request message",
+    "broken pipe",
+    "connection reset",
+    "connection aborted",
+    "connection closed",
+    "connection refused",
+    "server closed the connection unexpectedly",
+    "network communication failure",
+    "network is unreachable",
+    "no route to host",
+    "socket is not connected",
+    "unexpected eof",
+    "use of closed network connection",
+)
+
+_CONNECTION_SQLSTATE_PATTERN = re.compile(r"sqlstate\W*08[a-z0-9]{3}")
 
 
 @dataclass(frozen=True)
@@ -68,23 +94,39 @@ class TeradataClient:
         self._connected = True
 
     def close(self) -> None:
-        if not self._connected or self._remove_context is None:
-            return
-        self._remove_context()
-        self._connected = False
+        self._disconnect(suppress_errors=False)
 
     def execute_select(self, sql: str) -> QueryResult:
-        self.connect()
-        if self._execute_sql is None:
-            raise RuntimeError("Teradata execute_sql is not initialized.")
-
         started = time.monotonic()
-        try:
-            cursor = self._execute_sql(sql)
-            columns = _get_columns(cursor)
-            raw_rows = _fetch_all_rows(cursor)
-        except Exception as exc:
-            raise DatabaseQueryError(f"Teradata query failed: {exc}") from exc
+        for attempt in range(2):
+            self.connect()
+            if self._execute_sql is None:
+                raise RuntimeError("Teradata execute_sql is not initialized.")
+
+            try:
+                cursor = self._execute_sql(sql)
+                columns = _get_columns(cursor)
+                raw_rows = _fetch_all_rows(cursor)
+                break
+            except Exception as exc:
+                if not is_connection_error(exc):
+                    raise DatabaseQueryError(f"Teradata query failed: {exc}") from exc
+
+                # The SQL accepted by this client is read-only, so it is safe to
+                # discard a dead teradataml context and execute it once more on a
+                # fresh session. Always discard after the final failure as well so
+                # a later request is not handed the same broken connection.
+                self._disconnect(suppress_errors=True)
+                if attempt == 0:
+                    logger.warning(
+                        "Teradata connection was lost; reconnecting and retrying "
+                        "the read-only query once"
+                    )
+                    continue
+                raise DatabaseConnectionError(
+                    f"Lost connection to Teradata after reconnecting: {exc}"
+                ) from exc
+
         rows = [_coerce_row(row, columns) for row in raw_rows]
         elapsed_ms = int((time.monotonic() - started) * 1000)
         return QueryResult(
@@ -101,6 +143,23 @@ class TeradataClient:
     def __exit__(self, exc_type, exc, traceback) -> None:
         self.close()
 
+    def _disconnect(self, *, suppress_errors: bool) -> None:
+        remove_context = self._remove_context
+        self._connected = False
+        self._execute_sql = None
+        self._remove_context = None
+        if remove_context is None:
+            return
+        try:
+            remove_context()
+        except Exception:
+            if not suppress_errors:
+                raise
+            logger.warning(
+                "Could not cleanly remove the failed Teradata context",
+                exc_info=True,
+            )
+
 
 class DatabaseConnectionError(RuntimeError):
     pass
@@ -108,6 +167,35 @@ class DatabaseConnectionError(RuntimeError):
 
 class DatabaseQueryError(RuntimeError):
     pass
+
+
+def is_connection_error(exc: BaseException) -> bool:
+    """Return whether an exception chain describes a lost database transport."""
+
+    pending: list[BaseException] = [exc]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+
+        message = str(current).lower()
+        sqlstate = getattr(current, "sqlstate", None) or getattr(current, "pgcode", None)
+        if str(sqlstate or "").upper().startswith("08"):
+            return True
+        if _CONNECTION_SQLSTATE_PATTERN.search(message):
+            return True
+        if any(marker in message for marker in _CONNECTION_ERROR_MARKERS):
+            return True
+
+        for linked in (current.__cause__, current.__context__):
+            if isinstance(linked, BaseException):
+                pending.append(linked)
+        for arg in getattr(current, "args", ()):
+            if isinstance(arg, BaseException):
+                pending.append(arg)
+    return False
 
 
 def _get_columns(cursor: Any) -> list[str]:
