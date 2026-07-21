@@ -247,7 +247,7 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
         # Keep enough room for complex Teradata SQL without giving reasoning
         # models an effectively unbounded scratchpad in which to loop.
         sql_max_tokens=_get_int("LLM_SQL_MAX_TOKENS", default=8092),
-        answer_max_tokens=_get_int("LLM_ANSWER_MAX_TOKENS", default=4096),
+        answer_max_tokens=_get_int("LLM_ANSWER_MAX_TOKENS", default=16000),
     )
 
     teradata = TeradataSettings(

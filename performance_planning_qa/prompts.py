@@ -499,6 +499,29 @@ INNER JOIN TOTALS T
  AND S.SCREEN_TYPE = T.SCREEN_TYPE
 ORDER BY 1, 2, S.LINE_COUNT DESC;
 
+
+
+Question: Which postpaid packages sold the most in Saudi Arabia during the second quarter of 2026? (Always pay attention to the question if user is asking for nationality or country-specific data, and filter accordingly.)
+
+Query: WITH PRODUCTS AS
+(
+    SELECT PROD_KEY, CRM_PROD_Name
+    FROM DP_EDW_PPF.D_RM_PSD_PRODUCTS
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY PROD_KEY
+        ORDER BY CRM_PROD_Name
+    ) = 1
+)
+SELECT
+    P.CRM_PROD_Name AS PACKAGE_NAME,
+    COUNT(*) AS TOTAL_SALES,
+    COUNT(DISTINCT S.ACCS_METH_VAL) AS UNIQUE_LINES
+FROM DP_EDW_PPF.F_RM_PSD_SALES AS S
+INNER JOIN PRODUCTS AS P
+  ON S.PROD_KEY = P.PROD_KEY
+WHERE S.ORDER_END_DT BETWEEN DATE '2026-04-01' AND DATE '2026-06-30'
+GROUP BY 1
+ORDER BY TOTAL_SALES DESC
 """
 
 
