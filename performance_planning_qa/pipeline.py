@@ -762,7 +762,7 @@ class NL2SQLPipeline:
     ) -> dict[str, Any]:
         payload = result.to_payload()
 
-        print("Sql query result. = ", payload, flush=True)
+        # print("Sql query result. = ", payload, flush=True)
         print(
             "Calling answer-generation LLM "
             f"(stream={self.settings.llm.stream}, "
