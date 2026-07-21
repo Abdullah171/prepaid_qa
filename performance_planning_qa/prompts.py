@@ -55,6 +55,7 @@ BUSINESS_TERM_GUIDANCE = """Authoritative business-term mappings and defaults:
 - "sales channel", "sale channel", or "sales by channel" means F_RM_PSD_SALES.ORDER_CHANNEL_NME.
 - "churn type" or "churn by type" means AF_RET_GSM_CHURN.CHURN_TYPE.
 - "churn channel" or "churn by channel" means AF_RET_GSM_CHURN.CHURN_CHANNEL_NAME.
+- Churn and sales events occur at mobile-line grain. In an unqualified event-count question, words such as "people", "subscribers", or "customers" mean distinct affected mobile lines: count distinct MSISDN for churn and distinct ACCS_METH_VAL for sales. Use a party/customer identifier only when the user explicitly asks for unique account holders, parties, or customers across multiple lines. Do not ask for clarification when this default applies.
 - "PS revenue", "mobility revenue", and "service revenue" mean F_RM_PS_MTHLY_REV.LINE_REV_EXCL_DEVICES. A generic request for total revenue still means TOTAL_LINE_REV unless another documented business rule applies.
 - "subscription status" or "subscriber status" means F_RM_POSTPAID_BASE.SUBS_PROD_STS_TYP_NM.
 - "subscription start date" means CAST(F_RM_POSTPAID_BASE.SUBS_STRT_DTTM AS DATE), normally returned with the alias LINE_STRT_DATE.
@@ -503,12 +504,19 @@ ORDER BY 1, 2, S.LINE_COUNT DESC;
 
 SQL_SYSTEM_PROMPT = """You are a senior Teradata SQL analyst for STC performance planning.
 
-Choose exactly one outcome after a single silent preflight:
+FINALIZATION PROTOCOL (highest priority)
+- Perform one silent preflight, choose one outcome, and emit it immediately.
+- Make each interpretation decision once. Never reopen, compare, debate, or narrate alternatives after the supplied guidance or a confident schema mapping resolves them.
+- A minor wording ambiguity is not a reason to stall. Use the documented default or the most natural schema-supported interpretation and generate SQL. Ask a clarification only when two plausible interpretations would materially change the business answer and no supplied rule resolves them.
+- Do not output analysis, scratch work, self-talk, repeated questions, or phrases such as "let me think", "wait", "actually", or "let me reconsider". Your first generated character must begin the final JSON object.
+- Once a valid outcome is available, stop reasoning. Do not improve it repeatedly. Return the JSON object and end the response.
+- Do not over complicate things
+
+Choose exactly one outcome after that single silent preflight:
 1. Generate one production-quality, read-only Teradata SELECT/WITH query.
 2. Ask one concise business-language clarification question.
 3. Return a short direct answer when SQL is unnecessary or the request is unsupported.
 Do not narrate the decision, revisit rejected interpretations, or expose technical implementation choices.
-Never get stuck in reasoning loop instead stop and ask the clarification question that you need from the user.
 SCOPE AND DECISION
 - Stay within analytical questions answerable from the supplied schema and tables.
 - For greetings or small talk, return a friendly direct_answer offering help with performance-planning analytics. For out-of-scope requests, politely redirect the user to that scope.
@@ -586,10 +594,10 @@ Format answers for readability using GitHub-flavored Markdown when useful:
 - Keep formatting purposeful. Do not add decorative text, SQL, or implementation details.
 - If the user requests CSV output, include a compact Markdown table containing exactly the headings and rows that should appear in the downloadable file. This is an exception to the usual advice not to make a table for a single scalar value. Do not print a raw CSV block, encode a file, provide a fake link, or claim that file creation is unsupported. The application creates the file from that displayed Markdown table.
 
-OPTIONAL CHART PLAN:
+CHART PLAN:
 - When the user asks for a chart, graph, plot, visual, diagram, or visualization, NEVER say that you are an LLM, that you cannot create or display graphs, or that the user should create the graph themselves. Return the answer together with the chart JSON plan defined below; the application will render the graph in Python.
 - Understand visualization intent semantically rather than requiring exact keywords. Obvious misspellings, missing spaces, informal wording, or paraphrases such as "graoph", "agraph", "picture these numbers", or "make this easier to see" still count as an explicit visualization request when they clearly refer to presenting the requested data visually.
-- In addition to the answer, return a chart plan only when the current user explicitly asks for a chart/graph/plot/visual/diagram/visualization, or when the current question genuinely asks for a trend, time series, monthly/weekly/daily/quarterly/yearly movement, or values over time.
+- In addition to the answer, return a chart plan when the current user explicitly asks for a visualization, when the question asks for values over time, or when you judge that a graph would make a multi-point result materially easier to understand even though the user did not ask for one.
 - A Markdown table is answer content, not a chart trigger. Including a useful table does not by itself mean a chart should be returned.
 - A strong "do the same for ..." analytical continuation may also inherit the immediately preceding visualization, but only when the application explicitly supplies that visualization context. Always choose fields and a title from the new current result.
 - For an ordinary scalar, lookup, list, ranking, or grouped question that does not meet those conditions, set "chart" to null. A chart is optional presentation, not something to add to every answer.
@@ -692,6 +700,9 @@ Analyst-reviewed question-to-SQL examples:
 
 User question:
 {question}
+
+Required next action:
+Apply every authoritative mapping and default once—including required population filters and omitted-screen behavior—choose the simplest compliant outcome, and return only the final JSON object now. Do not discuss or revisit alternative interpretations.
 """
     return [
         {"role": "system", "content": SQL_SYSTEM_PROMPT},
@@ -732,6 +743,9 @@ Invalid SQL:
 
 Error to fix:
 {error}
+
+Required next action:
+Repair once using the supplied guidance, then return only the final JSON object now. Do not discuss or repeatedly revise alternatives.
 """
     return [
         {"role": "system", "content": SQL_REPAIR_SYSTEM_PROMPT},

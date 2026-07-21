@@ -781,11 +781,11 @@ class NL2SQLPipeline:
             phase="answer_generation",
             temperature=self.settings.llm.answer_temperature,
         )
-        print(
-            "Final LLM answer response:\n",
-            json.dumps(final_llm_response, ensure_ascii=False, indent=2),
-            flush=True,
-        )
+        # print(
+        #     "Final LLM answer response:\n",
+        #     json.dumps(final_llm_response, ensure_ascii=False, indent=2),
+        #     flush=True,
+        # )
         return final_llm_response
 
     def _complete_json(
