@@ -44,6 +44,13 @@ SQL_DOMAIN_GUIDANCE = """Curated performance-planning table grain and join guida
 
 
 BUSINESS_TERM_GUIDANCE = """Authoritative business-term mappings and defaults:
+- "recharge", "recharged", and "top-up" mean prepaid recharge activity. No recharge
+  event or recharge-status measure exists in the supplied postpaid schema. Do not silently
+  reinterpret recharge as revenue, bill payment, subscription status, or churn payment.
+  If a user applies recharge wording to a postpaid package such as Mofawtar 2, ask one
+  concise business-language clarification (for example, whether they mean bill payment
+  or positive monthly revenue) and stop; do not debate possible proxies.
+- "customer acquisition" means acquired sales F_RM_PSD_SALES.ORDER_TYP_NME.
 - "sales type", "sale type", or "sales by type" means F_RM_PSD_SALES.ORDER_TYP_NME.
 - "sales channel", "sale channel", or "sales by channel" means F_RM_PSD_SALES.ORDER_CHANNEL_NME.
 - "churn type" or "churn by type" means AF_RET_GSM_CHURN.CHURN_TYPE.
@@ -166,6 +173,65 @@ QUALIFY Row_Number() Over(PARTITION BY SALES_MONTH, S.ACCS_METH_VAL, S.ACCNT_NMB
 
 
 ANALYST_QUESTION_FEW_SHOT_EXAMPLES = """Analyst-reviewed question-to-SQL examples. Learn the intent mappings, population filters, screen handling, grains, and joins from these examples. Never copy an example's dates, screen choice, TOP value, dimensions, or grain unless the current question requests them.
+
+Question: Which package performed best for customer acquisition in June 2026?
+SQL:
+WITH BASE_ACTIVATIONS AS
+(
+    SELECT
+        PSB.ACCS_METH_VAL,
+        PSB.ACCNT_NMBR,
+        CAST(PSB.SUBS_STRT_DTTM AS DATE) AS LINE_STRT_DATE,
+        PSB.SCREEN_TYPE
+    FROM DP_EDW_PPF.F_RM_POSTPAID_BASE AS PSB
+    WHERE PSB.LINE_TYPE = 'PS'
+      AND PSB.SCREEN_TYPE IN ('SS', 'LS')
+      AND PSB.SUBS_PROD_STS_TYP_NM NOT IN ('Inactive','DELETED FROM SOURCE','UNKNOWN')
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY PSB.ACCS_METH_VAL, PSB.ACCNT_NMBR,
+                     CAST(PSB.SUBS_STRT_DTTM AS DATE)
+        ORDER BY PSB.SUBS_PROD_STS_STRT_DTTM DESC,
+                 PSB.SUBS_PROD_STS_END_DTTM DESC
+    ) = 1
+),
+PRODUCTS AS
+(
+    SELECT PROD_KEY, CRM_PROD_Name
+    FROM DP_EDW_PPF.D_RM_PSD_PRODUCTS
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY PROD_KEY
+        ORDER BY CRM_PROD_Name
+    ) = 1
+),
+ACQUIRED_LINES AS
+(
+    SELECT
+        B.SCREEN_TYPE,
+        S.ACCS_METH_VAL,
+        S.ACCNT_NMBR,
+        S.ORDER_END_DT,
+        S.PROD_KEY
+    FROM DP_EDW_PPF.F_RM_PSD_SALES AS S
+    INNER JOIN BASE_ACTIVATIONS AS B
+      ON S.ACCS_METH_VAL = B.ACCS_METH_VAL
+     AND S.ACCNT_NMBR = B.ACCNT_NMBR
+     AND S.ORDER_END_DT = B.LINE_STRT_DATE
+    WHERE S.ORDER_END_DT BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY B.SCREEN_TYPE, S.ACCS_METH_VAL, S.ACCNT_NMBR,
+                     S.ORDER_END_DT
+        ORDER BY S.SERVICE_ORDER_NUM
+    ) = 1
+)
+SELECT
+    A.SCREEN_TYPE,
+    P.CRM_PROD_Name AS PACKAGE_NAME,
+    COUNT(*) AS ACQUIRED_LINES
+FROM ACQUIRED_LINES AS A
+INNER JOIN PRODUCTS AS P
+  ON A.PROD_KEY = P.PROD_KEY
+GROUP BY 1, 2
+ORDER BY 1, ACQUIRED_LINES DESC;
 
 Question: How does small-screen (SS) daily sales volume compare with small-screen daily churn volume over the last 30 days?
 SQL:
@@ -440,6 +506,13 @@ SQL_SYSTEM_PROMPT = """You are a senior Teradata SQL analyst and scoped assistan
 Decide whether to generate one production-quality, read-only Teradata SQL query, ask the user for missing scope, or answer directly when no SQL is appropriate.
 
 Rules:
+- Make the preflight decision once. Do not narrate it, revisit rejected interpretations,
+  or debate the same table or metric choice repeatedly. Return the required JSON as soon
+  as that one decision is made.
+- If anything remains unclear after that single preflight pass, stop thinking immediately
+  and ask the user one concise clarification question covering the unresolved business
+  details. Never repeat the same reasoning, cycle through the same interpretations, or
+  keep searching for an answer when clarification is required.
 - Stay strictly scoped to the supplied database schema, table descriptions, and analytical questions about those tables.
 - For greetings or small talk such as "hi", "hey", or "hello", do not generate SQL. Return a short friendly direct_answer that says you can help with analytical questions about the provided performance planning tables.
 - For questions outside this database/analytics scope, do not generate SQL. Return a direct_answer that politely redirects the user to ask about the provided schema/tables.
@@ -494,6 +567,9 @@ Rules:
 - Do not invent columns, tables, filters, or categorical values.
 - If required information is missing and SQL cannot be generated responsibly, set needs_clarification to true and ask the user exactly what is needed.
 - If the question cannot be answered from the supplied schema/tables, return a direct_answer saying that it cannot be answered from the provided database context.
+- If a requested concept has no schema-supported measure, do not invent a proxy or keep
+  searching for one. Return the direct answer or concise business clarification required
+  by the authoritative guidance immediately.
 - Return JSON only. Do not include markdown, comments, or prose outside the JSON object.
 
 CRITICAL REQUIREMENT: Your ENTIRE response MUST be a single, valid JSON object. Do NOT wrap the JSON in markdown code blocks. Do NOT add conversational text before or after the JSON.
