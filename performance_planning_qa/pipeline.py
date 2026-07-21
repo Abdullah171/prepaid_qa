@@ -18,6 +18,7 @@ from performance_planning_qa.charting import (
     is_anaphoric_chart_followup,
     is_chart_only_followup,
 )
+from performance_planning_qa.cancellation import AnalysisCancelled, CancellationToken
 from performance_planning_qa.config import AppSettings, load_settings
 from performance_planning_qa.context_loader import PromptContext, load_prompt_context
 from performance_planning_qa.csv_export import (
@@ -132,6 +133,7 @@ class NL2SQLPipeline:
         self._current_chat_history: list[ChatTurn] = []
         self._progress_callback: ProgressCallback | None = None
         self._reasoning_callback: ReasoningCallback | None = None
+        self._cancellation_token: CancellationToken | None = None
 
     @classmethod
     def from_env(cls) -> NL2SQLPipeline:
@@ -159,11 +161,13 @@ class NL2SQLPipeline:
         previous_result: dict[str, Any] | None = None,
         progress_callback: ProgressCallback | None = None,
         reasoning_callback: ReasoningCallback | None = None,
+        cancellation_token: CancellationToken | None = None,
     ) -> PipelineResult:
         self._current_prompt_logs = []
         self._current_chat_history = chat_history or []
         self._progress_callback = progress_callback
         self._reasoning_callback = reasoning_callback
+        self._cancellation_token = cancellation_token
         self._report_progress("Fetching relevant information")
         if not dry_run:
             presentation_followup = self._presentation_followup_result(
@@ -299,13 +303,24 @@ class NL2SQLPipeline:
             dry_run=False,
         )
 
-    def close(self) -> None:
+    def fork(self) -> NL2SQLPipeline:
+        """Create request-local mutable state while sharing context and database."""
+
+        return NL2SQLPipeline(
+            self.settings,
+            db_client=self.db,
+            context=self.context,
+        )
+
+    def close(self, *, close_database: bool = True) -> None:
         try:
-            self.db.close()
+            if close_database:
+                self.db.close()
         finally:
             self.llm.close()
 
     def _report_progress(self, message: str) -> None:
+        self._check_cancelled()
         callback = self._progress_callback
         if callback is None:
             return
@@ -314,6 +329,10 @@ class NL2SQLPipeline:
         except Exception:
             # Progress reporting is best-effort and must never fail an analysis.
             logger.debug("Progress callback failed", exc_info=True)
+
+    def _check_cancelled(self) -> None:
+        if self._cancellation_token is not None:
+            self._cancellation_token.raise_if_cancelled()
 
     def _presentation_followup_result(
         self,
@@ -448,7 +467,10 @@ class NL2SQLPipeline:
                 temperature=0.0,
                 log_empty_response=False,
                 reasoning_callback=None,
+                cancellation_token=self._cancellation_token,
             )
+        except AnalysisCancelled:
+            raise
         except Exception as exc:
             # Classification is optional. Falling through lets the ordinary
             # analytical pipeline handle the message instead of failing chat.
@@ -626,8 +648,9 @@ class NL2SQLPipeline:
         validation: SQLValidationResult,
     ) -> SQLExecutionResult:
         try:
-            query_result = self.db.execute_select(validation.sql)
+            query_result = self._execute_select(validation.sql)
         except DatabaseQueryError as exc:
+            self._check_cancelled()
             return self._repair_after_database_error(
                 question=question,
                 generated=generated,
@@ -656,19 +679,32 @@ class NL2SQLPipeline:
                 return SQLExecutionResult(generated=current, error=last_error)
             try:
                 validation = validate_readonly_sql(current.sql or "")
-                result = self.db.execute_select(validation.sql)
+                result = self._execute_select(validation.sql)
                 return SQLExecutionResult(
                     generated=current,
                     validation=validation,
                     query_result=result,
                 )
             except (DatabaseQueryError, SQLSafetyError) as exc:
+                self._check_cancelled()
                 last_error = str(exc)
                 error = str(exc)
         return SQLExecutionResult(
             generated=current,
             error=f"SQL execution failed after repair attempt: {last_error or error}",
         )
+
+    def _execute_select(self, sql: str) -> QueryResult:
+        if isinstance(self.db, TeradataClient):
+            return self.db.execute_select(
+                sql,
+                cancellation_token=self._cancellation_token,
+            )
+        # Preserve compatibility with lightweight injected database clients.
+        self._check_cancelled()
+        result = self.db.execute_select(sql)
+        self._check_cancelled()
+        return result
 
     def _direct_generated_result(
         self,
@@ -801,6 +837,7 @@ class NL2SQLPipeline:
             temperature=temperature,
             fallback_key=fallback_key,
             reasoning_callback=self._reasoning_callback,
+            cancellation_token=self._cancellation_token,
         )
 
 

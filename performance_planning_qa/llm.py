@@ -6,11 +6,13 @@ from datetime import datetime
 import json
 import logging
 import re
+import threading
 import time
 from typing import Any, Callable
 
 import json_repair
 
+from performance_planning_qa.cancellation import AnalysisCancelled, CancellationToken
 from performance_planning_qa.config import LLMSettings
 
 
@@ -48,6 +50,8 @@ class LiteLLMClient:
         settings.validate()
         self.settings = settings
         self._client = None
+        self._active_response: Any | None = None
+        self._response_lock = threading.Lock()
 
     @property
     def client(self):
@@ -73,7 +77,10 @@ class LiteLLMClient:
         temperature: float,
         log_empty_response: bool = True,
         reasoning_callback: ReasoningCallback | None = None,
+        cancellation_token: CancellationToken | None = None,
     ) -> str:
+        if cancellation_token is not None:
+            cancellation_token.raise_if_cancelled()
         request_payload = {
             "model": self.settings.model,
             "messages": _with_current_date_context(messages),
@@ -100,14 +107,29 @@ class LiteLLMClient:
                         headers=headers,
                         json=request_payload,
                     ) as response:
-                        if response.status_code >= 400:
-                            response.read()
-                        response.raise_for_status()
-                        content = _stream_completion_content(
-                            response,
-                            reasoning_callback=reasoning_callback,
-                            diagnostics=stream_diagnostics,
+                        with self._response_lock:
+                            self._active_response = response
+                        unregister_cancel = (
+                            cancellation_token.register(response.close)
+                            if cancellation_token is not None
+                            else None
                         )
+                        try:
+                            if response.status_code >= 400:
+                                response.read()
+                            response.raise_for_status()
+                            content = _stream_completion_content(
+                                response,
+                                reasoning_callback=reasoning_callback,
+                                cancellation_token=cancellation_token,
+                                diagnostics=stream_diagnostics,
+                            )
+                        finally:
+                            if unregister_cancel is not None:
+                                unregister_cancel()
+                            with self._response_lock:
+                                if self._active_response is response:
+                                    self._active_response = None
                     diagnostics["stream"] = stream_diagnostics
                 else:
                     response = self.client.post(
@@ -117,9 +139,15 @@ class LiteLLMClient:
                     )
                     response.raise_for_status()
                     payload = response.json()
+                    if cancellation_token is not None:
+                        cancellation_token.raise_if_cancelled()
                     content = _completion_content(payload)
                 break
+            except AnalysisCancelled:
+                raise
             except Exception as exc:
+                if cancellation_token is not None and cancellation_token.cancelled:
+                    raise AnalysisCancelled("Analysis stopped by the user") from exc
                 response = getattr(exc, "response", None)
                 if response is not None:
                     diagnostics["status_code"] = response.status_code
@@ -164,16 +192,22 @@ class LiteLLMClient:
         fallback_key: str | None = None,
         log_empty_response: bool = True,
         reasoning_callback: ReasoningCallback | None = None,
+        cancellation_token: CancellationToken | None = None,
     ) -> dict[str, Any]:
         text = self.complete(
             messages,
             temperature=temperature,
             log_empty_response=log_empty_response,
             reasoning_callback=reasoning_callback,
+            cancellation_token=cancellation_token,
         )
         return extract_json_object(text, fallback_key=fallback_key)
 
     def close(self) -> None:
+        with self._response_lock:
+            active_response = self._active_response
+        if active_response is not None:
+            active_response.close()
         if self._client is None:
             return
         self._client.close()
@@ -218,6 +252,7 @@ def _stream_completion_content(
     response: Any,
     *,
     reasoning_callback: ReasoningCallback | None,
+    cancellation_token: CancellationToken | None = None,
     diagnostics: dict[str, Any] | None = None,
 ) -> str:
     """Collect answer content while forwarding reasoning SSE chunks.
@@ -236,6 +271,8 @@ def _stream_completion_content(
     choice_keys: set[str] = set()
 
     for line in response.iter_lines():
+        if cancellation_token is not None:
+            cancellation_token.raise_if_cancelled()
         if not line.startswith("data:"):
             if line.strip():
                 ignored_line_count += 1

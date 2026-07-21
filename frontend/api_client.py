@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import json
+import threading
 from typing import Any, Iterator
 from urllib.parse import urlsplit
 
@@ -11,12 +12,16 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from performance_planning_qa.cancellation import AnalysisCancelled, CancellationToken
+
 
 INPROCESS_API_BASE_URL = "inprocess://ppqa"
 DEFAULT_CONNECT_TIMEOUT_SECONDS = 3.05
 DEFAULT_HEALTH_TIMEOUT_SECONDS = 5.0
 DEFAULT_READ_TIMEOUT_SECONDS = 15.0
 DEFAULT_STREAM_READ_TIMEOUT_SECONDS = 45.0
+DEFAULT_CANCEL_CONNECT_TIMEOUT_SECONDS = 1.0
+DEFAULT_CANCEL_READ_TIMEOUT_SECONDS = 2.0
 
 
 class ApiError(RuntimeError):
@@ -31,6 +36,18 @@ class ApiClient:
     stream_read_timeout_seconds: float = DEFAULT_STREAM_READ_TIMEOUT_SECONDS
     _session: requests.Session = field(
         default_factory=requests.Session,
+        init=False,
+        repr=False,
+        compare=False,
+    )
+    _active_stream_response: Any | None = field(
+        default=None,
+        init=False,
+        repr=False,
+        compare=False,
+    )
+    _stream_lock: threading.Lock = field(
+        default_factory=threading.Lock,
         init=False,
         repr=False,
         compare=False,
@@ -101,11 +118,19 @@ class ApiClient:
         question: str,
         *,
         dry_run: bool = False,
+        request_id: str | None = None,
+        cancellation_token: CancellationToken | None = None,
     ) -> Iterator[dict[str, Any]]:
         """Yield live progress events and the final session response."""
 
+        if cancellation_token is not None:
+            cancellation_token.raise_if_cancelled()
         path = f"/sessions/{session_id}/ask/stream"
-        payload = {"question": question, "dry_run": dry_run}
+        payload = {
+            "question": question,
+            "dry_run": dry_run,
+            "request_id": request_id,
+        }
         if self.base_url == INPROCESS_API_BASE_URL:
             try:
                 from performance_planning_qa.inprocess_api import (
@@ -116,6 +141,7 @@ class ApiClient:
                     session_id,
                     question,
                     dry_run=dry_run,
+                    cancellation_token=cancellation_token,
                 )
             except ApiError:
                 raise
@@ -140,11 +166,52 @@ class ApiClient:
                 ),
                 stream=True,
             ) as response:
-                yield from _iter_sse(response)
+                with self._stream_lock:
+                    self._active_stream_response = response
+                try:
+                    if cancellation_token is not None:
+                        cancellation_token.raise_if_cancelled()
+                    yield from _iter_sse(
+                        response,
+                        cancellation_token=cancellation_token,
+                    )
+                finally:
+                    with self._stream_lock:
+                        if self._active_stream_response is response:
+                            self._active_stream_response = None
+        except AnalysisCancelled:
+            raise
         except ApiError:
             raise
         except requests.RequestException as exc:
+            if cancellation_token is not None and cancellation_token.cancelled:
+                raise AnalysisCancelled("Analysis stopped by the user") from exc
             raise ApiError(f"Could not reach API at {self.base_url}: {exc}") from exc
+
+    def cancel_analysis(self, request_id: str) -> None:
+        """Best-effort signal that releases the backend chat immediately."""
+
+        if self.base_url == INPROCESS_API_BASE_URL:
+            return
+        try:
+            requests.post(
+                f"{self.base_url}/analysis/{request_id}/cancel",
+                timeout=(
+                    DEFAULT_CANCEL_CONNECT_TIMEOUT_SECONDS,
+                    DEFAULT_CANCEL_READ_TIMEOUT_SECONDS,
+                ),
+            )
+        except requests.RequestException:
+            # Closing the stream below remains a second cancellation path.
+            pass
+
+    def cancel_active_stream(self) -> None:
+        """Close the active response so a stopped stream unblocks immediately."""
+
+        with self._stream_lock:
+            response = self._active_stream_response
+        if response is not None:
+            response.close()
 
     def _request(
         self,
@@ -206,13 +273,19 @@ def _error_message(response: Any) -> str:
     return f"API error {response.status_code}: {response_text}"
 
 
-def _iter_sse(response: Any) -> Iterator[dict[str, Any]]:
+def _iter_sse(
+    response: Any,
+    *,
+    cancellation_token: CancellationToken | None = None,
+) -> Iterator[dict[str, Any]]:
     if response.status_code >= 400:
         raise ApiError(_error_message(response))
 
     event_name = "message"
     data_lines: list[str] = []
     for raw_line in response.iter_lines(chunk_size=1, decode_unicode=True):
+        if cancellation_token is not None:
+            cancellation_token.raise_if_cancelled()
         line = raw_line.decode("utf-8") if isinstance(raw_line, bytes) else raw_line
         if line == "":
             if data_lines:

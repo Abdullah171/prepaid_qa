@@ -38,15 +38,18 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from analysis_runner import AnalysisRunner
 from api_client import ApiClient, ApiError
+from performance_planning_qa.cancellation import AnalysisCancelled
 from performance_planning_qa.csv_export import csv_export_to_bytes
 from user_messages import (
     ANALYSIS_UNAVAILABLE_MESSAGE,
     SERVICE_UNAVAILABLE_MESSAGE,
 )
 from styles import APP_CSS
+from streamlit_logging import install_stale_fragment_info_filter
 
 
 logger = logging.getLogger(__name__)
+install_stale_fragment_info_filter()
 
 DEFAULT_API_BASE_URL = "http://127.0.0.1:8000"
 MAX_RENDERED_RESULT_ROWS = 200
@@ -135,6 +138,9 @@ def main() -> None:
         _render_empty_state()
 
     _render_failed_analysis()
+    analysis_notice = st.session_state.pop("analysis_notice", None)
+    if analysis_notice:
+        st.toast(str(analysis_notice), icon=":material/stop_circle:")
     if active_job is None:
         _render_question_composer()
     else:
@@ -969,6 +975,8 @@ def _render_active_analysis() -> None:
                 expected_session_id=snapshot.session_id,
                 reasoning=snapshot.reasoning,
             )
+        except AnalysisCancelled:
+            st.session_state.analysis_notice = "Analysis stopped"
         except Exception as exc:
             _record_failed_analysis(
                 snapshot.session_id,
@@ -998,6 +1006,7 @@ def _render_active_analysis() -> None:
             ):
                 is_expanded = not is_expanded
                 st.session_state[expanded_key] = is_expanded
+            st.caption(snapshot.progress)
             if is_expanded:
                 with st.container(
                     key="live-thinking-content",
@@ -1008,14 +1017,29 @@ def _render_active_analysis() -> None:
                     if snapshot.reasoning:
                         st.markdown(snapshot.reasoning)
                     else:
-                        st.write("Waiting for reasoning…")
+                        st.write(snapshot.progress)
 
     with st.bottom:
-        st.chat_input(
-            "Analysis in progress…",
-            key="active-question-composer",
-            disabled=True,
-        )
+        with st.container(key="active-composer"):
+            st.chat_input(
+                (
+                    "Stopping analysis…"
+                    if snapshot.stopping
+                    else "Analysis in progress…"
+                ),
+                key="active-question-composer",
+                disabled=True,
+            )
+            if st.button(
+                "Stop",
+                key="stop-analysis",
+                help="Stop the current analysis",
+                disabled=snapshot.stopping,
+                type="primary",
+                icon=":material/stop:",
+            ):
+                runner.cancel(snapshot.job_id)
+                st.rerun()
 
 
 def _cache_new_session(session: dict[str, Any]) -> None:

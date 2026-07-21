@@ -202,6 +202,51 @@ div[data-testid="stChatInput"] {
   padding-top: 0.45rem;
 }
 
+/* During generation, replace the composer's send arrow with a compact stop
+   control in the same position. */
+.st-key-active-composer {
+  position: relative;
+}
+
+.st-key-active-composer [data-testid="stChatInput"] button {
+  visibility: hidden;
+}
+
+.st-key-active-composer .st-key-stop-analysis {
+  bottom: 0.58rem;
+  position: absolute;
+  right: 0.72rem;
+  width: 2.15rem;
+  z-index: 10;
+}
+
+.st-key-active-composer .stButton {
+  width: 2.15rem;
+}
+
+.st-key-active-composer .stButton > button {
+  align-items: center;
+  border-radius: 999px;
+  display: flex;
+  height: 2.15rem;
+  justify-content: center;
+  min-height: 2.15rem;
+  padding: 0;
+  width: 2.15rem;
+}
+
+.st-key-active-composer .stButton [data-testid="stMarkdownContainer"] {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
 .stButton > button {
   border-radius: 6px;
   border-color: var(--ppqa-border);

@@ -9,6 +9,7 @@ import queue
 import threading
 from typing import Any, Iterator
 
+from performance_planning_qa.cancellation import AnalysisCancelled, CancellationToken
 from performance_planning_qa.user_messages import ANALYSIS_UNAVAILABLE_MESSAGE
 
 
@@ -48,11 +49,13 @@ def stream_inprocess_session_ask(
     question: str,
     *,
     dry_run: bool = False,
+    cancellation_token: CancellationToken | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Bridge pipeline progress out of TestClient's buffered ASGI transport."""
 
     client = get_inprocess_api_client()
     event_queue: queue.Queue[dict[str, Any] | None] = queue.Queue()
+    cancellation_token = cancellation_token or CancellationToken()
 
     def report_progress(message: str) -> None:
         event_queue.put({"event": "progress", "message": message})
@@ -89,8 +92,11 @@ def stream_inprocess_session_ask(
                 request=request,
                 progress_callback=report_progress,
                 reasoning_callback=report_reasoning,
+                cancellation_token=cancellation_token,
             )
             payload = client.portal.call(call)
+        except AnalysisCancelled:
+            event_queue.put({"event": "cancelled", "message": "Analysis stopped"})
         except HTTPException:
             event_queue.put(
                 {"event": "error", "message": ANALYSIS_UNAVAILABLE_MESSAGE}
@@ -107,7 +113,12 @@ def stream_inprocess_session_ask(
 
     threading.Thread(target=run_analysis, daemon=True).start()
     while True:
-        event = event_queue.get()
+        if cancellation_token.cancelled:
+            raise AnalysisCancelled("Analysis stopped by the user")
+        try:
+            event = event_queue.get(timeout=0.25)
+        except queue.Empty:
+            continue
         if event is None:
             return
         yield event

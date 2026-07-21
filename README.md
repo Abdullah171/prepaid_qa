@@ -22,7 +22,8 @@ For each user question it:
 
 When the selected provider has streaming enabled and returns GLM's
 `delta.reasoning_content` or MiniMax's `delta.reasoning`, the Streamlit interface
-renders that text live in a "Thinking" panel.
+renders that text live in a "Thinking" panel. While an analysis is running, a
+Stop button cancels model streaming and the active Teradata request.
 
 Structured LLM responses are parsed as strict JSON first. If parsing fails, the
 app uses `json-repair` for common issues such as unquoted keys, single quotes,
@@ -31,6 +32,11 @@ trailing commas, surrounding prose, or an unterminated final object.
 The FastAPI app also supports persisted chat sessions backed by either local PostgreSQL
 or Teradata. Session history is passed back into the SQL and answer prompts so follow-up
 questions can refer to the prior conversation.
+
+Different chats can run LLM work concurrently. Follow-ups within the same chat remain
+ordered, and Teradata execution is serialized over the shared connection. The app does
+not currently provide authentication or per-user chat isolation; everyone with access
+to the deployment should be treated as part of the same trusted workspace.
 
 ## Environment
 

@@ -10,6 +10,7 @@ from typing import Any
 from uuid import uuid4
 
 from api_client import ApiClient, ApiError
+from performance_planning_qa.cancellation import AnalysisCancelled, CancellationToken
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,7 @@ class AnalysisSnapshot:
     reasoning: str
     elapsed_seconds: float
     done: bool
+    stopping: bool
 
 
 @dataclass
@@ -37,6 +39,11 @@ class AnalysisJob:
     _reasoning_parts: list[str] = field(default_factory=list, init=False, repr=False)
     _future: Future[dict[str, Any]] | None = field(
         default=None,
+        init=False,
+        repr=False,
+    )
+    _cancellation_token: CancellationToken = field(
+        default_factory=CancellationToken,
         init=False,
         repr=False,
     )
@@ -64,6 +71,14 @@ class AnalysisJob:
         with self._lock:
             self._reasoning_parts.append(content)
 
+    def cancel(self) -> None:
+        self.update_progress("Stopping analysis")
+        self._cancellation_token.cancel()
+
+    @property
+    def cancellation_token(self) -> CancellationToken:
+        return self._cancellation_token
+
     def snapshot(self) -> AnalysisSnapshot:
         with self._lock:
             progress = self._progress
@@ -77,6 +92,7 @@ class AnalysisJob:
             reasoning=reasoning,
             elapsed_seconds=max(0.0, time.monotonic() - self.started_at),
             done=future.done() if future is not None else False,
+            stopping=self._cancellation_token.cancelled,
         )
 
     def result(self) -> dict[str, Any]:
@@ -134,19 +150,39 @@ class AnalysisRunner:
             if self._active_job is not None and self._active_job.job_id == job_id:
                 self._active_job = None
 
+    def cancel(self, job_id: str) -> None:
+        with self._lock:
+            job = self._active_job
+            if job is None or job.job_id != job_id:
+                return
+        job.cancel()
+
     def close(self) -> None:
+        with self._lock:
+            job = self._active_job
+        if job is not None:
+            job.cancel()
         self._executor.shutdown(wait=False, cancel_futures=True)
 
 
 def _run_analysis(job: AnalysisJob) -> dict[str, Any]:
     client = ApiClient(job.base_url)
+
+    def cancel_request() -> None:
+        client.cancel_analysis(job.job_id)
+        client.cancel_active_stream()
+
+    job.cancellation_token.register(cancel_request)
     response: dict[str, Any] | None = None
     try:
         for event in client.ask_session_stream(
             job.session_id,
             job.question,
             dry_run=job.dry_run,
+            request_id=job.job_id,
+            cancellation_token=job.cancellation_token,
         ):
+            job.cancellation_token.raise_if_cancelled()
             event_type = event.get("event")
             if event_type == "progress":
                 job.update_progress(str(event.get("message") or "Running analysis"))
@@ -156,8 +192,17 @@ def _run_analysis(job: AnalysisJob) -> dict[str, Any]:
                 response = event
             elif event_type == "error":
                 raise ApiError(str(event.get("message") or "Analysis failed"))
+            elif event_type == "cancelled":
+                raise AnalysisCancelled("Analysis stopped by the user")
+        job.cancellation_token.raise_if_cancelled()
         if response is None:
             raise ApiError("The analysis ended without returning a result")
         return response
+    except AnalysisCancelled:
+        raise
+    except Exception as exc:
+        if job.cancellation_token.cancelled:
+            raise AnalysisCancelled("Analysis stopped by the user") from exc
+        raise
     finally:
         client.close()

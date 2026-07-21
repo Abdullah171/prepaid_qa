@@ -24,6 +24,7 @@ from performance_planning_qa.chat_store import (
     ChatStore,
     make_session_title,
 )
+from performance_planning_qa.cancellation import AnalysisCancelled, CancellationToken
 from performance_planning_qa.config import load_environment, load_settings
 from performance_planning_qa.pipeline import NL2SQLPipeline
 from performance_planning_qa.prompts import ChatTurn
@@ -45,6 +46,64 @@ DEFAULT_CORS_ORIGINS = (
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=4_000)
     dry_run: bool = False
+    request_id: str | None = Field(default=None, max_length=128)
+
+
+class _SessionAnalysisGate:
+    """Serialize a chat while allowing cancelled work to be superseded."""
+
+    def __init__(self) -> None:
+        self._condition = asyncio.Condition()
+        self._generation = 0
+        self._active_generation: int | None = None
+        self._active_token: CancellationToken | None = None
+
+    async def acquire(
+        self,
+        cancellation_token: CancellationToken | None,
+        *,
+        waiting_callback: Callable[[], None] | None = None,
+    ) -> int:
+        loop = asyncio.get_running_loop()
+        waiting_since: float | None = None
+        waiting_reported = False
+
+        async with self._condition:
+            while self._active_generation is not None and not (
+                self._active_token is not None and self._active_token.cancelled
+            ):
+                if cancellation_token is not None:
+                    cancellation_token.raise_if_cancelled()
+                if waiting_since is None:
+                    waiting_since = loop.time()
+                elif (
+                    not waiting_reported
+                    and waiting_callback is not None
+                    and loop.time() - waiting_since >= 0.25
+                ):
+                    waiting_callback()
+                    waiting_reported = True
+                try:
+                    await asyncio.wait_for(self._condition.wait(), timeout=0.1)
+                except asyncio.TimeoutError:
+                    pass
+
+            if cancellation_token is not None:
+                cancellation_token.raise_if_cancelled()
+            self._generation += 1
+            self._active_generation = self._generation
+            self._active_token = cancellation_token
+            return self._generation
+
+    async def release(self, generation: int) -> None:
+        async with self._condition:
+            # A cancelled generation may finish after its replacement. It must
+            # never release the replacement's lease.
+            if self._active_generation != generation:
+                return
+            self._active_generation = None
+            self._active_token = None
+            self._condition.notify_all()
 
 
 class QueryResultResponse(BaseModel):
@@ -151,7 +210,10 @@ def _cors_origins() -> list[str]:
 async def lifespan(app: FastAPI):
     settings = load_settings()
     app.state.pipeline = NL2SQLPipeline(settings)
-    app.state.pipeline_lock = asyncio.Lock()
+    app.state.session_analysis_gates: dict[str, _SessionAnalysisGate] = {}
+    app.state.session_analysis_locks_guard = asyncio.Lock()
+    app.state.active_analysis_tokens: dict[str, CancellationToken] = {}
+    app.state.active_analysis_tokens_guard = asyncio.Lock()
     app.state.chat_store = ChatStore(settings.chat_storage, settings.teradata)
     app.state.chat_store_lock = asyncio.Lock()
     await run_in_threadpool(app.state.chat_store.ensure_schema)
@@ -190,18 +252,22 @@ async def ask(request_body: AskRequest, request: Request) -> dict[str, Any]:
     if not question:
         raise HTTPException(status_code=422, detail="question must not be empty")
 
-    pipeline = _get_pipeline(request)
-    pipeline_lock: asyncio.Lock = request.app.state.pipeline_lock
+    pipeline = _get_pipeline(request).fork()
 
     try:
-        async with pipeline_lock:
-            result = await run_in_threadpool(pipeline.ask, question, dry_run=request_body.dry_run)
+        result = await run_in_threadpool(
+            pipeline.ask,
+            question,
+            dry_run=request_body.dry_run,
+        )
     except Exception as exc:
         logger.exception("Failed to answer question")
         raise HTTPException(
             status_code=500,
             detail=ANALYSIS_UNAVAILABLE_MESSAGE,
         ) from exc
+    finally:
+        pipeline.close(close_database=False)
 
     return result.to_dict()
 
@@ -296,6 +362,13 @@ async def ask_session_stream(
     async def events():
         loop = asyncio.get_running_loop()
         event_queue: asyncio.Queue[tuple[str, str]] = asyncio.Queue()
+        cancellation_token = CancellationToken()
+        if request_body.request_id is not None:
+            await _register_active_analysis(
+                request,
+                request_body.request_id,
+                cancellation_token,
+            )
 
         def report_progress(message: str) -> None:
             loop.call_soon_threadsafe(event_queue.put_nowait, ("progress", message))
@@ -311,38 +384,52 @@ async def ask_session_stream(
                 request=request,
                 progress_callback=report_progress,
                 reasoning_callback=report_reasoning,
+                cancellation_token=cancellation_token,
             )
         )
         last_event_at = loop.time()
 
-        while not analysis_task.done():
-            try:
-                event_name, content = await asyncio.wait_for(
-                    event_queue.get(), timeout=1.0
-                )
-            except asyncio.TimeoutError:
-                if loop.time() - last_event_at >= 15:
-                    yield ": keep-alive\n\n"
-                    last_event_at = loop.time()
-                continue
-            field = "content" if event_name == "reasoning" else "message"
-            yield _sse_event(event_name, {field: content})
-            last_event_at = loop.time()
-
-        while not event_queue.empty():
-            event_name, content = event_queue.get_nowait()
-            field = "content" if event_name == "reasoning" else "message"
-            yield _sse_event(event_name, {field: content})
-
         try:
-            payload = await analysis_task
-        except HTTPException:
-            yield _sse_event("error", {"message": ANALYSIS_UNAVAILABLE_MESSAGE})
-        except Exception:
-            logger.exception("Failed to stream session answer")
-            yield _sse_event("error", {"message": ANALYSIS_UNAVAILABLE_MESSAGE})
-        else:
-            yield _sse_event("result", payload)
+            while not analysis_task.done():
+                try:
+                    event_name, content = await asyncio.wait_for(
+                        event_queue.get(), timeout=1.0
+                    )
+                except asyncio.TimeoutError:
+                    if loop.time() - last_event_at >= 15:
+                        yield ": keep-alive\n\n"
+                        last_event_at = loop.time()
+                    continue
+                field = "content" if event_name == "reasoning" else "message"
+                yield _sse_event(event_name, {field: content})
+                last_event_at = loop.time()
+
+            while not event_queue.empty():
+                event_name, content = event_queue.get_nowait()
+                field = "content" if event_name == "reasoning" else "message"
+                yield _sse_event(event_name, {field: content})
+
+            try:
+                payload = await analysis_task
+            except AnalysisCancelled:
+                yield _sse_event("cancelled", {"message": "Analysis stopped"})
+            except HTTPException:
+                yield _sse_event("error", {"message": ANALYSIS_UNAVAILABLE_MESSAGE})
+            except Exception:
+                logger.exception("Failed to stream session answer")
+                yield _sse_event("error", {"message": ANALYSIS_UNAVAILABLE_MESSAGE})
+            else:
+                yield _sse_event("result", payload)
+        finally:
+            cancellation_token.cancel()
+            if request_body.request_id is not None:
+                await _unregister_active_analysis(
+                    request,
+                    request_body.request_id,
+                    cancellation_token,
+                )
+            if not analysis_task.done():
+                analysis_task.add_done_callback(_consume_background_task)
 
     return StreamingResponse(
         events(),
@@ -354,6 +441,19 @@ async def ask_session_stream(
     )
 
 
+@app.post("/analysis/{request_id}/cancel")
+async def cancel_analysis(request_id: str, request: Request) -> dict[str, bool]:
+    """Cancel one streaming analysis without affecting newer chat work."""
+
+    guard: asyncio.Lock = request.app.state.active_analysis_tokens_guard
+    async with guard:
+        token = request.app.state.active_analysis_tokens.get(request_id)
+    if token is None:
+        return {"cancelled": False}
+    await run_in_threadpool(token.cancel)
+    return {"cancelled": True}
+
+
 async def _ask_session_impl(
     session_id: str,
     question: str,
@@ -362,71 +462,83 @@ async def _ask_session_impl(
     request: Request,
     progress_callback: Callable[[str], None] | None = None,
     reasoning_callback: Callable[[str], None] | None = None,
+    cancellation_token: CancellationToken | None = None,
 ) -> dict[str, Any]:
     """Run and persist one session question for regular and streaming routes."""
 
-    pipeline = _get_pipeline(request)
+    pipeline = _get_pipeline(request).fork()
     chat_store = _get_chat_store(request)
-    pipeline_lock: asyncio.Lock = request.app.state.pipeline_lock
+    session_gate = await _get_session_analysis_gate(request, session_id)
+    gate_generation: int | None = None
+
+    def report_queue_wait() -> None:
+        if progress_callback is None:
+            return
+        try:
+            progress_callback("Waiting for the previous request in this chat")
+        except Exception:
+            logger.debug("Queue progress callback failed", exc_info=True)
 
     try:
         # Keep load -> analysis -> persistence ordered so simultaneous follow-ups
-        # cannot both reuse the same stale session result.
-        if pipeline_lock.locked() and progress_callback is not None:
-            try:
-                progress_callback("Waiting for the current analysis to finish")
-            except Exception:
-                logger.debug("Queue progress callback failed", exc_info=True)
-        async with pipeline_lock:
-            session, messages = await _load_session_with_messages(request, session_id)
-            chat_history = _pipeline_history_from_messages(messages)
-            previous_result = _latest_assistant_result(messages)
-            result = await run_in_threadpool(
-                pipeline.ask,
-                question,
-                dry_run=dry_run,
-                chat_history=chat_history,
-                previous_result=previous_result,
-                progress_callback=progress_callback,
-                reasoning_callback=reasoning_callback,
-            )
-            result_payload = result.to_dict()
-            assistant_content = _assistant_content_from_result(result_payload)
-            user_message = await _run_chat_store(
+        # cannot both reuse the same stale session result. A cancelled request's
+        # generation is replaced immediately instead of holding up its successor.
+        gate_generation = await session_gate.acquire(
+            cancellation_token,
+            waiting_callback=report_queue_wait,
+        )
+        session, messages = await _load_session_with_messages(request, session_id)
+        chat_history = _pipeline_history_from_messages(messages)
+        previous_result = _latest_assistant_result(messages)
+        result = await run_in_threadpool(
+            pipeline.ask,
+            question,
+            dry_run=dry_run,
+            chat_history=chat_history,
+            previous_result=previous_result,
+            progress_callback=progress_callback,
+            reasoning_callback=reasoning_callback,
+            cancellation_token=cancellation_token,
+        )
+        if cancellation_token is not None:
+            cancellation_token.raise_if_cancelled()
+        result_payload = result.to_dict()
+        assistant_content = _assistant_content_from_result(result_payload)
+        user_message = await _run_chat_store(
+            request,
+            chat_store.add_message,
+            session_id=session_id,
+            role="user",
+            content=question,
+            dry_run=dry_run,
+        )
+        assistant_message = await _run_chat_store(
+            request,
+            chat_store.add_message,
+            session_id=session_id,
+            role="assistant",
+            content=assistant_content,
+            dry_run=dry_run,
+            metadata=result_payload,
+        )
+        if session.message_count == 0 and session.title == DEFAULT_SESSION_TITLE:
+            updated_session = await _run_chat_store(
                 request,
-                chat_store.add_message,
-                session_id=session_id,
-                role="user",
-                content=question,
-                dry_run=dry_run,
+                chat_store.update_session_title,
+                session_id,
+                make_session_title(question),
             )
-            assistant_message = await _run_chat_store(
+            if updated_session is not None:
+                session = updated_session
+        else:
+            latest_session = await _run_chat_store(
                 request,
-                chat_store.add_message,
-                session_id=session_id,
-                role="assistant",
-                content=assistant_content,
-                dry_run=dry_run,
-                metadata=result_payload,
+                chat_store.get_session,
+                session_id,
             )
-            if session.message_count == 0 and session.title == DEFAULT_SESSION_TITLE:
-                updated_session = await _run_chat_store(
-                    request,
-                    chat_store.update_session_title,
-                    session_id,
-                    make_session_title(question),
-                )
-                if updated_session is not None:
-                    session = updated_session
-            else:
-                latest_session = await _run_chat_store(
-                    request,
-                    chat_store.get_session,
-                    session_id,
-                )
-                if latest_session is not None:
-                    session = latest_session
-    except HTTPException:
+            if latest_session is not None:
+                session = latest_session
+    except (HTTPException, AnalysisCancelled):
         raise
     except Exception as exc:
         logger.exception("Failed to answer session question")
@@ -434,6 +546,10 @@ async def _ask_session_impl(
             status_code=500,
             detail=ANALYSIS_UNAVAILABLE_MESSAGE,
         ) from exc
+    finally:
+        if gate_generation is not None:
+            await session_gate.release(gate_generation)
+        pipeline.close(close_database=False)
 
     return {
         "session": session.to_payload(),
@@ -441,6 +557,15 @@ async def _ask_session_impl(
         "assistant_message": assistant_message.to_payload(),
         "result": result_payload,
     }
+
+
+def _consume_background_task(task: asyncio.Task[Any]) -> None:
+    """Retrieve errors from work finishing after its stream disconnected."""
+
+    try:
+        task.exception()
+    except (asyncio.CancelledError, Exception):
+        pass
 
 
 def _sse_event(event: str, payload: dict[str, Any]) -> str:
@@ -463,6 +588,48 @@ def _get_chat_store(request: Request) -> ChatStore:
     if chat_store is None:
         raise HTTPException(status_code=503, detail="Chat store is not initialized")
     return chat_store
+
+
+async def _get_session_analysis_gate(
+    request: Request,
+    session_id: str,
+) -> _SessionAnalysisGate:
+    """Return the cancellation-aware coordinator for one chat."""
+
+    guard: asyncio.Lock = request.app.state.session_analysis_locks_guard
+    async with guard:
+        gates: dict[str, _SessionAnalysisGate] = (
+            request.app.state.session_analysis_gates
+        )
+        gate = gates.get(session_id)
+        if gate is None:
+            gate = _SessionAnalysisGate()
+            gates[session_id] = gate
+        return gate
+
+
+async def _register_active_analysis(
+    request: Request,
+    request_id: str,
+    cancellation_token: CancellationToken,
+) -> None:
+    guard: asyncio.Lock = request.app.state.active_analysis_tokens_guard
+    async with guard:
+        request.app.state.active_analysis_tokens[request_id] = cancellation_token
+
+
+async def _unregister_active_analysis(
+    request: Request,
+    request_id: str,
+    cancellation_token: CancellationToken,
+) -> None:
+    guard: asyncio.Lock = request.app.state.active_analysis_tokens_guard
+    async with guard:
+        tokens: dict[str, CancellationToken] = (
+            request.app.state.active_analysis_tokens
+        )
+        if tokens.get(request_id) is cancellation_token:
+            tokens.pop(request_id, None)
 
 
 async def _run_chat_store(request: Request, func, *args, **kwargs):
