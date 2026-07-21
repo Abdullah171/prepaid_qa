@@ -446,7 +446,6 @@ class NL2SQLPipeline:
                     previous_answer=str(previous_result.get("answer") or ""),
                 ),
                 temperature=0.0,
-                max_tokens=256,
                 log_empty_response=False,
                 reasoning_callback=None,
             )
@@ -765,8 +764,7 @@ class NL2SQLPipeline:
         # print("Sql query result. = ", payload, flush=True)
         print(
             "Calling answer-generation LLM "
-            f"(stream={self.settings.llm.stream}, "
-            f"max_tokens={self.settings.llm.answer_max_tokens})...",
+            f"(stream={self.settings.llm.stream})...",
             flush=True,
         )
 
@@ -798,15 +796,9 @@ class NL2SQLPipeline:
         # self.prompt_logger.log(phase=phase, messages=messages, temperature=temperature)  # DEBUG: comment out this line to stop writing LLM input files.
         is_answer_generation = phase == "answer_generation"
         fallback_key = "answer" if is_answer_generation else "direct_answer"
-        max_tokens = (
-            self.settings.llm.answer_max_tokens
-            if is_answer_generation
-            else self.settings.llm.sql_max_tokens
-        )
         return self.llm.complete_json(
             messages,
             temperature=temperature,
-            max_tokens=max_tokens,
             fallback_key=fallback_key,
             reasoning_callback=self._reasoning_callback,
         )

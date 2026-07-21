@@ -71,7 +71,6 @@ class LiteLLMClient:
         messages: list[ChatMessage],
         *,
         temperature: float,
-        max_tokens: int,
         log_empty_response: bool = True,
         reasoning_callback: ReasoningCallback | None = None,
     ) -> str:
@@ -79,7 +78,6 @@ class LiteLLMClient:
             "model": self.settings.model,
             "messages": _with_current_date_context(messages),
             "temperature": temperature,
-            "max_tokens": max_tokens,
             "stream": self.settings.stream,
         }
         diagnostics = {
@@ -163,7 +161,6 @@ class LiteLLMClient:
         messages: list[ChatMessage],
         *,
         temperature: float,
-        max_tokens: int,
         fallback_key: str | None = None,
         log_empty_response: bool = True,
         reasoning_callback: ReasoningCallback | None = None,
@@ -171,7 +168,6 @@ class LiteLLMClient:
         text = self.complete(
             messages,
             temperature=temperature,
-            max_tokens=max_tokens,
             log_empty_response=log_empty_response,
             reasoning_callback=reasoning_callback,
         )

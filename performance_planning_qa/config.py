@@ -87,8 +87,6 @@ class LLMSettings:
     retry_backoff_seconds: float
     sql_temperature: float
     answer_temperature: float
-    sql_max_tokens: int
-    answer_max_tokens: int
 
     @property
     def base_url(self) -> str:
@@ -244,10 +242,6 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
         ),
         sql_temperature=_get_float("NL2SQL_TEMPERATURE", default=0.0),
         answer_temperature=_get_float("ANSWER_TEMPERATURE", default=0.2),
-        # Keep enough room for complex Teradata SQL without giving reasoning
-        # models an effectively unbounded scratchpad in which to loop.
-        sql_max_tokens=_get_int("LLM_SQL_MAX_TOKENS", default=8092),
-        answer_max_tokens=_get_int("LLM_ANSWER_MAX_TOKENS", default=16000),
     )
 
     teradata = TeradataSettings(
