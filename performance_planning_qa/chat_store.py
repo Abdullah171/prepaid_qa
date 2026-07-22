@@ -15,7 +15,6 @@ from performance_planning_qa.database import is_connection_error, to_jsonable
 
 DEFAULT_SESSION_TITLE = "New chat"
 MAX_SESSION_TITLE_LENGTH = 500
-TERADATA_METADATA_MAX_CHARS = 32_000
 
 
 logger = logging.getLogger(__name__)
@@ -279,11 +278,6 @@ class ChatStore:
             ensure_ascii=False,
             separators=(",", ":"),
         )
-        if self.is_teradata and len(payload) > TERADATA_METADATA_MAX_CHARS:
-            raise ChatStoreError(
-                "Chat metadata exceeds the Teradata metadata VARCHAR(32000) limit "
-                f"({len(payload)} characters)."
-            )
         p = self.placeholder
         metadata_value = p if self.is_teradata else f"{p}::jsonb"
         self._execute_writes(

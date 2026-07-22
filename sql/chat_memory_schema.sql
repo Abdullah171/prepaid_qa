@@ -23,8 +23,7 @@ CREATE MULTISET TABLE DP_EDW_PPF_STG.SC_PPQA_CHAT_MESSAGES
     message_role  VARCHAR(9) CHARACTER SET Latin CaseSpecific NOT NULL,
     Content       CLOB CHARACTER SET Unicode NOT NULL,
     dry_run       BYTEINT NOT NULL DEFAULT 0,
-    metadata      VARCHAR(32000) CHARACTER SET Unicode
-                      NOT NULL DEFAULT '{}',
+    metadata      CLOB CHARACTER SET Unicode NOT NULL,
     created_at    TIMESTAMP(6) WITH TIME Zone
                       NOT NULL DEFAULT Current_Timestamp(6),
 

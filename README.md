@@ -343,7 +343,8 @@ The Teradata chat tables are defined in `sql/chat_memory_schema.sql`:
 
 - `DP_EDW_PPF_STG.SC_PPQA_CHAT_SESSIONS`: session title and timestamps.
 - `DP_EDW_PPF_STG.SC_PPQA_CHAT_MESSAGES`: user and assistant messages, dry-run flag,
-  and JSON metadata containing SQL/result details for assistant responses.
+  and Unicode CLOB JSON metadata containing complete SQL/result details for assistant
+  responses.
 
 Run that file with your Teradata SQL client before setting `chat_db="teradata"`.
 The PostgreSQL version is in `sql/chat_memory_schema_postgres.sql` and can be applied
