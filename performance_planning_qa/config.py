@@ -241,7 +241,7 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
             default=2.0,
         ),
         sql_temperature=_get_float("NL2SQL_TEMPERATURE", default=0.0),
-        answer_temperature=_get_float("ANSWER_TEMPERATURE", default=0.2),
+        answer_temperature=_get_float("ANSWER_TEMPERATURE", default=0.0),
     )
 
     teradata = TeradataSettings(
