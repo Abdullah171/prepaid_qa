@@ -501,7 +501,8 @@ ORDER BY 1, 2, S.LINE_COUNT DESC;
 
 
 
-Question: Which postpaid packages sold the most in Saudi Arabia during the second quarter of 2026? (Always pay attention to the question if user is asking for nationality or country-specific data, and filter accordingly.)
+Question: Which postpaid packages sold the most in Saudi Arabia during the second quarter of 2026? (Always pay attention to the question if user is asking for nationality or country-specific data, and filter accordingly. 
+for example if user says saudis or saudi then its nationality only but if he says tell for saudia arabia etc then means country to try to undersand from user question.)
 
 Query: WITH PRODUCTS AS
 (

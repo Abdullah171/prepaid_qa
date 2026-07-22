@@ -104,11 +104,13 @@ class AnalysisJob:
 
 
 class AnalysisRunner:
-    """Own one bounded worker per Streamlit browser session."""
+    """Own bounded workers for one Streamlit browser session."""
 
     def __init__(self) -> None:
         self._executor = ThreadPoolExecutor(
-            max_workers=1,
+            # A replacement must be able to start while a cancelled worker is
+            # still unwinding its network/driver resources.
+            max_workers=4,
             thread_name_prefix="ppqa-analysis",
         )
         self._active_job: AnalysisJob | None = None
@@ -150,12 +152,18 @@ class AnalysisRunner:
             if self._active_job is not None and self._active_job.job_id == job_id:
                 self._active_job = None
 
-    def cancel(self, job_id: str) -> None:
+    def cancel(self, job_id: str) -> bool:
         with self._lock:
             job = self._active_job
             if job is None or job.job_id != job_id:
-                return
+                return False
         job.cancel()
+        with self._lock:
+            if self._active_job is job:
+                # Detach immediately. The worker may finish cleanup in the
+                # background, but the composer can accept the next question.
+                self._active_job = None
+        return True
 
     def close(self) -> None:
         with self._lock:
@@ -169,8 +177,17 @@ def _run_analysis(job: AnalysisJob) -> dict[str, Any]:
     client = ApiClient(job.base_url)
 
     def cancel_request() -> None:
-        client.cancel_analysis(job.job_id)
-        client.cancel_active_stream()
+        # CancellationToken callbacks run on Streamlit's UI thread. Keep that
+        # path instant and perform network cleanup on a short-lived daemon.
+        def interrupt_in_background() -> None:
+            client.cancel_active_stream()
+            client.cancel_analysis(job.job_id)
+
+        threading.Thread(
+            target=interrupt_in_background,
+            name=f"ppqa-cancel-{job.job_id[:8]}",
+            daemon=True,
+        ).start()
 
     job.cancellation_token.register(cancel_request)
     response: dict[str, Any] | None = None

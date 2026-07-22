@@ -1038,7 +1038,8 @@ def _render_active_analysis() -> None:
                 type="primary",
                 icon=":material/stop:",
             ):
-                runner.cancel(snapshot.job_id)
+                if runner.cancel(snapshot.job_id):
+                    st.session_state.analysis_notice = "Analysis stopped"
                 st.rerun()
 
 
