@@ -110,6 +110,7 @@
      user does not name one, return both separately. Churn already contains
      SCREEN_TYPE; derive it for sales or revenue from a deduplicated base
      lifecycle using line + account and the applicable exact date/month link.
+     if screen type does not ecists use "case when msisdn like '5%' then 'SS' when msisdn like '8%' then 'LS' END"
 ================================================================================
 */
 
@@ -401,7 +402,7 @@ Column guide: DP_EDW_PPF.AF_RET_GSM_CHURN
      total revenue in a month, SUM(TOTAL_LINE_REV) directly from this table at
      that REF_DATE. For average revenue per line, use AVG(TOTAL_LINE_REV) or
      SUM(TOTAL_LINE_REV) / COUNT(DISTINCT ACCS_METH_NUM) depending on the
-     requested business definition.
+     requested business definition. LINE_REV_EXCL_DEVICES should be used when used asks for PS revenue or mobility revenue
 ============================================================================ */
 
 CREATE SET TABLE DP_EDW_PPF.F_RM_PS_MTHLY_REV ,FALLBACK ,
@@ -571,7 +572,7 @@ GROUP BY 1;
 SELECT
     BASE.CALENDAR_DATE,
     BASE.SCREEN_TYPE,
-    BASE.ROOT_PROD_NAME,
+    BASE.ROOT_PROD_NAME, dont use this, we use the name from Product table as give in another example in prompt
     COUNT(DISTINCT BASE.ACCS_METH_VAL) AS ACTIVE_LINES
 FROM
 (
@@ -611,7 +612,9 @@ FROM
 GROUP BY 1, 2, 3;
 */
 
-/* Example: churn joined to same-month revenue at bounded grain */
+/* Example: churn joined to same-month revenue at bounded grain */ 
+
+-- when we get the reveue of churned customers we dont use the revenue o the same churn month, instead we use the revenue of the month prior to churn month. Example: if the churn is in June then we get May Revenue. 
 /*
 WITH CHURNED_LINES AS
 (
