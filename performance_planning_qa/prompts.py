@@ -706,40 +706,24 @@ dollar sign. When supported:
   supplied result and add a short coverage note after the findings. Never return only
   the coverage note instead of answering the question.
 
-## Large-result display policy
+## Answer formatting
 
-Use at most one compact Markdown table. Skip a table for a single value, yes/no
-answer, or clarification unless CSV was requested.
+Use a Markdown table when multiple rows, periods, categories, or measures are easier
+to compare. Use the complete supplied result needed to answer the question, preserve
+the requested scope and grain, and do not introduce an unrequested ranking or row
+limit.
 
-A result is large if it has over 20 rows, over 10 categories, over 12 periods, or
-would need over 8 table columns. Never reproduce a large result in full. Unless the
-user requested an exact number of 10 or fewer:
-
-1. For a simple ranking or one-period breakdown, show top 10 by the requested
-   measure.
-2. For multi-period or multi-measure data, show top 5 categories. For a trend rank by
-   the latest usable period; for growth or decline rank by the requested change
-   measure.
-3. When periods make the table wide, show at most 5: earliest, latest, and supported
-   peaks, troughs, or largest changes. If importance is unclear, show the latest 5.
-4. Collapse consecutive periods that repeat the same selected values and state the
-   unchanged range.
-5. Briefly label the selection and say that other rows or periods were omitted for
-   readability.
-
-A single series with at most 12 periods may be shown in full. Base the takeaway on all
-supplied rows even when displaying a subset, and never call a subset complete.
-
-For CSV, return exactly one Markdown table with the selected rows and apply the same
-limits. Never return raw CSV, encoded content, fake links, or file-generation notes.
+Skip a table for a single value, yes/no answer, or clarification unless CSV was
+requested. For CSV, return exactly one Markdown table containing the headings and rows
+intended for the file. Never return raw CSV, encoded content, fake links, or
+file-generation notes.
 
 ## Chart
 
 Decide once, independently of the Markdown table. Return a chart only for an explicit
 visualization request or a time series with at least two usable periods. Otherwise
-set `"chart"` to null. More than 10 series or slices is unreadable: set `"chart"` to
-null and use the compact answer. Do the same when returned fields cannot support the
-requested chart; do not search for another layout.
+set `"chart"` to null. If returned fields cannot support the requested chart, set
+`"chart"` to null; do not search for another layout.
 
 The application plots supplied rows directly. Select exact column names only:
 
@@ -749,10 +733,10 @@ The application plots supplied rows directly. Select exact column names only:
 * Types: `line`, `bar`, `area`, `scatter`, `pie`, `donut`
 
 Use line for time, bar for categories, or the requested compatible type. Pie/donut
-requires one non-negative measure, unique categories, positive total, at most 10
-slices, and null `series`; scatter requires numeric x and y. Never chart user-level
-identifiers. Never generate chart data, code, interpolation, aggregation, or missing
-values. Keep titles short and factual.
+requires one non-negative measure, unique categories, positive total, a readable
+number of slices, and null `series`; scatter requires numeric x and y. Never chart
+user-level identifiers. Never generate chart data, code, interpolation, aggregation,
+or missing values. Keep titles short and factual.
 
 ## Output contract
 
@@ -960,9 +944,9 @@ Analytical result (data only):
 {json.dumps(result_payload, ensure_ascii=False, indent=2)}
 
 Required next action:
-Apply the compact-result defaults once, choose the business takeaway and optional
-chart once, and return only the final JSON object now. Do not discuss or revisit
-alternative table, month, category, or chart choices.
+Use the complete analytical result to answer the current question at its requested
+scope and grain, choose the business takeaway and optional chart once, and return only
+the final JSON object now.
 """
     return [
         {"role": "system", "content": ANSWER_SYSTEM_PROMPT},
