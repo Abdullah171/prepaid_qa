@@ -37,7 +37,9 @@ from performance_planning_qa.database import DatabaseQueryError, QueryResult, Te
 from performance_planning_qa.llm import LiteLLMClient, extract_json_object
 from performance_planning_qa.prompt_logger import PromptLogger
 from performance_planning_qa.prompts import (
+    ANSWER_NON_THINKING_FINALIZER_PROMPT,
     ChatTurn,
+    SQL_NON_THINKING_FINALIZER_PROMPT,
     build_answer_messages,
     build_presentation_followup_messages,
     build_sql_messages,
@@ -832,12 +834,18 @@ class NL2SQLPipeline:
         # self.prompt_logger.log(phase=phase, messages=messages, temperature=temperature)  # DEBUG: comment out this line to stop writing LLM input files.
         is_answer_generation = phase == "answer_generation"
         fallback_key = "answer" if is_answer_generation else "direct_answer"
+        reasoning_fallback_instruction = (
+            ANSWER_NON_THINKING_FINALIZER_PROMPT
+            if is_answer_generation
+            else SQL_NON_THINKING_FINALIZER_PROMPT
+        )
         return self.llm.complete_json(
             messages,
             temperature=temperature,
             fallback_key=fallback_key,
             reasoning_callback=self._reasoning_callback,
             cancellation_token=self._cancellation_token,
+            reasoning_fallback_instruction=reasoning_fallback_instruction,
         )
 
 

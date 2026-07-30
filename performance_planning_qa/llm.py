@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 import json
 import logging
@@ -19,9 +20,17 @@ from performance_planning_qa.config import LLMSettings
 logger = logging.getLogger(__name__)
 
 RETRYABLE_STATUS_CODES = frozenset({502, 503, 504})
+GLM_REASONING_CHAR_LIMIT = 60_000
 
 ChatMessage = dict[str, str]
 ReasoningCallback = Callable[[str], None]
+
+
+@dataclass(frozen=True)
+class _StreamCompletion:
+    content: str
+    captured_reasoning: str
+    reasoning_limit_reached: bool
 
 
 def _with_current_date_context(messages: list[ChatMessage]) -> list[ChatMessage]:
@@ -78,12 +87,14 @@ class LiteLLMClient:
         log_empty_response: bool = True,
         reasoning_callback: ReasoningCallback | None = None,
         cancellation_token: CancellationToken | None = None,
+        reasoning_fallback_instruction: str | None = None,
     ) -> str:
         if cancellation_token is not None:
             cancellation_token.raise_if_cancelled()
+        contextualized_messages = _with_current_date_context(messages)
         request_payload = {
             "model": self.settings.model,
-            "messages": _with_current_date_context(messages),
+            "messages": contextualized_messages,
             "temperature": temperature,
             "stream": self.settings.stream,
         }
@@ -92,6 +103,7 @@ class LiteLLMClient:
             "model": self.settings.model,
             "endpoint": _completion_url(self.settings.endpoint),
         }
+        captured_reasoning: str | None = None
 
         for attempt in range(self.settings.max_retries + 1):
             try:
@@ -118,12 +130,22 @@ class LiteLLMClient:
                             if response.status_code >= 400:
                                 response.read()
                             response.raise_for_status()
-                            content = _stream_completion_content(
+                            stream_completion = _stream_completion_content(
                                 response,
                                 reasoning_callback=reasoning_callback,
                                 cancellation_token=cancellation_token,
                                 diagnostics=stream_diagnostics,
+                                reasoning_char_limit=(
+                                    GLM_REASONING_CHAR_LIMIT
+                                    if self.settings.provider == "glm"
+                                    else None
+                                ),
                             )
+                            content = stream_completion.content
+                            if stream_completion.reasoning_limit_reached:
+                                captured_reasoning = (
+                                    stream_completion.captured_reasoning
+                                )
                         finally:
                             if unregister_cancel is not None:
                                 unregister_cancel()
@@ -172,6 +194,21 @@ class LiteLLMClient:
                 )
                 raise
 
+        if captured_reasoning is not None:
+            print(
+                "GLM reasoning reached the "
+                f"{GLM_REASONING_CHAR_LIMIT:,}-character limit. "
+                "Entering non-thinking mode to finalize the response...",
+                flush=True,
+            )
+            content = self._complete_glm_without_thinking(
+                contextualized_messages,
+                captured_reasoning=captured_reasoning,
+                temperature=temperature,
+                cancellation_token=cancellation_token,
+                finalization_instruction=reasoning_fallback_instruction,
+            )
+
         if not content.strip():
             if log_empty_response:
                 logger.error("LLM returned an empty response; diagnostics=%s", diagnostics)
@@ -184,6 +221,113 @@ class LiteLLMClient:
             raise RuntimeError("LLM returned an empty response.")
         return content.strip()
 
+    def _complete_glm_without_thinking(
+        self,
+        contextualized_messages: list[ChatMessage],
+        *,
+        captured_reasoning: str,
+        temperature: float,
+        cancellation_token: CancellationToken | None,
+        finalization_instruction: str | None,
+    ) -> str:
+        """Ask GLM to finalize once after a runaway reasoning stream."""
+
+        continuation_messages = [
+            message.copy() for message in contextualized_messages
+        ]
+        continuation_messages.append(
+            {
+                "role": "user",
+                "content": _reasoning_continuation_prompt(
+                    captured_reasoning,
+                    finalization_instruction=finalization_instruction,
+                ),
+            }
+        )
+        request_payload = {
+            "model": self.settings.model,
+            "messages": continuation_messages,
+            "temperature": temperature,
+            "stream": False,
+            "chat_template_kwargs": {"enable_thinking": False},
+        }
+        diagnostics = {
+            "provider": self.settings.provider,
+            "model": self.settings.model,
+            "endpoint": _completion_url(self.settings.endpoint),
+            "reasoning_fallback": True,
+        }
+
+        for attempt in range(self.settings.max_retries + 1):
+            if cancellation_token is not None:
+                cancellation_token.raise_if_cancelled()
+            try:
+                with self.client.stream(
+                    "POST",
+                    diagnostics["endpoint"],
+                    headers={
+                        "Authorization": f"Bearer {self.settings.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=request_payload,
+                ) as response:
+                    with self._response_lock:
+                        self._active_response = response
+                    unregister_cancel = (
+                        cancellation_token.register(response.close)
+                        if cancellation_token is not None
+                        else None
+                    )
+                    try:
+                        if response.status_code >= 400:
+                            response.read()
+                        response.raise_for_status()
+                        response.read()
+                        payload = response.json()
+                    finally:
+                        if unregister_cancel is not None:
+                            unregister_cancel()
+                        with self._response_lock:
+                            if self._active_response is response:
+                                self._active_response = None
+                if cancellation_token is not None:
+                    cancellation_token.raise_if_cancelled()
+                content = _completion_content(payload)
+                if not content.strip():
+                    raise RuntimeError(
+                        "GLM returned an empty non-thinking fallback response."
+                    )
+                return content.strip()
+            except AnalysisCancelled:
+                raise
+            except Exception as exc:
+                if cancellation_token is not None and cancellation_token.cancelled:
+                    raise AnalysisCancelled("Analysis stopped by the user") from exc
+                response = getattr(exc, "response", None)
+                if response is not None:
+                    diagnostics["status_code"] = response.status_code
+                    diagnostics["response"] = _safe_error_response(response)
+
+                if attempt < self.settings.max_retries and _is_retryable_error(exc):
+                    delay = self.settings.retry_backoff_seconds * (2**attempt)
+                    logger.warning(
+                        "Transient non-thinking GLM fallback failure; retrying in "
+                        "%.1f seconds (attempt %d/%d); diagnostics=%s",
+                        delay,
+                        attempt + 1,
+                        self.settings.max_retries,
+                        diagnostics,
+                    )
+                    time.sleep(delay)
+                    continue
+
+                diagnostics["attempts"] = attempt + 1
+                logger.exception(
+                    "Non-thinking GLM fallback request failed; diagnostics=%s",
+                    diagnostics,
+                )
+                raise
+
     def complete_json(
         self,
         messages: list[ChatMessage],
@@ -193,6 +337,7 @@ class LiteLLMClient:
         log_empty_response: bool = True,
         reasoning_callback: ReasoningCallback | None = None,
         cancellation_token: CancellationToken | None = None,
+        reasoning_fallback_instruction: str | None = None,
     ) -> dict[str, Any]:
         text = self.complete(
             messages,
@@ -200,6 +345,7 @@ class LiteLLMClient:
             log_empty_response=log_empty_response,
             reasoning_callback=reasoning_callback,
             cancellation_token=cancellation_token,
+            reasoning_fallback_instruction=reasoning_fallback_instruction,
         )
         return extract_json_object(text, fallback_key=fallback_key)
 
@@ -254,7 +400,8 @@ def _stream_completion_content(
     reasoning_callback: ReasoningCallback | None,
     cancellation_token: CancellationToken | None = None,
     diagnostics: dict[str, Any] | None = None,
-) -> str:
+    reasoning_char_limit: int | None = None,
+) -> _StreamCompletion:
     """Collect answer content while forwarding reasoning SSE chunks.
 
     The optional diagnostics object contains metadata only.  It deliberately
@@ -262,9 +409,13 @@ def _stream_completion_content(
     """
 
     content_parts: list[str] = []
+    captured_reasoning_parts: list[str] | None = (
+        [] if reasoning_char_limit is not None else None
+    )
     event_count = 0
     ignored_line_count = 0
     reasoning_chars = 0
+    reasoning_limit_reached = False
     finish_reason: Any = None
     usage: Any = None
     delta_keys: set[str] = set()
@@ -308,14 +459,27 @@ def _stream_completion_content(
         reasoning = delta.get("reasoning_content")
         if not isinstance(reasoning, str):
             reasoning = delta.get("reasoning")
-        if isinstance(reasoning, str) and reasoning and reasoning_callback is not None:
-            reasoning_chars += len(reasoning)
-            try:
-                reasoning_callback(reasoning)
-            except Exception:
-                logger.debug("Reasoning callback failed", exc_info=True)
-        elif isinstance(reasoning, str):
-            reasoning_chars += len(reasoning)
+        if isinstance(reasoning, str) and reasoning:
+            forwarded_reasoning = reasoning
+            if reasoning_char_limit is not None:
+                remaining = max(reasoning_char_limit - reasoning_chars, 0)
+                forwarded_reasoning = reasoning[:remaining]
+                if captured_reasoning_parts is not None and forwarded_reasoning:
+                    captured_reasoning_parts.append(forwarded_reasoning)
+
+            reasoning_chars += len(forwarded_reasoning)
+            if forwarded_reasoning and reasoning_callback is not None:
+                try:
+                    reasoning_callback(forwarded_reasoning)
+                except Exception:
+                    logger.debug("Reasoning callback failed", exc_info=True)
+
+            if (
+                reasoning_char_limit is not None
+                and reasoning_chars >= reasoning_char_limit
+            ):
+                reasoning_limit_reached = True
+                break
 
         content = delta.get("content")
         if isinstance(content, str):
@@ -328,6 +492,7 @@ def _stream_completion_content(
                 "event_count": event_count,
                 "ignored_line_count": ignored_line_count,
                 "reasoning_chars": reasoning_chars,
+                "reasoning_limit_reached": reasoning_limit_reached,
                 "content_chars": len(content),
                 "finish_reason": finish_reason,
                 "choice_keys": sorted(choice_keys),
@@ -335,7 +500,40 @@ def _stream_completion_content(
                 "usage": usage,
             }
         )
-    return content
+    return _StreamCompletion(
+        content=content,
+        captured_reasoning=(
+            "".join(captured_reasoning_parts)
+            if captured_reasoning_parts is not None
+            else ""
+        ),
+        reasoning_limit_reached=reasoning_limit_reached,
+    )
+
+
+def _reasoning_continuation_prompt(
+    captured_reasoning: str,
+    *,
+    finalization_instruction: str | None,
+) -> str:
+    """Build the one-shot non-thinking instruction without logging its content."""
+
+    instruction = finalization_instruction or (
+        "Complete the original task now. Follow the original output contract exactly "
+        "and output nothing else."
+    )
+    return (
+        "The previous thinking-enabled attempt reached its reasoning limit before "
+        "returning the final response. Every original message above remains available "
+        "and authoritative. Treat the captured reasoning as unfinished working notes, "
+        "not as a final answer.\n\n"
+        "<captured_reasoning>\n"
+        f"{captured_reasoning}\n"
+        "</captured_reasoning>\n\n"
+        "FINALIZATION INSTRUCTIONS — HIGHEST PRIORITY:\n"
+        f"{instruction}\n\n"
+        "Do not continue the reasoning. Produce the required final JSON now."
+    )
 
 
 def _format_stream_diagnostics(diagnostics: dict[str, Any]) -> str:
@@ -345,6 +543,7 @@ def _format_stream_diagnostics(diagnostics: dict[str, Any]) -> str:
         "event_count",
         "ignored_line_count",
         "reasoning_chars",
+        "reasoning_limit_reached",
         "content_chars",
         "finish_reason",
         "choice_keys",

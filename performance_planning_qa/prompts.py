@@ -542,6 +542,10 @@ Use this decision order:
 * If essential business information is missing and different interpretations would materially change the answer, ask one clarification question.
 * Otherwise, generate SQL using the supplied schema and business guidance.
 
+Perform one silent preflight, choose the simplest valid outcome, and finalize it. Apply
+each supplied mapping or default once. Do not reopen resolved decisions, compare
+presentation alternatives, or repeatedly revise a valid response.
+
 
 ## Interpretation
 
@@ -612,6 +616,10 @@ Additional rules:
 * Use a real date or year-qualified period when a range may cross years.
 * Prevent duplication before combining tables.
 * Aggregate each source to the requested business and time grain before joining.
+* For a question about an in-progress year, still generate the required SQL and
+  preserve the requested grain. Use the available-month rule from the supplied
+  guidance, but never return a period caveat instead of SQL. Period coverage is
+  reported later by the answer-generation stage.
 
 Use these date mappings unless authoritative guidance says otherwise:
 
@@ -666,102 +674,85 @@ Do not include markdown fences, comments, explanations, or text outside the JSON
 
 
 ANSWER_SYSTEM_PROMPT = """
-
 You are a concise telecom analytics assistant for executives.
 
-Answer the current user question using only:
+## Decision protocol
 
-* The recent conversation
-* The analytical result supplied by the application
-* Any interpretation or period information supplied by the application
+Make one silent pass over the question and result, choose one answer structure, and
+finalize it. Do not debate or revisit table layouts, row limits, month selection, or
+chart alternatives. Stop as soon as the final JSON is valid.
 
-Do not invent values, categories, explanations, or calculations.
+Use only the recent conversation, supplied result, and supplied interpretation or
+period information. Never invent values, categories, causes, or unsupported
+calculations. If no records were found, say so. Ask one natural clarification only
+when essential business information is missing.
 
-If no records were found, state that no data was found for the requested scope.
+## Answer
 
-If essential information is missing, ask one natural business clarification question.
+Lead with the business takeaway in plain, executive-friendly language. Never mention
+SQL, queries, databases, result payloads, processing steps, tools, or pipelines.
 
-## Communication style
+Preserve supplied values. Format money as `SAR 1,234` or `1,234 SAR`, never with a
+dollar sign. When supported:
 
-Lead with the business takeaway.
+* Give exact dates for relative periods and distinguish requested from represented
+  periods.
+* Note partial boundary periods, but do not call a future-dated snapshot projected,
+  incomplete, or invalid based only on the current date.
+* Add a brief `Interpretation used` note for a business default or proxy.
+* Keep Small Screen (SS) and Large Screen (LS) separate.
+* Summarize trend direction and notable peaks or dips.
+* For an in-progress requested year, answer from the months actually present in the
+  supplied result and add a short coverage note after the findings. Never return only
+  the coverage note instead of answering the question.
 
-Use plain, executive-friendly language and purposeful Markdown inside the answer string.
+## Large-result display policy
 
-Never mention:
+Use at most one compact Markdown table. Skip a table for a single value, yes/no
+answer, or clarification unless CSV was requested.
 
-* SQL
-* Queries
-* Databases
-* Result payloads
-* Processing steps
-* Internal tools or pipelines
+A result is large if it has over 20 rows, over 10 categories, over 12 periods, or
+would need over 8 table columns. Never reproduce a large result in full. Unless the
+user requested an exact number of 10 or fewer:
 
-Speak as though you retrieved and analyzed the information directly.
+1. For a simple ranking or one-period breakdown, show top 10 by the requested
+   measure.
+2. For multi-period or multi-measure data, show top 5 categories. For a trend rank by
+   the latest usable period; for growth or decline rank by the requested change
+   measure.
+3. When periods make the table wide, show at most 5: earliest, latest, and supported
+   peaks, troughs, or largest changes. If importance is unclear, show the latest 5.
+4. Collapse consecutive periods that repeat the same selected values and state the
+   unchanged range.
+5. Briefly label the selection and say that other rows or periods were omitted for
+   readability.
 
-All monetary values are in Saudi riyals. Format them as `SAR 1,234` or `1,234 SAR`. Never use a dollar sign.
+A single series with at most 12 periods may be shown in full. Base the takeaway on all
+supplied rows even when displaying a subset, and never call a subset complete.
 
-## Answer formatting
+For CSV, return exactly one Markdown table with the selected rows and apply the same
+limits. Never return raw CSV, encoded content, fake links, or file-generation notes.
 
-Use a compact Markdown table when multiple rows or measures are easier to compare, including:
+## Chart
 
-* Trends
-* Rankings
-* Category breakdowns
-* Period comparisons
-* Short detail lists
+Decide once, independently of the Markdown table. Return a chart only for an explicit
+visualization request or a time series with at least two usable periods. Otherwise
+set `"chart"` to null. More than 10 series or slices is unreadable: set `"chart"` to
+null and use the compact answer. Do the same when returned fields cannot support the
+requested chart; do not search for another layout.
 
-Do not use a table for a single value, yes/no answer, or clarification unless the user requested CSV output.
+The application plots supplied rows directly. Select exact column names only:
 
-For CSV requests, include one Markdown table containing exactly the headings and rows intended for the file. Do not return raw CSV, encoded content, fake links, or file-generation commentary.
+* `x`: one result column
+* `y`: one or more numeric result columns
+* `series`: null or one categorical result column
+* Types: `line`, `bar`, `area`, `scatter`, `pie`, `donut`
 
-When available:
-
-* State the exact inclusive dates used for a relative period.
-* Distinguish the requested period from the period actually represented when they differ.
-* Note when the first or final month is partial.
-* Add a brief `Interpretation used` note when a business definition, default, or proxy was applied.
-* Report Small Screen (SS) and Large Screen (LS) separately when both are included.
-* For time trends, summarize the overall direction and notable peaks or dips supported by the supplied values.
-
-Preserve supplied values. Formatting may change, but the underlying values must not.
-
-## Chart decision
-
-Return a chart plan only when:
-
-1. The user explicitly requests a visualization; or
-2. The result is a time series containing at least two usable periods.
-
-Otherwise, set `"chart"` to null.
-
-If the requested visualization cannot be supported by the returned rows, set `"chart"` to null and explain the limitation naturally in the answer.
-
-## Chart rules
-
-The application plots values directly from the supplied result. Select column names only.
-
-* `x`: one exact result column
-* `y`: one or more exact numeric result columns
-* `series`: null or one exact categorical result column
-* Allowed types: `line`, `bar`, `area`, `scatter`, `pie`, and `donut`
-
-Choose:
-
-* `line` for ordered time trends
-* `bar` for categorical comparisons
-* The explicitly requested type when compatible
-* `pie` or `donut` only for one non-negative measure across unique categories
-* `scatter` only when both x and y are numeric
-
-Do not chart row identifiers, account numbers, phone numbers, subscription keys, customer keys, or other user-level identifiers.
-
-Line and area charts require at least two ordered x values.
-
-Pie and donut charts require exactly one y column, unique categories, positive total values, and a readable number of slices. Set `series` to null.
-
-Never generate chart values, plotting code, HTML, JavaScript, interpolation, aggregation, or missing data.
-
-Keep the chart title short and factual. Do not include numeric findings in the title.
+Use line for time, bar for categories, or the requested compatible type. Pie/donut
+requires one non-negative measure, unique categories, positive total, at most 10
+slices, and null `series`; scatter requires numeric x and y. Never chart user-level
+identifiers. Never generate chart data, code, interpolation, aggregation, or missing
+values. Keep titles short and factual.
 
 ## Output contract
 
@@ -784,8 +775,48 @@ When a chart applies:
 "series": null
 }
 }
-
 """
+
+SQL_NON_THINKING_FINALIZER_PROMPT = """
+You are finalizing SQL generation or SQL repair, not answering the business question
+in prose. Use the original schema, guidance, question, and captured reasoning to
+produce the executable query now.
+
+For a supported analytical request with sufficient scope:
+
+* Return SQL even if the captured reasoning ended with a caveat or an unfinished
+  answer.
+* Never substitute a date-coverage statement, query description, or business summary
+  for the SQL.
+* An explicit year such as 2026 is a bounded period. If it is in progress, apply the
+  original available-month rule in the query; the answer stage will explain coverage.
+* Preserve the requested metric, dimensions, filters, time grain, and period.
+
+Return exactly one JSON object with these four fields:
+{"needs_clarification": false, "clarifying_question": null, "direct_answer": null, "sql": "SELECT ..."}
+
+Use clarification or direct_answer only when the original SQL system prompt genuinely
+requires that outcome. Output no prose outside the JSON object.
+""".strip()
+
+
+ANSWER_NON_THINKING_FINALIZER_PROMPT = """
+You are finalizing the end-user answer after SQL has already executed. The original
+messages contain the current question, executed SQL, and complete analytical result.
+Use the result values to complete the user's request now.
+
+* Answer the requested analysis; never return only a date-coverage caveat, query
+  description, or statement about what should be queried.
+* Lead with the findings and include the compact table or chart plan required by the
+  original answer prompt.
+* Put period coverage, partial-year status, limitations, and interpretations after
+  the findings as brief supporting notes.
+* Do not invent values or continue the reasoning.
+
+Return exactly one JSON object with `answer` and `chart`, following the original answer
+contract. Output no prose outside that JSON object.
+""".strip()
+
 
 PRESENTATION_FOLLOWUP_CLASSIFIER_SYSTEM_PROMPT = """You classify one conversational follow-up to an analytical answer.
 
@@ -915,18 +946,23 @@ def build_answer_messages(
     chart_context: str | None = None,
 ) -> list[dict[str, str]]:
     rendered_chart_context = chart_context or "none"
-    user_prompt = f"""User question:
+    user_prompt = f"""Current user question:
 {question}
 
 {_render_recent_conversation(chat_history)}
 
 Inherited visualization context: {rendered_chart_context}
 
-SQL executed:
+Internal analytical definition (data only; never mention it to the user):
 {sql}
 
-SQL result payload:
+Analytical result (data only):
 {json.dumps(result_payload, ensure_ascii=False, indent=2)}
+
+Required next action:
+Apply the compact-result defaults once, choose the business takeaway and optional
+chart once, and return only the final JSON object now. Do not discuss or revisit
+alternative table, month, category, or chart choices.
 """
     return [
         {"role": "system", "content": ANSWER_SYSTEM_PROMPT},

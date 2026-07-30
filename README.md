@@ -25,6 +25,17 @@ When the selected provider has streaming enabled and returns GLM's
 renders that text live in a "Thinking" panel. While an analysis is running, a
 Stop button cancels model streaming and the active Teradata request.
 
+For GLM only, each SQL-generation or answer-generation stream has a
+100,000-character reasoning safety limit. If a stream reaches that limit, the
+backend closes it, preserves exactly the reasoning already shown, and sends one
+non-streaming follow-up with the original messages and captured reasoning using
+`chat_template_kwargs: {"enable_thinking": false}`. For answer generation, those
+original messages include the question, executed SQL, and complete analytical result.
+The final instruction is phase-specific and placed after the captured reasoning: SQL
+generation/repair must return executable SQL JSON, while answer generation must answer
+from the returned rows and treat period coverage only as a supporting note. MiniMax
+behavior is unchanged.
+
 Structured LLM responses are parsed as strict JSON first. If parsing fails, the
 app uses `json-repair` for common issues such as unquoted keys, single quotes,
 trailing commas, surrounding prose, or an unterminated final object.
