@@ -30,6 +30,7 @@ SQL_DOMAIN_GUIDANCE = """Curated performance-planning table grain and join guida
 - Choose dimensions according to the business subject of the question. For an overall postpaid package or package-performance question that is not specifically about a churn attribute, use the postpaid base or sales PROD_KEY enriched to CRM_PROD_Name through D_RM_PSD_PRODUCTS, according to the lifecycle being measured. Use the churn table's PACKAGE_ANME only for churn-specific package questions. Make this choice yourself rather than asking the user to select a schema column.
 - When an executive business term has no exact measure in the supplied schema, use the closest defensible available proxy only when it can answer the direction of the question without misrepresentation. Preserve a clear business label for the proxy and ensure the final answer discloses the interpretation. Never label revenue as actual profit when cost or margin data is unavailable.
 - For "profitable growth" when the schema has revenue but no cost, margin, or profit measure, use growth in line revenue excluding devices as the default service-revenue proxy. For "growth over" a bounded multi-month window without an explicit comparison baseline, compare the earliest and latest available monthly observations inside that window, return both values plus absolute and percentage change, and rank only positive growth as growth drivers. Do not silently compare against a preceding window unless the user asks for that comparison.
+- Interpret the singular phrases "last month" and "previous month" as the immediately preceding complete calendar month, never the current month or a rolling one-month window. For example, when the supplied current date is any day in July 2026, both phrases mean DATE '2026-06-01' through DATE '2026-06-30'. This singular-month rule takes precedence over the rolling-window rule for "last N months" and "previous N months".
 - Resolve relative periods from the current date supplied by the application. Unless the user explicitly asks for complete or calendar months, interpret both "last N months" and "previous N months" as a rolling window ending on the supplied current date and beginning on the same day N months earlier. Resolve the boundaries to explicit DATE literals in generated SQL. For example, with a supplied current date of 2026-07-14, "last 6 months" means DATE '2026-01-14' through DATE '2026-07-14', and "previous 3 months" means DATE '2026-04-14' through DATE '2026-07-14'.
 - If the user explicitly asks for the previous N complete months, exclude the current partial month and use the N full calendar months immediately before it. Do not silently replace a rolling-month request with complete calendar months.
 - F_RM_PS_MTHLY_REV is already monthly at line/account grain. REF_DATE is the monthly reference date, usually month-end in the samples. For a standalone monthly revenue question such as June 2026 revenue, use F_RM_PS_MTHLY_REV directly with REF_DATE = DATE '2026-06-30' or a bounded June date range. Do not join to base unless the user explicitly asks for a base-aligned revenue analysis or the documented screen-type default requires separate SS and LS results.
@@ -766,6 +767,13 @@ You are finalizing SQL generation or SQL repair, not answering the business ques
 in prose. Use the original schema, guidance, question, and captured reasoning to
 produce the executable query now.
 
+Before finalizing, re-read every original message above. It still contains the full
+SQL system prompt, raw schema and samples, curated SQL guidance, authoritative
+business-term mappings, few-shot join examples, analyst-reviewed question-to-SQL
+examples, recent conversation, current question, and output contract. Apply those
+sources directly; do not rely only on the captured reasoning and do not invent rules
+that conflict with them.
+
 For a supported analytical request with sufficient scope:
 
 * Return SQL even if the captured reasoning ended with a caveat or an unfinished
@@ -789,10 +797,15 @@ You are finalizing the end-user answer after SQL has already executed. The origi
 messages contain the current question, executed SQL, and complete analytical result.
 Use the result values to complete the user's request now.
 
+Before finalizing, re-read every original message above. It still contains the full
+answer system prompt, recent conversation, visualization context, current question,
+executed SQL, complete SQL-result payload, formatting rules, chart rules, and output
+contract. Apply those sources directly; do not rely only on the captured reasoning.
+
 * Answer the requested analysis; never return only a date-coverage caveat, query
   description, or statement about what should be queried.
-* Lead with the findings and include the compact table or chart plan required by the
-  original answer prompt.
+* Lead with the findings and include the table or chart plan required by the original
+  answer prompt.
 * Put period coverage, partial-year status, limitations, and interpretations after
   the findings as brief supporting notes.
 * Do not invent values or continue the reasoning.

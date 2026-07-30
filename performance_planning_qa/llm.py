@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import logging
 import re
@@ -20,7 +20,7 @@ from performance_planning_qa.config import LLMSettings
 logger = logging.getLogger(__name__)
 
 RETRYABLE_STATUS_CODES = frozenset({502, 503, 504})
-GLM_REASONING_CHAR_LIMIT = 60_000
+GLM_REASONING_CHAR_LIMIT = 50_000
 
 ChatMessage = dict[str, str]
 ReasoningCallback = Callable[[str], None]
@@ -37,12 +37,17 @@ def _with_current_date_context(messages: list[ChatMessage]) -> list[ChatMessage]
     """Return a copy of the messages with fresh date context for the LLM."""
 
     now = datetime.now().astimezone()
+    current_month_start = now.date().replace(day=1)
+    previous_month_end = current_month_start - timedelta(days=1)
+    previous_month_start = previous_month_end.replace(day=1)
     date_context = (
         f"Current date: {now.date().isoformat()} ({now.strftime('%A')}). "
         "Use this date to resolve relative time expressions such as today, yesterday, "
-        "this month, this year, last N months, and previous N months. Do not assume the "
-        "supplied data is current or complete "
-        "through this date."
+        "this month, this year, last N months, and previous N months. The singular "
+        f'phrase "last month" means the immediately preceding complete calendar month: '
+        f"{previous_month_start.isoformat()} through {previous_month_end.isoformat()}; "
+        "it never means the current month or a rolling one-month window. Do not assume "
+        "the supplied data is current or complete through this date."
     )
 
     contextualized = [message.copy() for message in messages]
