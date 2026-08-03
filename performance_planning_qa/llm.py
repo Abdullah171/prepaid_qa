@@ -89,6 +89,7 @@ class LiteLLMClient:
         messages: list[ChatMessage],
         *,
         temperature: float,
+        reasoning_effort: str | None = None,
         log_empty_response: bool = True,
         reasoning_callback: ReasoningCallback | None = None,
         cancellation_token: CancellationToken | None = None,
@@ -103,6 +104,8 @@ class LiteLLMClient:
             "temperature": temperature,
             "stream": self.settings.stream,
         }
+        if reasoning_effort is not None:
+            request_payload["reasoning_effort"] = reasoning_effort
         diagnostics = {
             "provider": self.settings.provider,
             "model": self.settings.model,
@@ -338,6 +341,7 @@ class LiteLLMClient:
         messages: list[ChatMessage],
         *,
         temperature: float,
+        reasoning_effort: str | None = None,
         fallback_key: str | None = None,
         log_empty_response: bool = True,
         reasoning_callback: ReasoningCallback | None = None,
@@ -347,6 +351,7 @@ class LiteLLMClient:
         text = self.complete(
             messages,
             temperature=temperature,
+            reasoning_effort=reasoning_effort,
             log_empty_response=log_empty_response,
             reasoning_callback=reasoning_callback,
             cancellation_token=cancellation_token,

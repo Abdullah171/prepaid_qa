@@ -839,6 +839,9 @@ class NL2SQLPipeline:
             if is_answer_generation
             else SQL_NON_THINKING_FINALIZER_PROMPT
         )
+        completion_options = {}
+        if is_answer_generation and self.settings.llm.provider == "glm":
+            completion_options["reasoning_effort"] = "low"
         return self.llm.complete_json(
             messages,
             temperature=temperature,
@@ -846,6 +849,7 @@ class NL2SQLPipeline:
             reasoning_callback=self._reasoning_callback,
             cancellation_token=self._cancellation_token,
             reasoning_fallback_instruction=reasoning_fallback_instruction,
+            **completion_options,
         )
 
 
