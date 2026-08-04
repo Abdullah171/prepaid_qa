@@ -27,7 +27,7 @@ Stop button cancels model streaming and the active Teradata request.
 The sidebar's **Thinking** toggle is enabled by default. When it is off, every LLM
 request for that question includes
 `chat_template_kwargs: {"enable_thinking": false}` and the live reasoning panel is
-hidden.
+replaced by an animated progress indicator.
 
 For GLM only, each SQL-generation or answer-generation stream has a
 50,000-character reasoning safety limit. If a stream reaches that limit, the

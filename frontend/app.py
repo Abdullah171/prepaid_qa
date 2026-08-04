@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import logging
 import os
 from pathlib import Path
@@ -1017,7 +1018,18 @@ def _render_active_analysis() -> None:
                 ):
                     is_expanded = not is_expanded
                     st.session_state[expanded_key] = is_expanded
-            st.caption(snapshot.progress)
+                st.caption(snapshot.progress)
+            else:
+                st.markdown(
+                    (
+                        '<div class="ppqa-non-thinking-progress" role="status" '
+                        'aria-live="polite">'
+                        '<span class="ppqa-progress-spinner" aria-hidden="true"></span>'
+                        f"<span>{html.escape(snapshot.progress)}</span>"
+                        "</div>"
+                    ),
+                    unsafe_allow_html=True,
+                )
             if is_expanded:
                 with st.container(
                     key="live-thinking-content",

@@ -288,6 +288,34 @@ div[data-testid="stChatInput"] {
   }
 }
 
+.ppqa-non-thinking-progress {
+  align-items: center;
+  color: var(--ppqa-muted);
+  display: inline-flex;
+  font-size: 0.86rem;
+  gap: 0.65rem;
+  min-height: 2.25rem;
+}
+
+.ppqa-progress-spinner {
+  animation: ppqa-thinking-spin 700ms linear infinite;
+  border: 2px solid rgba(79, 0, 140, 0.2);
+  border-radius: 50%;
+  border-top-color: var(--ppqa-stc-purple);
+  box-sizing: border-box;
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 1.15rem;
+  width: 1.15rem;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ppqa-progress-spinner {
+    animation-duration: 1.4s;
+  }
+}
+
 /* Stable live-reasoning control. The spinner is CSS-only, so polling reruns do
    not restart it or switch it between status icons. */
 .st-key-live-thinking .stButton > button {
