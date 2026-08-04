@@ -154,8 +154,7 @@ def _init_state() -> None:
         os.getenv("PPQA_API_BASE_URL", DEFAULT_API_BASE_URL),
     )
     st.session_state.setdefault("active_session_id", None)
-    st.session_state.setdefault("dry_run", False)
-    st.session_state.setdefault("enable_thinking", True)
+    st.session_state.setdefault("enable_thinking", False)
     st.session_state.setdefault("show_source", False)
     st.session_state.setdefault("sessions_cache", None)
     st.session_state.setdefault("sessions_loaded_at", 0.0)
@@ -320,12 +319,6 @@ def _sidebar(client: ApiClient, *, analysis_running: bool) -> None:
                 on_change=_reset_frontend_cache,
                 help="Development override. Configure PPQA_API_BASE_URL in production.",
             )
-        st.toggle(
-            "Dry run",
-            key="dry_run",
-            disabled=analysis_running,
-            help="Generate SQL without executing it.",
-        )
         st.toggle(
             "Thinking",
             key="enable_thinking",
@@ -933,8 +926,8 @@ def _begin_analysis(prompt: str) -> None:
     if runner.active_job() is not None:
         st.rerun()
     session_id = st.session_state.get("active_session_id")
-    dry_run = bool(st.session_state.get("dry_run", False))
-    enable_thinking = bool(st.session_state.get("enable_thinking", True))
+    dry_run = False
+    enable_thinking = bool(st.session_state.get("enable_thinking", False))
     st.session_state.failed_analysis = None
 
     if not session_id:
