@@ -136,6 +136,7 @@ class NL2SQLPipeline:
         self._progress_callback: ProgressCallback | None = None
         self._reasoning_callback: ReasoningCallback | None = None
         self._cancellation_token: CancellationToken | None = None
+        self._enable_thinking = True
 
     @classmethod
     def from_env(cls) -> NL2SQLPipeline:
@@ -159,6 +160,7 @@ class NL2SQLPipeline:
         question: str,
         *,
         dry_run: bool = False,
+        enable_thinking: bool = True,
         chat_history: list[ChatTurn] | None = None,
         previous_result: dict[str, Any] | None = None,
         progress_callback: ProgressCallback | None = None,
@@ -170,6 +172,7 @@ class NL2SQLPipeline:
         self._progress_callback = progress_callback
         self._reasoning_callback = reasoning_callback
         self._cancellation_token = cancellation_token
+        self._enable_thinking = enable_thinking
         self._report_progress("Fetching relevant information")
         if not dry_run:
             presentation_followup = self._presentation_followup_result(
@@ -460,6 +463,9 @@ class NL2SQLPipeline:
     ) -> tuple[str, str | None]:
         """Use the LLM for natural presentation requests and scope changes."""
 
+        completion_options = {}
+        if not self._enable_thinking:
+            completion_options["enable_thinking"] = False
         try:
             payload = self.llm.complete_json(
                 build_presentation_followup_messages(
@@ -470,6 +476,7 @@ class NL2SQLPipeline:
                 log_empty_response=False,
                 reasoning_callback=None,
                 cancellation_token=self._cancellation_token,
+                **completion_options,
             )
         except AnalysisCancelled:
             raise
@@ -840,7 +847,13 @@ class NL2SQLPipeline:
             else SQL_NON_THINKING_FINALIZER_PROMPT
         )
         completion_options = {}
-        if is_answer_generation and self.settings.llm.provider == "glm":
+        if not self._enable_thinking:
+            completion_options["enable_thinking"] = False
+        if (
+            is_answer_generation
+            and self.settings.llm.provider == "glm"
+            and self._enable_thinking
+        ):
             completion_options["reasoning_effort"] = "low"
         return self.llm.complete_json(
             messages,

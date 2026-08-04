@@ -49,6 +49,7 @@ def stream_inprocess_session_ask(
     question: str,
     *,
     dry_run: bool = False,
+    enable_thinking: bool = True,
     cancellation_token: CancellationToken | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Bridge pipeline progress out of TestClient's buffered ASGI transport."""
@@ -89,6 +90,7 @@ def stream_inprocess_session_ask(
                 session_id,
                 question,
                 dry_run=dry_run,
+                enable_thinking=enable_thinking,
                 request=request,
                 progress_callback=report_progress,
                 reasoning_callback=report_reasoning,

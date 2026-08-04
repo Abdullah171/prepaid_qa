@@ -46,6 +46,7 @@ DEFAULT_CORS_ORIGINS = (
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=4_000)
     dry_run: bool = False
+    enable_thinking: bool = True
     request_id: str | None = Field(default=None, max_length=128)
 
 
@@ -259,6 +260,7 @@ async def ask(request_body: AskRequest, request: Request) -> dict[str, Any]:
             pipeline.ask,
             question,
             dry_run=request_body.dry_run,
+            enable_thinking=request_body.enable_thinking,
         )
     except Exception as exc:
         logger.exception("Failed to answer question")
@@ -343,6 +345,7 @@ async def ask_session(
         session_id,
         question,
         dry_run=request_body.dry_run,
+        enable_thinking=request_body.enable_thinking,
         request=request,
     )
 
@@ -381,6 +384,7 @@ async def ask_session_stream(
                 session_id,
                 question,
                 dry_run=request_body.dry_run,
+                enable_thinking=request_body.enable_thinking,
                 request=request,
                 progress_callback=report_progress,
                 reasoning_callback=report_reasoning,
@@ -459,6 +463,7 @@ async def _ask_session_impl(
     question: str,
     *,
     dry_run: bool,
+    enable_thinking: bool = True,
     request: Request,
     progress_callback: Callable[[str], None] | None = None,
     reasoning_callback: Callable[[str], None] | None = None,
@@ -494,6 +499,7 @@ async def _ask_session_impl(
             pipeline.ask,
             question,
             dry_run=dry_run,
+            enable_thinking=enable_thinking,
             chat_history=chat_history,
             previous_result=previous_result,
             progress_callback=progress_callback,

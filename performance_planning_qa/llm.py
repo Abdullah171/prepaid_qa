@@ -20,7 +20,7 @@ from performance_planning_qa.config import LLMSettings
 logger = logging.getLogger(__name__)
 
 RETRYABLE_STATUS_CODES = frozenset({502, 503, 504})
-GLM_REASONING_CHAR_LIMIT = 50_000
+GLM_REASONING_CHAR_LIMIT = 40_000
 
 ChatMessage = dict[str, str]
 ReasoningCallback = Callable[[str], None]
@@ -89,6 +89,7 @@ class LiteLLMClient:
         messages: list[ChatMessage],
         *,
         temperature: float,
+        enable_thinking: bool = True,
         reasoning_effort: str | None = None,
         log_empty_response: bool = True,
         reasoning_callback: ReasoningCallback | None = None,
@@ -106,6 +107,8 @@ class LiteLLMClient:
         }
         if reasoning_effort is not None:
             request_payload["reasoning_effort"] = reasoning_effort
+        if not enable_thinking:
+            request_payload["chat_template_kwargs"] = {"enable_thinking": False}
         diagnostics = {
             "provider": self.settings.provider,
             "model": self.settings.model,
@@ -341,6 +344,7 @@ class LiteLLMClient:
         messages: list[ChatMessage],
         *,
         temperature: float,
+        enable_thinking: bool = True,
         reasoning_effort: str | None = None,
         fallback_key: str | None = None,
         log_empty_response: bool = True,
@@ -348,6 +352,9 @@ class LiteLLMClient:
         cancellation_token: CancellationToken | None = None,
         reasoning_fallback_instruction: str | None = None,
     ) -> dict[str, Any]:
+        completion_options = {}
+        if not enable_thinking:
+            completion_options["enable_thinking"] = False
         text = self.complete(
             messages,
             temperature=temperature,
@@ -356,6 +363,7 @@ class LiteLLMClient:
             reasoning_callback=reasoning_callback,
             cancellation_token=cancellation_token,
             reasoning_fallback_instruction=reasoning_fallback_instruction,
+            **completion_options,
         )
         return extract_json_object(text, fallback_key=fallback_key)
 

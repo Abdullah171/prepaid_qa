@@ -105,11 +105,15 @@ class ApiClient:
         question: str,
         *,
         dry_run: bool = False,
+        enable_thinking: bool = True,
     ) -> dict[str, Any]:
+        payload = {"question": question, "dry_run": dry_run}
+        if not enable_thinking:
+            payload["enable_thinking"] = False
         return self._request(
             "POST",
             f"/sessions/{session_id}/ask",
-            json={"question": question, "dry_run": dry_run},
+            json=payload,
         )
 
     def ask_session_stream(
@@ -118,6 +122,7 @@ class ApiClient:
         question: str,
         *,
         dry_run: bool = False,
+        enable_thinking: bool = True,
         request_id: str | None = None,
         cancellation_token: CancellationToken | None = None,
     ) -> Iterator[dict[str, Any]]:
@@ -131,6 +136,8 @@ class ApiClient:
             "dry_run": dry_run,
             "request_id": request_id,
         }
+        if not enable_thinking:
+            payload["enable_thinking"] = False
         if self.base_url == INPROCESS_API_BASE_URL:
             try:
                 from performance_planning_qa.inprocess_api import (
@@ -141,6 +148,7 @@ class ApiClient:
                     session_id,
                     question,
                     dry_run=dry_run,
+                    enable_thinking=enable_thinking,
                     cancellation_token=cancellation_token,
                 )
             except ApiError:

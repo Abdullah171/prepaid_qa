@@ -24,6 +24,10 @@ When the selected provider has streaming enabled and returns GLM's
 `delta.reasoning_content` or MiniMax's `delta.reasoning`, the Streamlit interface
 renders that text live in a "Thinking" panel. While an analysis is running, a
 Stop button cancels model streaming and the active Teradata request.
+The sidebar's **Thinking** toggle is enabled by default. When it is off, every LLM
+request for that question includes
+`chat_template_kwargs: {"enable_thinking": false}` and the live reasoning panel is
+hidden.
 
 For GLM only, each SQL-generation or answer-generation stream has a
 50,000-character reasoning safety limit. If a stream reaches that limit, the
@@ -162,6 +166,14 @@ Ask a question:
 curl -X POST http://127.0.0.1:8000/ask \
   -H "Content-Type: application/json" \
   -d '{"question":"What is monthly total revenue by REF_DATE for 2024?"}'
+```
+
+Disable model thinking for a question:
+
+```bash
+curl -X POST http://127.0.0.1:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What is 1+1?","enable_thinking":false}'
 ```
 
 Generate and validate SQL without executing it:

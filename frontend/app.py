@@ -154,6 +154,7 @@ def _init_state() -> None:
     )
     st.session_state.setdefault("active_session_id", None)
     st.session_state.setdefault("dry_run", False)
+    st.session_state.setdefault("enable_thinking", True)
     st.session_state.setdefault("show_source", False)
     st.session_state.setdefault("sessions_cache", None)
     st.session_state.setdefault("sessions_loaded_at", 0.0)
@@ -323,6 +324,12 @@ def _sidebar(client: ApiClient, *, analysis_running: bool) -> None:
             key="dry_run",
             disabled=analysis_running,
             help="Generate SQL without executing it.",
+        )
+        st.toggle(
+            "Thinking",
+            key="enable_thinking",
+            disabled=analysis_running,
+            help="Allow the model to reason before returning its answer.",
         )
         st.toggle(
             "See source",
@@ -926,6 +933,7 @@ def _begin_analysis(prompt: str) -> None:
         st.rerun()
     session_id = st.session_state.get("active_session_id")
     dry_run = bool(st.session_state.get("dry_run", False))
+    enable_thinking = bool(st.session_state.get("enable_thinking", True))
     st.session_state.failed_analysis = None
 
     if not session_id:
@@ -951,6 +959,7 @@ def _begin_analysis(prompt: str) -> None:
             session_id=session_id,
             question=prompt,
             dry_run=dry_run,
+            enable_thinking=enable_thinking,
         )
     except Exception as exc:
         _record_failed_analysis(session_id, prompt, dry_run, exc)
@@ -995,17 +1004,19 @@ def _render_active_analysis() -> None:
 
     with st.chat_message("assistant", avatar=_message_avatar("assistant")):
         with st.container(key="live-thinking"):
-            expanded_key = f"thinking-expanded-{snapshot.job_id}"
-            is_expanded = bool(st.session_state.get(expanded_key, False))
-            if st.button(
-                "Click to hide thinking" if is_expanded else "Click to view thinking",
-                key=f"thinking-toggle-{snapshot.job_id}",
-                help="Click to show or hide live reasoning",
-                type="tertiary",
-                icon=":material/progress_activity:",
-            ):
-                is_expanded = not is_expanded
-                st.session_state[expanded_key] = is_expanded
+            is_expanded = False
+            if job.enable_thinking:
+                expanded_key = f"thinking-expanded-{snapshot.job_id}"
+                is_expanded = bool(st.session_state.get(expanded_key, False))
+                if st.button(
+                    "Click to hide thinking" if is_expanded else "Click to view thinking",
+                    key=f"thinking-toggle-{snapshot.job_id}",
+                    help="Click to show or hide live reasoning",
+                    type="tertiary",
+                    icon=":material/progress_activity:",
+                ):
+                    is_expanded = not is_expanded
+                    st.session_state[expanded_key] = is_expanded
             st.caption(snapshot.progress)
             if is_expanded:
                 with st.container(

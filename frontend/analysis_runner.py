@@ -34,6 +34,7 @@ class AnalysisJob:
     session_id: str
     question: str
     dry_run: bool
+    enable_thinking: bool = True
     started_at: float = field(default_factory=time.monotonic)
     _progress: str = field(default="Connecting to the analysis service", init=False)
     _reasoning_parts: list[str] = field(default_factory=list, init=False, repr=False)
@@ -123,6 +124,7 @@ class AnalysisRunner:
         session_id: str,
         question: str,
         dry_run: bool,
+        enable_thinking: bool = True,
     ) -> AnalysisJob:
         with self._lock:
             if self._active_job is not None:
@@ -133,6 +135,7 @@ class AnalysisRunner:
                 session_id=session_id,
                 question=question,
                 dry_run=dry_run,
+                enable_thinking=enable_thinking,
             )
             self._active_job = job
             try:
@@ -196,6 +199,7 @@ def _run_analysis(job: AnalysisJob) -> dict[str, Any]:
             job.session_id,
             job.question,
             dry_run=job.dry_run,
+            enable_thinking=job.enable_thinking,
             request_id=job.job_id,
             cancellation_token=job.cancellation_token,
         ):
