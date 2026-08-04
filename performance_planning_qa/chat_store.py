@@ -1,4 +1,4 @@
-"""PostgreSQL and Teradata persistence for chat sessions and messages."""
+"""PostgreSQL, DuckDB, and Teradata persistence for chat sessions and messages."""
 
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ class ChatMessage:
 
 
 class ChatStore:
-    """Persist chat history in local PostgreSQL or Teradata."""
+    """Persist chat history in PostgreSQL, DuckDB, or Teradata."""
 
     def __init__(
         self,
@@ -77,15 +77,23 @@ class ChatStore:
         return self.settings.backend == "teradata"
 
     @property
+    def is_duckdb(self) -> bool:
+        return self.settings.backend == "duckdb"
+
+    @property
     def sessions_table(self) -> str:
         if self.is_teradata:
             return f"{self.settings.teradata_database}.SC_PPQA_CHAT_SESSIONS"
+        if self.is_duckdb:
+            return "SC_PPQA_CHAT_SESSIONS"
         return "public.SC_PPQA_CHAT_SESSIONS"
 
     @property
     def messages_table(self) -> str:
         if self.is_teradata:
             return f"{self.settings.teradata_database}.SC_PPQA_CHAT_MESSAGES"
+        if self.is_duckdb:
+            return "SC_PPQA_CHAT_MESSAGES"
         return "public.SC_PPQA_CHAT_MESSAGES"
 
     @property
@@ -94,7 +102,11 @@ class ChatStore:
 
     @property
     def placeholder(self) -> str:
-        return "?" if self.is_teradata else "%s"
+        return "?" if self.is_teradata or self.is_duckdb else "%s"
+
+    @property
+    def current_timestamp(self) -> str:
+        return "CURRENT_TIMESTAMP" if self.is_duckdb else "CURRENT_TIMESTAMP(6)"
 
     def connect(self):
         if self._connection is not None:
@@ -103,9 +115,29 @@ class ChatStore:
         self.settings.validate()
         if self.is_teradata:
             self._connection = self._connect_teradata()
+        elif self.is_duckdb:
+            self._connection = self._connect_duckdb()
         else:
             self._connection = self._connect_postgres()
         return self._connection
+
+    def _connect_duckdb(self):
+        try:
+            import duckdb
+        except ImportError as exc:
+            raise ChatStoreError(
+                "Missing DuckDB dependency. Install it with "
+                "`python -m pip install -r requirements.txt`."
+            ) from exc
+
+        database_path = self.settings.duckdb_path
+        try:
+            database_path.parent.mkdir(parents=True, exist_ok=True)
+            return duckdb.connect(str(database_path))
+        except Exception as exc:
+            raise ChatStoreError(
+                f"Failed to open DuckDB chat storage at {database_path}: {exc}"
+            ) from exc
 
     def _connect_postgres(self):
         try:
@@ -175,6 +207,11 @@ class ChatStore:
                 ) from exc
             return
 
+        if self.is_duckdb:
+            schema_sql = self.settings.duckdb_schema_path.read_text(encoding="utf-8")
+            self.connect().execute(schema_sql)
+            return
+
         schema_sql = self.settings.local_schema_path.read_text(encoding="utf-8")
         with self.connect().cursor() as cursor:
             cursor.execute(schema_sql)
@@ -239,7 +276,7 @@ class ChatStore:
         self._execute_write(
             f"""
             UPDATE {self.sessions_table}
-            SET {self.session_title_column} = {p}, updated_at = CURRENT_TIMESTAMP(6)
+            SET {self.session_title_column} = {p}, updated_at = {self.current_timestamp}
             WHERE id = {p}
             """,
             (cleaned_title, session_id),
@@ -279,7 +316,7 @@ class ChatStore:
             separators=(",", ":"),
         )
         p = self.placeholder
-        metadata_value = p if self.is_teradata else f"{p}::jsonb"
+        metadata_value = p if self.is_teradata or self.is_duckdb else f"{p}::jsonb"
         self._execute_writes(
             (
                 (
@@ -300,7 +337,7 @@ class ChatStore:
                 (
                     f"""
                     UPDATE {self.sessions_table}
-                    SET updated_at = CURRENT_TIMESTAMP(6)
+                    SET updated_at = {self.current_timestamp}
                     WHERE id = {p}
                     """,
                     (session_id,),
@@ -348,6 +385,17 @@ class ChatStore:
         # A write that itself loses the network is never replayed because its
         # commit outcome may be unknown.
         connection = self._writable_connection()
+        if self.is_duckdb:
+            try:
+                connection.execute("BEGIN TRANSACTION")
+                for query, params in statements:
+                    connection.execute(query, params)
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+            return
+
         if not self.is_teradata:
             try:
                 with connection.transaction():

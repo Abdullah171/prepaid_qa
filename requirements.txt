@@ -1,4 +1,5 @@
 fastapi==0.139.0
+duckdb==1.5.5
 httpx==0.28.1
 json-repair==0.61.2
 psycopg[binary]==3.3.4

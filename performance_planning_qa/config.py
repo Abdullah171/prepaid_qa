@@ -159,10 +159,12 @@ class ChatStorageSettings:
     sslmode: str
     schema_path: Path
     local_schema_path: Path
+    duckdb_path: Path = PROJECT_ROOT / "data" / "chat_history.duckdb"
+    duckdb_schema_path: Path = PROJECT_ROOT / "sql" / "chat_memory_schema_duckdb.sql"
 
     def validate(self) -> None:
-        if self.backend not in {"local", "teradata"}:
-            raise ValueError("chat_db must be either 'local' or 'teradata'")
+        if self.backend not in {"local", "teradata", "duckdb"}:
+            raise ValueError("chat_db must be 'local', 'teradata', or 'duckdb'")
         if self.backend == "teradata":
             if not self.teradata_database:
                 raise ValueError("CHAT_TERADATA_DATABASE must not be empty")
@@ -170,6 +172,12 @@ class ChatStorageSettings:
                 raise ValueError("CHAT_TERADATA_DATABASE must be a valid Teradata identifier")
             if not self.schema_path.exists():
                 raise ValueError(f"Teradata chat schema file does not exist: {self.schema_path}")
+            return
+        if self.backend == "duckdb":
+            if not self.duckdb_schema_path.exists():
+                raise ValueError(
+                    f"DuckDB chat schema file does not exist: {self.duckdb_schema_path}"
+                )
             return
 
         missing = []
@@ -270,9 +278,30 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
     if not local_chat_schema_path.is_absolute():
         local_chat_schema_path = root / local_chat_schema_path
 
+    duckdb_chat_schema_path = Path(
+        _get_any(
+            "CHAT_DB_DUCKDB_SCHEMA_PATH",
+            default=str(root / "sql" / "chat_memory_schema_duckdb.sql"),
+        )
+        or ""
+    )
+    if not duckdb_chat_schema_path.is_absolute():
+        duckdb_chat_schema_path = root / duckdb_chat_schema_path
+
+    duckdb_path = Path(
+        _get_any(
+            "CHAT_DUCKDB_PATH",
+            "CHAT_DB_DUCKDB_PATH",
+            default=str(root / "data" / "chat_history.duckdb"),
+        )
+        or ""
+    )
+    if not duckdb_path.is_absolute():
+        duckdb_path = root / duckdb_path
+
     chat_backend = (_get_any("chat_db", "CHAT_DB", default="local") or "").lower()
-    if chat_backend not in {"local", "teradata"}:
-        raise ValueError("chat_db must be either 'local' or 'teradata'")
+    if chat_backend not in {"local", "teradata", "duckdb"}:
+        raise ValueError("chat_db must be 'local', 'teradata', or 'duckdb'")
 
     chat_storage = ChatStorageSettings(
         backend=chat_backend,
@@ -280,6 +309,7 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
             "CHAT_TERADATA_DATABASE", default="DP_EDW_PPF_STG"
         )
         or "",
+        duckdb_path=duckdb_path,
         host=_get_any("CHAT_DB_HOST", "POSTGRES_HOST", "PGHOST", "Host", default="localhost")
         or "",
         port=_get_int(_first_existing_env("CHAT_DB_PORT", "POSTGRES_PORT", "PGPORT", "Port"), 5432),
@@ -292,6 +322,7 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
         sslmode=_get_any("CHAT_DB_SSLMODE", "PGSSLMODE", default="disable") or "disable",
         schema_path=chat_schema_path,
         local_schema_path=local_chat_schema_path,
+        duckdb_schema_path=duckdb_chat_schema_path,
     )
 
     prompt_log_dir = Path(

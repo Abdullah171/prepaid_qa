@@ -47,9 +47,9 @@ Structured LLM responses are parsed as strict JSON first. If parsing fails, the
 app uses `json-repair` for common issues such as unquoted keys, single quotes,
 trailing commas, surrounding prose, or an unterminated final object.
 
-The FastAPI app also supports persisted chat sessions backed by either local PostgreSQL
-or Teradata. Session history is passed back into the SQL and answer prompts so follow-up
-questions can refer to the prior conversation.
+The FastAPI app also supports persisted chat sessions backed by local PostgreSQL,
+DuckDB, or Teradata. Session history is passed back into the SQL and answer prompts so
+follow-up questions can refer to the prior conversation.
 
 Different chats can run LLM work concurrently. Follow-ups within the same chat remain
 ordered, and Teradata execution is serialized over the shared connection. The app does
@@ -76,12 +76,19 @@ TERADATA_USER="..."
 TERADATA_PASSWORD="..."
 ```
 
-Choose the chat-history database and Teradata database in `.env`:
+Choose the chat-history database in `.env`:
 
 ```env
-chat_db="local" # Choose "local" or "teradata"
+chat_db="duckdb" # Choose "local", "duckdb", or "teradata"
+CHAT_DUCKDB_PATH="data/chat_history.duckdb"
+
+# Only used with chat_db="teradata"
 CHAT_TERADATA_DATABASE="DP_EDW_PPF_STG"
 ```
+
+With `chat_db="duckdb"`, startup creates the parent directory, DuckDB database file,
+and chat tables automatically when they do not exist. Use an absolute path for a
+server-mounted persistent volume if the application directory is ephemeral.
 
 The `local` option uses the PostgreSQL credentials in `.env`:
 
@@ -114,6 +121,7 @@ LLM_PROMPT_LOG_ENABLED=false # Set true to write LLM inputs to logs/llm_prompts/
 LLM_PROMPT_LOG_DIR="logs/llm_prompts"
 CHAT_DB_SCHEMA_PATH="sql/chat_memory_schema.sql"
 CHAT_DB_LOCAL_SCHEMA_PATH="sql/chat_memory_schema_postgres.sql"
+CHAT_DB_DUCKDB_SCHEMA_PATH="sql/chat_memory_schema_duckdb.sql"
 PPQA_API_BASE_URL="http://127.0.0.1:8000"
 PPQA_ALLOW_API_URL_EDIT=false
 ```
@@ -365,6 +373,18 @@ monthly points remain readable.
 
 ## Chat Memory Schema
 
+The DuckDB chat tables are defined in `sql/chat_memory_schema_duckdb.sql`. Select
+DuckDB with:
+
+```env
+chat_db="duckdb"
+CHAT_DUCKDB_PATH="data/chat_history.duckdb"
+```
+
+No manual initialization is needed: the API creates the database file, parent
+directory, and schema during startup. Keep `CHAT_DUCKDB_PATH` on persistent storage
+in a server deployment so chat history survives application redeployments.
+
 The Teradata chat tables are defined in `sql/chat_memory_schema.sql`:
 
 - `DP_EDW_PPF_STG.SC_PPQA_CHAT_SESSIONS`: session title and timestamps.
@@ -381,8 +401,9 @@ PGPASSWORD=pkgbench psql -h localhost -p 5433 -U pkgbench -d pkgbench \
   -f sql/chat_memory_schema_postgres.sql
 ```
 
-For local storage, the API also runs the PostgreSQL schema at startup with
-`CREATE TABLE IF NOT EXISTS`. For Teradata, startup verifies that both tables exist.
+For local PostgreSQL and DuckDB storage, the API runs the corresponding schema at
+startup with `CREATE TABLE IF NOT EXISTS`. For Teradata, startup verifies that both
+tables exist.
 
 ## Session API
 
