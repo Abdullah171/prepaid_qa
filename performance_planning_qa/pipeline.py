@@ -6,6 +6,7 @@ from dataclasses import dataclass, replace
 import json
 import logging
 from pathlib import Path
+import time
 from typing import Any, Callable
 
 from performance_planning_qa.charting import (
@@ -34,6 +35,11 @@ from performance_planning_qa.csv_export import (
     strip_embedded_csv_dump,
 )
 from performance_planning_qa.database import DatabaseQueryError, QueryResult, TeradataClient
+from performance_planning_qa.diagnostics import (
+    diagnostic_event,
+    diagnostic_exception,
+    diagnostic_failure_summary,
+)
 from performance_planning_qa.llm import LiteLLMClient, extract_json_object
 from performance_planning_qa.prompt_logger import PromptLogger
 from performance_planning_qa.prompts import (
@@ -79,6 +85,7 @@ class PipelineResult:
     prompt_log_paths: tuple[Path, ...] = ()
     dry_run: bool = False
     error: str | None = None
+    error_stage: str | None = None
 
     @property
     def sql(self) -> str | None:
@@ -97,6 +104,7 @@ class PipelineResult:
             "chart": self.chart.to_payload() if self.chart else None,
             "csv_export": self.csv_export.to_payload() if self.csv_export else None,
             "error": self.error,
+            "error_stage": self.error_stage,
             "prompt_log_paths": [str(path) for path in self.prompt_log_paths],
             "query_result": self.query_result.to_payload() if self.query_result else None,
         }
@@ -137,6 +145,7 @@ class NL2SQLPipeline:
         self._reasoning_callback: ReasoningCallback | None = None
         self._cancellation_token: CancellationToken | None = None
         self._enable_thinking = True
+        self._diagnostic_request_id: str | None = None
 
     @classmethod
     def from_env(cls) -> NL2SQLPipeline:
@@ -166,6 +175,7 @@ class NL2SQLPipeline:
         progress_callback: ProgressCallback | None = None,
         reasoning_callback: ReasoningCallback | None = None,
         cancellation_token: CancellationToken | None = None,
+        diagnostic_request_id: str | None = None,
     ) -> PipelineResult:
         self._current_prompt_logs = []
         self._current_chat_history = chat_history or []
@@ -173,6 +183,17 @@ class NL2SQLPipeline:
         self._reasoning_callback = reasoning_callback
         self._cancellation_token = cancellation_token
         self._enable_thinking = enable_thinking
+        self._diagnostic_request_id = diagnostic_request_id
+        diagnostic_event(
+            component="pipeline",
+            stage="request",
+            status="started",
+            request_id=diagnostic_request_id,
+            question_chars=len(question),
+            history_turns=len(self._current_chat_history),
+            dry_run=dry_run,
+            thinking_enabled=enable_thinking,
+        )
         self._report_progress("Fetching relevant information")
         if not dry_run:
             presentation_followup = self._presentation_followup_result(
@@ -190,6 +211,16 @@ class NL2SQLPipeline:
 
         self._report_progress("Reviewing the available data")
         generated = self.generate_sql(question, chat_history=self._current_chat_history)
+        diagnostic_event(
+            component="pipeline",
+            stage="sql_generation_result",
+            status="completed",
+            request_id=self._diagnostic_request_id,
+            has_sql=bool(generated.sql),
+            sql_chars=len(generated.sql or ""),
+            needs_clarification=generated.needs_clarification,
+            has_direct_answer=bool(generated.direct_answer),
+        )
         direct_result = self._direct_generated_result(
             question=question,
             generated=generated,
@@ -220,6 +251,13 @@ class NL2SQLPipeline:
 
         generated = prepared.generated
         validation = prepared.validation
+        diagnostic_event(
+            component="pipeline",
+            stage="sql_validation",
+            status="completed",
+            request_id=self._diagnostic_request_id,
+            tables=list(validation.table_references),
+        )
         if dry_run:
             return PipelineResult(
                 question=question,
@@ -251,6 +289,16 @@ class NL2SQLPipeline:
                 dry_run=False,
                 phase="execution",
             )
+
+        diagnostic_event(
+            component="pipeline",
+            stage="database_query",
+            status="completed",
+            request_id=self._diagnostic_request_id,
+            row_count=executed.query_result.row_count,
+            query_elapsed_ms=executed.query_result.elapsed_ms,
+            columns=executed.query_result.columns,
+        )
 
         inherited_intent, inherited_candidate, chart_context = (
             self._inherited_chart_context(question, previous_result)
@@ -296,6 +344,15 @@ class NL2SQLPipeline:
             table=extract_displayed_table(raw_answer),
         )
         answer = append_csv_message(raw_answer, csv_export)
+        diagnostic_event(
+            component="pipeline",
+            stage="final_answer",
+            status="completed",
+            request_id=self._diagnostic_request_id,
+            answer_chars=len(answer or ""),
+            has_chart=chart is not None,
+            has_csv=csv_export is not None,
+        )
         return PipelineResult(
             question=question,
             generated_sql=executed.generated,
@@ -326,6 +383,13 @@ class NL2SQLPipeline:
 
     def _report_progress(self, message: str) -> None:
         self._check_cancelled()
+        diagnostic_event(
+            component="pipeline",
+            stage=_diagnostic_stage_name(message),
+            status="started",
+            request_id=self._diagnostic_request_id,
+            progress=message,
+        )
         callback = self._progress_callback
         if callback is None:
             return
@@ -636,6 +700,16 @@ class NL2SQLPipeline:
                 validation = validate_readonly_sql(current.sql or "")
                 return SQLPreparationResult(generated=current, validation=validation)
             except SQLSafetyError as exc:
+                diagnostic_event(
+                    component="pipeline",
+                    stage="sql_validation",
+                    status="retrying" if attempt < attempts else "failed",
+                    request_id=self._diagnostic_request_id,
+                    level=logging.WARNING if attempt < attempts else logging.ERROR,
+                    attempt=attempt + 1,
+                    max_attempts=attempts + 1,
+                    error=str(exc),
+                )
                 last_error = str(exc)
                 if attempt >= attempts:
                     break
@@ -659,6 +733,14 @@ class NL2SQLPipeline:
         try:
             query_result = self._execute_select(validation.sql)
         except DatabaseQueryError as exc:
+            diagnostic_event(
+                component="pipeline",
+                stage="database_query",
+                status="repairing",
+                request_id=self._diagnostic_request_id,
+                level=logging.WARNING,
+                error=str(exc),
+            )
             self._check_cancelled()
             return self._repair_after_database_error(
                 question=question,
@@ -763,6 +845,25 @@ class NL2SQLPipeline:
         phase: str,
     ) -> PipelineResult:
         cleaned_error = _sanitize_error(error)
+        diagnostic_event(
+            component="pipeline",
+            stage=f"sql_{phase}",
+            status="failed",
+            request_id=self._diagnostic_request_id,
+            level=logging.ERROR,
+            error=cleaned_error or "No error detail was returned",
+        )
+        diagnostic_failure_summary(
+            component="pipeline",
+            request_id=self._diagnostic_request_id,
+            failed_step=(
+                "SQL validation/repair"
+                if phase == "validation"
+                else "Database execution/SQL repair"
+            ),
+            error=cleaned_error or "No error detail was returned",
+            generated_sql=generated.sql,
+        )
         answer, needs_clarification = _sql_failure_message(cleaned_error, phase=phase)
         if needs_clarification:
             generated = replace(
@@ -778,6 +879,7 @@ class NL2SQLPipeline:
             prompt_log_paths=tuple(self._current_prompt_logs),
             dry_run=dry_run,
             error=cleaned_error,
+            error_stage=phase,
         )
 
     def _repair_sql(self, *, question: str, generated: GeneratedSQL, error: str) -> GeneratedSQL:
@@ -824,11 +926,11 @@ class NL2SQLPipeline:
             phase="answer_generation",
             temperature=self.settings.llm.answer_temperature,
         )
-        # print(
-        #     "Final LLM answer response:\n",
-        #     json.dumps(final_llm_response, ensure_ascii=False, indent=2),
-        #     flush=True,
-        # )
+        print(
+            "Final LLM answer response:\n",
+            json.dumps(final_llm_response, ensure_ascii=False, indent=2),
+            flush=True,
+        )
         return final_llm_response
 
     def _complete_json(
@@ -855,15 +957,53 @@ class NL2SQLPipeline:
             and self._enable_thinking
         ):
             completion_options["reasoning_effort"] = "low"
-        return self.llm.complete_json(
-            messages,
-            temperature=temperature,
-            fallback_key=fallback_key,
-            reasoning_callback=self._reasoning_callback,
-            cancellation_token=self._cancellation_token,
-            reasoning_fallback_instruction=reasoning_fallback_instruction,
-            **completion_options,
+        started = time.monotonic()
+        diagnostic_event(
+            component="pipeline",
+            stage=phase,
+            status="started",
+            request_id=self._diagnostic_request_id,
+            provider=self.settings.llm.provider,
+            model=self.settings.llm.model,
+            streaming=self.settings.llm.stream,
         )
+        try:
+            payload = self.llm.complete_json(
+                messages,
+                temperature=temperature,
+                fallback_key=fallback_key,
+                reasoning_callback=self._reasoning_callback,
+                cancellation_token=self._cancellation_token,
+                reasoning_fallback_instruction=reasoning_fallback_instruction,
+                **completion_options,
+            )
+        except AnalysisCancelled:
+            diagnostic_event(
+                component="pipeline",
+                stage=phase,
+                status="cancelled",
+                request_id=self._diagnostic_request_id,
+                elapsed_ms=int((time.monotonic() - started) * 1000),
+            )
+            raise
+        except Exception as exc:
+            diagnostic_exception(
+                component="pipeline",
+                stage=phase,
+                request_id=self._diagnostic_request_id,
+                error=exc,
+                elapsed_ms=int((time.monotonic() - started) * 1000),
+            )
+            raise
+        diagnostic_event(
+            component="pipeline",
+            stage=phase,
+            status="completed",
+            request_id=self._diagnostic_request_id,
+            elapsed_ms=int((time.monotonic() - started) * 1000),
+            response_fields=sorted(payload),
+        )
+        return payload
 
 
 def _generated_sql_from_payload(payload: dict[str, Any]) -> GeneratedSQL:
@@ -1007,6 +1147,12 @@ def _sanitize_error(error: str | None) -> str | None:
     if len(text) > max_length:
         return f"{text[:max_length].rstrip()}..."
     return text
+
+
+def _diagnostic_stage_name(message: str) -> str:
+    """Turn a user-facing progress label into a stable log stage name."""
+
+    return "_".join(str(message).strip().lower().split()) or "unknown"
 
 
 def _sql_failure_message(error: str | None, *, phase: str) -> tuple[str, bool]:

@@ -10,6 +10,7 @@ import threading
 from typing import Any, Iterator
 
 from performance_planning_qa.cancellation import AnalysisCancelled, CancellationToken
+from performance_planning_qa.diagnostics import diagnostic_event, diagnostic_exception
 from performance_planning_qa.user_messages import ANALYSIS_UNAVAILABLE_MESSAGE
 
 
@@ -51,6 +52,7 @@ def stream_inprocess_session_ask(
     dry_run: bool = False,
     enable_thinking: bool = True,
     cancellation_token: CancellationToken | None = None,
+    diagnostic_request_id: str | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Bridge pipeline progress out of TestClient's buffered ASGI transport."""
 
@@ -95,15 +97,38 @@ def stream_inprocess_session_ask(
                 progress_callback=report_progress,
                 reasoning_callback=report_reasoning,
                 cancellation_token=cancellation_token,
+                diagnostic_request_id=diagnostic_request_id,
             )
             payload = client.portal.call(call)
         except AnalysisCancelled:
+            diagnostic_event(
+                component="inprocess_api",
+                stage="analysis",
+                status="cancelled",
+                request_id=diagnostic_request_id,
+                session_id=session_id,
+            )
             event_queue.put({"event": "cancelled", "message": "Analysis stopped"})
-        except HTTPException:
+        except HTTPException as exc:
+            diagnostic_exception(
+                component="inprocess_api",
+                stage="analysis",
+                request_id=diagnostic_request_id,
+                error=exc,
+                session_id=session_id,
+                status_code=exc.status_code,
+            )
             event_queue.put(
                 {"event": "error", "message": ANALYSIS_UNAVAILABLE_MESSAGE}
             )
-        except Exception:
+        except Exception as exc:
+            diagnostic_exception(
+                component="inprocess_api",
+                stage="analysis",
+                request_id=diagnostic_request_id,
+                error=exc,
+                session_id=session_id,
+            )
             logger.exception("In-process session analysis failed")
             event_queue.put(
                 {"event": "error", "message": ANALYSIS_UNAVAILABLE_MESSAGE}

@@ -8,7 +8,9 @@ from datetime import datetime
 import json
 import logging
 import os
+import time
 from typing import Any, Callable, Literal
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.concurrency import run_in_threadpool
@@ -26,6 +28,7 @@ from performance_planning_qa.chat_store import (
 )
 from performance_planning_qa.cancellation import AnalysisCancelled, CancellationToken
 from performance_planning_qa.config import load_environment, load_settings
+from performance_planning_qa.diagnostics import diagnostic_event, diagnostic_exception
 from performance_planning_qa.pipeline import NL2SQLPipeline
 from performance_planning_qa.prompts import ChatTurn
 from performance_planning_qa.user_messages import ANALYSIS_UNAVAILABLE_MESSAGE
@@ -152,8 +155,10 @@ class AskResponse(BaseModel):
     chart: ChartResponse | None = None
     csv_export: CSVExportResponse | None = None
     error: str | None
+    error_stage: str | None = None
     prompt_log_paths: list[str]
     query_result: QueryResultResponse | None
+    diagnostic_request_id: str | None = None
 
 
 class CreateSessionRequest(BaseModel):
@@ -254,6 +259,14 @@ async def ask(request_body: AskRequest, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=422, detail="question must not be empty")
 
     pipeline = _get_pipeline(request).fork()
+    request_id = request_body.request_id or str(uuid4())
+    diagnostic_event(
+        component="api",
+        stage="standalone_request",
+        status="received",
+        request_id=request_id,
+        question_chars=len(question),
+    )
 
     try:
         result = await run_in_threadpool(
@@ -261,8 +274,15 @@ async def ask(request_body: AskRequest, request: Request) -> dict[str, Any]:
             question,
             dry_run=request_body.dry_run,
             enable_thinking=request_body.enable_thinking,
+            diagnostic_request_id=request_id,
         )
     except Exception as exc:
+        diagnostic_exception(
+            component="api",
+            stage="standalone_pipeline",
+            request_id=request_id,
+            error=exc,
+        )
         logger.exception("Failed to answer question")
         raise HTTPException(
             status_code=500,
@@ -271,7 +291,9 @@ async def ask(request_body: AskRequest, request: Request) -> dict[str, Any]:
     finally:
         pipeline.close(close_database=False)
 
-    return result.to_dict()
+    payload = result.to_dict()
+    payload["diagnostic_request_id"] = request_id
+    return payload
 
 
 @app.get("/sessions", response_model=list[ChatSessionResponse])
@@ -347,6 +369,7 @@ async def ask_session(
         dry_run=request_body.dry_run,
         enable_thinking=request_body.enable_thinking,
         request=request,
+        diagnostic_request_id=request_body.request_id or str(uuid4()),
     )
 
 
@@ -362,16 +385,25 @@ async def ask_session_stream(
     if not question:
         raise HTTPException(status_code=422, detail="question must not be empty")
 
+    diagnostic_request_id = request_body.request_id or str(uuid4())
+    diagnostic_event(
+        component="api",
+        stage="stream_request",
+        status="received",
+        request_id=diagnostic_request_id,
+        session_id=session_id,
+        question_chars=len(question),
+    )
+
     async def events():
         loop = asyncio.get_running_loop()
         event_queue: asyncio.Queue[tuple[str, str]] = asyncio.Queue()
         cancellation_token = CancellationToken()
-        if request_body.request_id is not None:
-            await _register_active_analysis(
-                request,
-                request_body.request_id,
-                cancellation_token,
-            )
+        await _register_active_analysis(
+            request,
+            diagnostic_request_id,
+            cancellation_token,
+        )
 
         def report_progress(message: str) -> None:
             loop.call_soon_threadsafe(event_queue.put_nowait, ("progress", message))
@@ -389,6 +421,7 @@ async def ask_session_stream(
                 progress_callback=report_progress,
                 reasoning_callback=report_reasoning,
                 cancellation_token=cancellation_token,
+                diagnostic_request_id=diagnostic_request_id,
             )
         )
         last_event_at = loop.time()
@@ -416,22 +449,52 @@ async def ask_session_stream(
             try:
                 payload = await analysis_task
             except AnalysisCancelled:
+                diagnostic_event(
+                    component="api",
+                    stage="stream_response",
+                    status="cancelled",
+                    request_id=diagnostic_request_id,
+                    session_id=session_id,
+                )
                 yield _sse_event("cancelled", {"message": "Analysis stopped"})
-            except HTTPException:
+            except HTTPException as exc:
+                diagnostic_exception(
+                    component="api",
+                    stage="stream_response",
+                    request_id=diagnostic_request_id,
+                    error=exc,
+                    session_id=session_id,
+                    status_code=exc.status_code,
+                )
                 yield _sse_event("error", {"message": ANALYSIS_UNAVAILABLE_MESSAGE})
-            except Exception:
+            except Exception as exc:
+                diagnostic_exception(
+                    component="api",
+                    stage="stream_response",
+                    request_id=diagnostic_request_id,
+                    error=exc,
+                    session_id=session_id,
+                )
                 logger.exception("Failed to stream session answer")
                 yield _sse_event("error", {"message": ANALYSIS_UNAVAILABLE_MESSAGE})
             else:
+                result_error = (payload.get("result") or {}).get("error")
+                diagnostic_event(
+                    component="api",
+                    stage="stream_response",
+                    status="completed_with_error" if result_error else "completed",
+                    request_id=diagnostic_request_id,
+                    session_id=session_id,
+                    result_error=result_error,
+                )
                 yield _sse_event("result", payload)
         finally:
             cancellation_token.cancel()
-            if request_body.request_id is not None:
-                await _unregister_active_analysis(
-                    request,
-                    request_body.request_id,
-                    cancellation_token,
-                )
+            await _unregister_active_analysis(
+                request,
+                diagnostic_request_id,
+                cancellation_token,
+            )
             if not analysis_task.done():
                 analysis_task.add_done_callback(_consume_background_task)
 
@@ -468,6 +531,7 @@ async def _ask_session_impl(
     progress_callback: Callable[[str], None] | None = None,
     reasoning_callback: Callable[[str], None] | None = None,
     cancellation_token: CancellationToken | None = None,
+    diagnostic_request_id: str | None = None,
 ) -> dict[str, Any]:
     """Run and persist one session question for regular and streaming routes."""
 
@@ -475,6 +539,16 @@ async def _ask_session_impl(
     chat_store = _get_chat_store(request)
     session_gate = await _get_session_analysis_gate(request, session_id)
     gate_generation: int | None = None
+    started = time.monotonic()
+    current_stage = "session_gate"
+    diagnostic_event(
+        component="api",
+        stage="session_analysis",
+        status="started",
+        request_id=diagnostic_request_id,
+        session_id=session_id,
+        question_chars=len(question),
+    )
 
     def report_queue_wait() -> None:
         if progress_callback is None:
@@ -492,9 +566,26 @@ async def _ask_session_impl(
             cancellation_token,
             waiting_callback=report_queue_wait,
         )
+        diagnostic_event(
+            component="api",
+            stage="session_gate",
+            status="acquired",
+            request_id=diagnostic_request_id,
+            session_id=session_id,
+        )
+        current_stage = "load_chat_history"
         session, messages = await _load_session_with_messages(request, session_id)
         chat_history = _pipeline_history_from_messages(messages)
         previous_result = _latest_assistant_result(messages)
+        diagnostic_event(
+            component="api",
+            stage=current_stage,
+            status="completed",
+            request_id=diagnostic_request_id,
+            session_id=session_id,
+            message_count=len(messages),
+        )
+        current_stage = "pipeline"
         result = await run_in_threadpool(
             pipeline.ask,
             question,
@@ -505,11 +596,26 @@ async def _ask_session_impl(
             progress_callback=progress_callback,
             reasoning_callback=reasoning_callback,
             cancellation_token=cancellation_token,
+            diagnostic_request_id=diagnostic_request_id,
         )
         if cancellation_token is not None:
             cancellation_token.raise_if_cancelled()
         result_payload = result.to_dict()
+        result_payload["diagnostic_request_id"] = diagnostic_request_id
+        diagnostic_event(
+            component="api",
+            stage="pipeline",
+            status=(
+                "completed_with_error" if result_payload.get("error") else "completed"
+            ),
+            request_id=diagnostic_request_id,
+            session_id=session_id,
+            result_error=result_payload.get("error"),
+            has_sql=bool(result_payload.get("sql")),
+            row_count=(result_payload.get("query_result") or {}).get("row_count"),
+        )
         assistant_content = _assistant_content_from_result(result_payload)
+        current_stage = "persist_user_message"
         user_message = await _run_chat_store(
             request,
             chat_store.add_message,
@@ -518,6 +624,7 @@ async def _ask_session_impl(
             content=question,
             dry_run=dry_run,
         )
+        current_stage = "persist_assistant_message"
         assistant_message = await _run_chat_store(
             request,
             chat_store.add_message,
@@ -527,6 +634,7 @@ async def _ask_session_impl(
             dry_run=dry_run,
             metadata=result_payload,
         )
+        current_stage = "update_session"
         if session.message_count == 0 and session.title == DEFAULT_SESSION_TITLE:
             updated_session = await _run_chat_store(
                 request,
@@ -544,9 +652,36 @@ async def _ask_session_impl(
             )
             if latest_session is not None:
                 session = latest_session
-    except (HTTPException, AnalysisCancelled):
+    except AnalysisCancelled:
+        diagnostic_event(
+            component="api",
+            stage=current_stage,
+            status="cancelled",
+            request_id=diagnostic_request_id,
+            session_id=session_id,
+            elapsed_ms=int((time.monotonic() - started) * 1000),
+        )
+        raise
+    except HTTPException as exc:
+        diagnostic_exception(
+            component="api",
+            stage=current_stage,
+            request_id=diagnostic_request_id,
+            error=exc,
+            session_id=session_id,
+            status_code=exc.status_code,
+            elapsed_ms=int((time.monotonic() - started) * 1000),
+        )
         raise
     except Exception as exc:
+        diagnostic_exception(
+            component="api",
+            stage=current_stage,
+            request_id=diagnostic_request_id,
+            error=exc,
+            session_id=session_id,
+            elapsed_ms=int((time.monotonic() - started) * 1000),
+        )
         logger.exception("Failed to answer session question")
         raise HTTPException(
             status_code=500,
@@ -556,6 +691,16 @@ async def _ask_session_impl(
         if gate_generation is not None:
             await session_gate.release(gate_generation)
         pipeline.close(close_database=False)
+
+    diagnostic_event(
+        component="api",
+        stage="session_analysis",
+        status="completed_with_error" if result_payload.get("error") else "completed",
+        request_id=diagnostic_request_id,
+        session_id=session_id,
+        elapsed_ms=int((time.monotonic() - started) * 1000),
+        result_error=result_payload.get("error"),
+    )
 
     return {
         "session": session.to_payload(),

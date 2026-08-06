@@ -40,7 +40,8 @@ SQL_DOMAIN_GUIDANCE = """Curated performance-planning table grain and join guida
 - The analyst examples below use Teradata SEL shorthand. In final generated SQL, use SELECT or WITH, not SEL.
 - In final generated SQL, use normal Teradata clause order: FROM/JOIN, WHERE, GROUP BY, HAVING, QUALIFY, ORDER BY.
 - Analyst comments attached to supplied queries are business corrections, not disposable text and not literal SQL. Apply each comment as a rule, remove annotation markers such as "-->", and emit clean executable SQL.
-
+- Do not ever assume or invent any column like rev year or anything always use the column that are only provided to you in the schema.
+- For choosing the week choose from sunday to saturday because its in saudia arabia enviornment, both days will be inclusive
 """
 
 
@@ -854,6 +855,8 @@ Rules:
 - Preserve the analytical metric, grain, dimensions, filters, comparisons, and supporting information while repairing. Ignore presentation-only chart types when deciding the result shape. Return SQL only; never return plotting code or chart markup.
 - If the query cannot be repaired from the provided schema, return a direct_answer saying it cannot be answered from the provided database context, with needs_clarification false and sql null.
 - Do not introduce tables or columns outside the supplied schema.
+- Do not ever assume or invent any column like rev year or anything always use the column that are only provided to you in the schema.
+- If in the query you see there are some columns or there is a column that is hallucinated or assumed if it doesnt exists in the provided schema then fix it by removing that column and using the actual from schema.
 
 """
 

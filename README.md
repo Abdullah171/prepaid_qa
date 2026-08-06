@@ -124,7 +124,30 @@ CHAT_DB_LOCAL_SCHEMA_PATH="sql/chat_memory_schema_postgres.sql"
 CHAT_DB_DUCKDB_SCHEMA_PATH="sql/chat_memory_schema_duckdb.sql"
 PPQA_API_BASE_URL="http://127.0.0.1:8000"
 PPQA_ALLOW_API_URL_EDIT=false
+PPQA_LOG_LEVEL="INFO" # Set DEBUG, INFO, WARNING, ERROR, or CRITICAL
 ```
+
+## Request diagnostics
+
+Each question prints structured `[PPQA]` log entries to the terminal running the app.
+The entries follow the request through the frontend worker, HTTP/SSE transport, API,
+pipeline, LLM calls, SQL validation/repair, database query, and chat persistence. Use
+the shared `request_id` to isolate one question. A failed entry includes `stage`,
+`error_type`, `error`, elapsed time, and a traceback; a SQL failure returned as a
+normal assistant response is also logged as failed. When a streamed request fails,
+the Streamlit fallback displays its diagnostic request ID beneath the safe user-facing
+message.
+
+Failures returned inside a successful HTTP/SSE response are marked
+`completed_with_error`, not `completed`. They also print a prominent `REQUEST FAILED`
+block with the failed pipeline step, the backend error, and the generated or repaired
+SQL that caused it.
+
+The diagnostic log intentionally excludes credentials, model prompts/reasoning,
+and database result rows. Successful requests log safe metadata such as response field
+names, referenced tables, returned column names, and row counts. Generated SQL is
+printed only in the failure block because it is needed to diagnose validation and
+database errors.
 
 ## Install
 

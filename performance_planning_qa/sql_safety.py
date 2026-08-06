@@ -170,14 +170,58 @@ def _first_token(sql: str) -> str:
 
 def _extract_table_references(sql: str) -> list[str]:
     references: list[str] = []
+    table_scan_sql = _mask_extract_from_keywords(sql)
     pattern = re.compile(
         r"\b(?:FROM|JOIN)\s+(?!\()([A-Za-z_][\w$]*(?:\s*\.\s*[A-Za-z_][\w$]*)?)",
         flags=re.IGNORECASE,
     )
-    for match in pattern.finditer(sql):
+    for match in pattern.finditer(table_scan_sql):
         table = re.sub(r"\s+", "", match.group(1)).upper()
         references.append(table)
     return references
+
+
+def _mask_extract_from_keywords(sql: str) -> str:
+    """Mask ``FROM`` inside ``EXTRACT(... FROM ...)`` scalar expressions.
+
+    Table discovery intentionally remains strict for real FROM and JOIN clauses.
+    A plain regex cannot distinguish those clauses from Teradata's date-part
+    expression, so mask only FROM tokens at the top level of an EXTRACT call.
+    Keeping every other character in place preserves the surrounding SQL for the
+    existing table-reference scanner.
+    """
+
+    chars = list(sql)
+    extract_pattern = re.compile(r"\bEXTRACT\s*\(", flags=re.IGNORECASE)
+    from_pattern = re.compile(r"\bFROM\b", flags=re.IGNORECASE)
+
+    for extract_match in extract_pattern.finditer(sql):
+        opening_parenthesis = sql.find("(", extract_match.start(), extract_match.end())
+        if opening_parenthesis < 0:
+            continue
+
+        depth = 1
+        index = opening_parenthesis + 1
+        while index < len(sql) and depth:
+            char = sql[index]
+            if char == "(":
+                depth += 1
+                index += 1
+                continue
+            if char == ")":
+                depth -= 1
+                index += 1
+                continue
+            if depth == 1:
+                from_match = from_pattern.match(sql, index)
+                if from_match is not None:
+                    for position in range(from_match.start(), from_match.end()):
+                        chars[position] = " "
+                    index = from_match.end()
+                    continue
+            index += 1
+
+    return "".join(chars)
 
 
 def _extract_cte_names(sql: str) -> list[str]:
