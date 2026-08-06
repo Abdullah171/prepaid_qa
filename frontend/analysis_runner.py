@@ -11,6 +11,11 @@ from uuid import uuid4
 
 from api_client import ApiClient, ApiError
 from performance_planning_qa.cancellation import AnalysisCancelled, CancellationToken
+from performance_planning_qa.diagnostics import (
+    diagnostic_event,
+    diagnostic_exception,
+    diagnostic_failure_summary,
+)
 
 
 @dataclass(frozen=True)
@@ -137,6 +142,15 @@ class AnalysisRunner:
                 dry_run=dry_run,
                 enable_thinking=enable_thinking,
             )
+            diagnostic_event(
+                component="frontend_runner",
+                stage="analysis_job",
+                status="started",
+                request_id=job.job_id,
+                session_id=job.session_id,
+                question_chars=len(job.question),
+                dry_run=job.dry_run,
+            )
             self._active_job = job
             try:
                 future = self._executor.submit(_run_analysis, job)
@@ -206,24 +220,110 @@ def _run_analysis(job: AnalysisJob) -> dict[str, Any]:
             job.cancellation_token.raise_if_cancelled()
             event_type = event.get("event")
             if event_type == "progress":
-                job.update_progress(str(event.get("message") or "Running analysis"))
+                progress = str(event.get("message") or "Running analysis")
+                job.update_progress(progress)
+                diagnostic_event(
+                    component="frontend_runner",
+                    stage="progress",
+                    status="received",
+                    request_id=job.job_id,
+                    session_id=job.session_id,
+                    progress=progress,
+                )
             elif event_type == "reasoning":
                 job.append_reasoning(str(event.get("content") or ""))
             elif event_type == "result":
                 response = event
+                result_payload = event.get("result")
+                if isinstance(result_payload, dict) and result_payload.get("error"):
+                    failed_step = _result_failure_stage(result_payload)
+                    diagnostic_failure_summary(
+                        component="frontend_runner",
+                        request_id=job.job_id,
+                        failed_step=failed_step,
+                        error=str(result_payload["error"]),
+                        generated_sql=(
+                            str(result_payload["sql"])
+                            if result_payload.get("sql")
+                            else None
+                        ),
+                    )
             elif event_type == "error":
-                raise ApiError(str(event.get("message") or "Analysis failed"))
+                error = ApiError(str(event.get("message") or "Analysis failed"))
+                diagnostic_exception(
+                    component="frontend_runner",
+                    stage="backend_event",
+                    request_id=job.job_id,
+                    error=error,
+                    session_id=job.session_id,
+                )
+                raise error
             elif event_type == "cancelled":
                 raise AnalysisCancelled("Analysis stopped by the user")
         job.cancellation_token.raise_if_cancelled()
         if response is None:
             raise ApiError("The analysis ended without returning a result")
+        result_payload = response.get("result")
+        result_error = (
+            result_payload.get("error") if isinstance(result_payload, dict) else None
+        )
+        diagnostic_event(
+            component="frontend_runner",
+            stage="analysis_job",
+            status="completed_with_error" if result_error else "completed",
+            request_id=job.job_id,
+            session_id=job.session_id,
+            elapsed_ms=int((time.monotonic() - job.started_at) * 1000),
+            failed_step=(
+                _result_failure_stage(result_payload)
+                if isinstance(result_payload, dict) and result_error
+                else None
+            ),
+            result_error=result_error,
+        )
         return response
     except AnalysisCancelled:
+        diagnostic_event(
+            component="frontend_runner",
+            stage="analysis_job",
+            status="cancelled",
+            request_id=job.job_id,
+            session_id=job.session_id,
+        )
         raise
     except Exception as exc:
         if job.cancellation_token.cancelled:
             raise AnalysisCancelled("Analysis stopped by the user") from exc
+        diagnostic_exception(
+            component="frontend_runner",
+            stage="analysis_job",
+            request_id=job.job_id,
+            error=exc,
+            session_id=job.session_id,
+            elapsed_ms=int((time.monotonic() - job.started_at) * 1000),
+        )
         raise
     finally:
         client.close()
+
+
+def _result_failure_stage(result: dict[str, Any]) -> str:
+    """Name result-level failures, including payloads from an older backend."""
+
+    explicit_stage = str(result.get("error_stage") or "").strip().lower()
+    if explicit_stage == "validation":
+        return "SQL validation/repair"
+    if explicit_stage == "execution":
+        return "Database execution/SQL repair"
+    if explicit_stage:
+        return explicit_stage
+
+    error = str(result.get("error") or "").lower()
+    if any(token in error for token in ("safety validation", "read-only", "parser")):
+        return "SQL validation/repair (inferred)"
+    if any(
+        token in error
+        for token in ("teradata", "query failed", "execution", "spool", "timeout")
+    ):
+        return "Database execution/SQL repair (inferred)"
+    return "Analysis result (backend did not report the exact phase)"

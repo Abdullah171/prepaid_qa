@@ -510,6 +510,11 @@ def _render_messages(
         with st.chat_message(role, avatar=_message_avatar(role)):
             st.markdown(content)
             if role == "assistant":
+                if metadata.get("error") and metadata.get("diagnostic_request_id"):
+                    st.caption(
+                        "Diagnostic request ID: "
+                        f"`{metadata['diagnostic_request_id']}`"
+                    )
                 _render_assistant_artifacts(
                     metadata,
                     chart_key=message.get("id"),
@@ -986,6 +991,7 @@ def _render_active_analysis() -> None:
                 snapshot.question,
                 job.dry_run,
                 exc,
+                request_id=snapshot.job_id,
             )
         finally:
             runner.clear(snapshot.job_id)
@@ -1124,6 +1130,8 @@ def _record_failed_analysis(
     question: str,
     dry_run: bool,
     error: Exception,
+    *,
+    request_id: str | None = None,
 ) -> None:
     _log_frontend_error("Analysis request failed", error)
     st.session_state.failed_analysis = {
@@ -1131,6 +1139,7 @@ def _record_failed_analysis(
         "question": question,
         "dry_run": dry_run,
         "error": ANALYSIS_UNAVAILABLE_MESSAGE,
+        "request_id": request_id,
     }
 
 
@@ -1142,6 +1151,9 @@ def _render_failed_analysis() -> None:
         st.markdown(str(failure.get("question") or ""))
     with st.chat_message("assistant", avatar=_message_avatar("assistant")):
         st.markdown(ANALYSIS_UNAVAILABLE_MESSAGE)
+        request_id = failure.get("request_id")
+        if request_id:
+            st.caption(f"Diagnostic request ID: `{request_id}`")
 
 
 def _log_frontend_error(context: str, error: Exception) -> None:

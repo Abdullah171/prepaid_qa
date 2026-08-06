@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import json
 import threading
+import time
 from typing import Any, Iterator
 from urllib.parse import urlsplit
 
@@ -13,6 +14,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from performance_planning_qa.cancellation import AnalysisCancelled, CancellationToken
+from performance_planning_qa.diagnostics import diagnostic_event, diagnostic_exception
 
 
 INPROCESS_API_BASE_URL = "inprocess://ppqa"
@@ -128,6 +130,15 @@ class ApiClient:
     ) -> Iterator[dict[str, Any]]:
         """Yield live progress events and the final session response."""
 
+        started = time.monotonic()
+        diagnostic_event(
+            component="frontend_http",
+            stage="analysis_stream",
+            status="started",
+            request_id=request_id,
+            session_id=session_id,
+            api_base_url=self.base_url,
+        )
         if cancellation_token is not None:
             cancellation_token.raise_if_cancelled()
         path = f"/sessions/{session_id}/ask/stream"
@@ -150,10 +161,18 @@ class ApiClient:
                     dry_run=dry_run,
                     enable_thinking=enable_thinking,
                     cancellation_token=cancellation_token,
+                    diagnostic_request_id=request_id,
                 )
             except ApiError:
                 raise
             except Exception as exc:
+                diagnostic_exception(
+                    component="frontend_http",
+                    stage="inprocess_stream",
+                    request_id=request_id,
+                    error=exc,
+                    session_id=session_id,
+                )
                 raise ApiError(
                     f"Could not stream from the in-process API: {exc}"
                 ) from exc
@@ -174,15 +193,56 @@ class ApiClient:
                 ),
                 stream=True,
             ) as response:
+                diagnostic_event(
+                    component="frontend_http",
+                    stage="http_response",
+                    status="received",
+                    request_id=request_id,
+                    session_id=session_id,
+                    status_code=response.status_code,
+                    elapsed_ms=int((time.monotonic() - started) * 1000),
+                )
                 with self._stream_lock:
                     self._active_stream_response = response
                 try:
                     if cancellation_token is not None:
                         cancellation_token.raise_if_cancelled()
-                    yield from _iter_sse(
+                    for event in _iter_sse(
                         response,
                         cancellation_token=cancellation_token,
-                    )
+                    ):
+                        event_type = str(event.get("event") or "message")
+                        if event_type != "reasoning":
+                            result_payload = event.get("result")
+                            result_error = (
+                                result_payload.get("error")
+                                if isinstance(result_payload, dict)
+                                else None
+                            )
+                            diagnostic_event(
+                                component="frontend_http",
+                                stage="sse_event",
+                                status=(
+                                    "received_with_error"
+                                    if result_error
+                                    else "received"
+                                ),
+                                request_id=request_id,
+                                session_id=session_id,
+                                event=event_type,
+                                progress=(
+                                    event.get("message")
+                                    if event_type == "progress"
+                                    else None
+                                ),
+                                failed_step=(
+                                    result_payload.get("error_stage")
+                                    if isinstance(result_payload, dict)
+                                    else None
+                                ),
+                                result_error=result_error,
+                            )
+                        yield event
                 finally:
                     with self._stream_lock:
                         if self._active_stream_response is response:
@@ -194,6 +254,14 @@ class ApiClient:
         except requests.RequestException as exc:
             if cancellation_token is not None and cancellation_token.cancelled:
                 raise AnalysisCancelled("Analysis stopped by the user") from exc
+            diagnostic_exception(
+                component="frontend_http",
+                stage="analysis_stream",
+                request_id=request_id,
+                error=exc,
+                session_id=session_id,
+                elapsed_ms=int((time.monotonic() - started) * 1000),
+            )
             raise ApiError(f"Could not reach API at {self.base_url}: {exc}") from exc
 
     def cancel_analysis(self, request_id: str) -> None:
