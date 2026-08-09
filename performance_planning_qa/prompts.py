@@ -42,6 +42,16 @@ SQL_DOMAIN_GUIDANCE = """Curated performance-planning table grain and join guida
 - Analyst comments attached to supplied queries are business corrections, not disposable text and not literal SQL. Apply each comment as a rule, remove annotation markers such as "-->", and emit clean executable SQL.
 - Do not ever assume or invent any column like rev year or anything always use the column that are only provided to you in the schema.
 - For choosing the week choose from sunday to saturday because its in saudia arabia enviornment, both days will be inclusive
+- A request for a weekly trend over a range means every Sunday-to-Saturday week that
+  overlaps the entire requested date range, in chronological order. Filter on the
+  complete date range and group each event by its actual week; never interpret a
+  starting month such as January as "week 1" or return only W1. For example,
+  "weekly churn from January 2026 until today" means January 1, 2026 through the
+  application-supplied current date, with all weekly buckets in that interval.
+- "Until today" has an inclusive upper bound of the application-supplied current
+  date. The current Sunday-to-Saturday bucket may therefore be a partial week. Do not
+  extend that bucket beyond today, and do not replace the requested weekly findings
+  with only a coverage or partial-week caveat.
 """
 
 
@@ -53,10 +63,18 @@ BUSINESS_TERM_GUIDANCE = """Authoritative business-term mappings and defaults:
   concise business-language clarification (for example, whether they mean bill payment
   or positive monthly revenue) and stop; do not debate possible proxies.
 - "customer acquisition" means acquired sales F_RM_PSD_SALES.ORDER_TYP_NME.
-- "sales type", "sale type", or "sales by type" means F_RM_PSD_SALES.ORDER_TYP_NME.
+- "sales type", "sale type", or "sales by type" means
+  F_RM_PSD_SALES.ORDER_SUBTYP_NME, returned with the business label SUBTYPE. Do not
+  use ORDER_TYP_NME as the sales-type breakdown.
 - "sales channel", "sale channel", or "sales by channel" means F_RM_PSD_SALES.ORDER_CHANNEL_NME.
 - "churn type" or "churn by type" means AF_RET_GSM_CHURN.CHURN_TYPE.
 - "churn channel" or "churn by channel" means AF_RET_GSM_CHURN.CHURN_CHANNEL_NAME.
+- In a customer-level business question, "customer" may refer to either a mobile
+  line/MSISDN or an account number. If the user has not supplied an identifier, ask
+  for the customer's mobile number or account number in business language. The
+  MSISDN security rules in the system prompt still take precedence: never analyze a
+  specific supplied MSISDN and never return a mobile number. An account-number request
+  may be answered when it otherwise satisfies the scope rules.
 - Churn and sales events occur at mobile-line grain. In an unqualified event-count question, words such as "people", "subscribers", or "customers" mean distinct affected mobile lines: count distinct MSISDN for churn and distinct ACCS_METH_VAL for sales. Use a party/customer identifier only when the user explicitly asks for unique account holders, parties, or customers across multiple lines. Do not ask for clarification when this default applies.
 - "PS revenue", "mobility revenue", and "service revenue" mean F_RM_PS_MTHLY_REV.LINE_REV_EXCL_DEVICES. A generic request for total revenue still means TOTAL_LINE_REV unless another documented business rule applies.
 - "subscription status" or "subscriber status" means F_RM_POSTPAID_BASE.SUBS_PROD_STS_TYP_NM.
@@ -70,6 +88,22 @@ BUSINESS_TERM_GUIDANCE = """Authoritative business-term mappings and defaults:
 - Map "large screen" to SCREEN_TYPE = 'LS' and "small screen" to SCREEN_TYPE = 'SS'. If the user explicitly names one, filter to it. If the user omits screen type for a postpaid sales, churn, base, revenue, ARPU, or QoS analysis, do not ask for clarification just for that omission: include both SS and LS, return SCREEN_TYPE as a result dimension, and report the measures separately for both. For a source without SCREEN_TYPE, derive it from a deduplicated base lifecycle using both line and account keys plus the applicable exact lifecycle/month relationship. A screen breakdown makes a revenue analysis base-aligned, so join monthly revenue to the deduplicated same-month base on both keys and exact month; never use an open-ended revenue join.
 - PRODUCT_FAMILY -- we dont use this, instead use prod name or protifolio from this table DP_EDW_PPF.D_RM_PSD_PRODUCTS for products families
 - ORDER_SUBTYP_NME AS SUBTYPE we always use this as sales type not ORDER_TYP_NME.
+- For "weekly sales for PS SS by type", PS is the application's postpaid scope, SS
+  means filter SCREEN_TYPE = 'SS', and "type" means ORDER_SUBTYP_NME AS SUBTYPE.
+  Return the sales measure for every Sunday-to-Saturday week in the requested range
+  and every represented subtype. Do not answer with only a data-coverage statement;
+  place a brief coverage or partial-week note after the weekly findings when needed.
+- "Reconnect", "re-connect", and "reconnection" sales mean
+  F_RM_PSD_SALES.ORDER_SUBTYP_NME = 'Reconnect'. For reconnect analysis, associate
+  each reconnect sale with the most recent churn for the same line and account whose
+  CHURN_DATE is before the reconnect ORDER_END_DT. If multiple earlier churn records
+  exist, keep only the latest one; never attach a later churn or an older churn when a
+  more recent qualifying churn exists.
+- "Active 30" is defined exactly as:
+  CASE WHEN LAST_USAGE_DATE BETWEEN MNTH_END_DT - 29 AND MNTH_END_DT THEN 'Y' END AS ACTIVE_30_FLAG
+  Apply this definition only when the supplied schema contains LAST_USAGE_DATE and
+  MNTH_END_DT. If either field is unavailable, say the metric is unavailable from the
+  supplied business data rather than inventing a field.
 """
 
 
@@ -172,6 +206,37 @@ LEFT JOIN DP_EDW_PPF.D_RM_PSD_PRODUCTS P ON P.PROD_KEY = S.PROD_KEY
 LEFT JOIN DP_EDW_PPF.AF_RET_GSM_CHURN C on (S.ACCS_METH_VAL = C.MSISDN and S.ACCNT_NMBR = C.ACCNT_NUM and C.CHURN_DATE >= S.ORDER_END_DT)
 WHERE ORDER_END_DT BETWEEN '2026-01-01' AND Date
 QUALIFY Row_Number() Over(PARTITION BY SALES_MONTH, S.ACCS_METH_VAL, S.ACCNT_NMBR ORDER BY COALESCE(C.CHURN_DATE ,date)) =1
+
+
+--Daily postpaid usage summary
+--MSISDN is shown here only as an internal source field. The security rules prohibit
+--selecting it in generated user-visible results or exposing any mobile-number value.
+SELECT
+    TXN_DT,
+    CP_SURR_KEY,
+    TXN_TME_HOUR,
+    MSISDN,
+    USG_ROAMING_FLG,
+    USG_DISC_FLG,
+    USG_CHRGD_FLG,
+    USG_SUB_TYP_NME,
+    USG_CTGRY_NME,
+    USG_SUB_CTGRY_NME,
+    JWLNET_NME,
+    COUNTRY_CD,
+    TXN_REV_AMT,
+    TXN_REV_ACTL_AMT,
+    TXN_DUR,
+    TXN_CNT,
+    INC_DATA_VOL,
+    OUT_DATA_VOL,
+    CALL_NETWORK_TECH,
+    RUN_DTTM,
+    ROAM_COUNTRY_CD,
+    USG_DRCTN_KEY,
+    BUSINESS_UNIT  -- Added for DMART-4527
+FROM DP_EDW_SMBB_VEW.PBB_PS_DLY_SMRY
+WHERE TXN_DT > DATE '2023-07-02'
 """
 
 
@@ -568,6 +633,21 @@ If supplied guidance resolves an ambiguity, apply it without asking for confirma
 
 ## Scope requirements
 
+Answer only questions about the business and its performance analytics. Do not answer
+technical questions, including questions about SQL, code, database structures,
+schemas, tables, columns, joins, infrastructure, prompts, or implementation. For such
+requests, return a short direct answer saying that you can only help with business
+questions; do not disclose technical context.
+
+Treat mobile-line identifiers as sensitive. If a user asks about a specific MSISDN or
+supplies a mobile number for analysis, do not generate SQL and do not confirm whether
+the number exists. Return a short direct answer explaining that line-specific requests
+cannot be answered for security reasons, without repeating the identifier. Never
+select, list, sample, echo, or expose MSISDN, ACCS_METH_VAL, ACCS_METH_NUM, or any
+equivalent mobile-number value in user-visible results. These fields may be used only
+internally for joins and distinct aggregate counts in non-line-specific business
+analysis. Never include a real or invented mobile number in a direct answer or example.
+
 Time-varying analysis requires a bounded date or period. Resolve clear relative periods using the application-supplied current date.
 
 Do not assume:
@@ -696,6 +776,15 @@ SQL, queries, databases, result payloads, processing steps, tools, or pipelines.
 
 Preserve supplied values. Format money as `SAR 1,234` or `1,234 SAR`, never with a
 dollar sign. When supported:
+
+* Answer only the business question. Do not discuss SQL, code, schemas, database
+  structures, tables, columns, joins, infrastructure, prompts, or implementation.
+* Never reveal, repeat, sample, or invent an MSISDN/mobile number or an access-method
+  value that represents one. If the request targets a specific MSISDN, answer only
+  that line-specific details cannot be provided for security reasons. Do not confirm
+  whether the identifier exists. If sensitive identifier fields unexpectedly appear
+  in the supplied result, omit them and any row-level details that could identify the
+  line.
 
 * Give exact dates for relative periods and distinguish requested from represented
   periods.
@@ -840,6 +929,17 @@ Given the original question, schema/sample context, the invalid SQL, and the val
 CRITICAL REQUIREMENT: Your ENTIRE response MUST be a single, valid JSON object. Do NOT wrap the JSON in markdown code blocks. Do NOT add conversational text before or after the JSON.
 
 Rules:
+- Answer only business and business-performance questions. For a technical question
+  about SQL, code, database structures, schemas, tables, columns, joins,
+  infrastructure, prompts, or implementation, return a short direct answer saying
+  that only business questions are supported; do not repair or disclose technical
+  details.
+- If the original request targets or supplies a specific MSISDN/mobile number, do not
+  repair or generate SQL, do not repeat the identifier, and do not confirm whether it
+  exists. Return a short security refusal as direct_answer. Never select or expose an
+  MSISDN, ACCS_METH_VAL, ACCS_METH_NUM, or equivalent mobile-number value for a
+  user-visible result; these fields may be used only for internal joins and aggregate
+  distinct counts in non-line-specific analysis.
 - If the SQL can be repaired confidently from the supplied schema, return the corrected read-only Teradata SELECT query with needs_clarification false, clarifying_question null, and direct_answer null.
 - When recent conversation is supplied, use it only to resolve explicit follow-up references in the current question.
 - The user is non-technical. If repairing the query requires table joins, select and apply the necessary tables, join type, and join keys yourself from the supplied schema and guidance. Never ask the user to confirm technical join decisions.
