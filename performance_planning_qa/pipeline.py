@@ -51,6 +51,7 @@ from performance_planning_qa.prompts import (
     build_sql_messages,
     build_sql_repair_messages,
 )
+from performance_planning_qa.result_formatting import compact_result_payload_for_llm
 from performance_planning_qa.sql_safety import (
     SQLSafetyError,
     SQLValidationResult,
@@ -374,7 +375,7 @@ class NL2SQLPipeline:
             context=self.context,
         )
 
-    def close(self, *, close_database: bool = True) -> None:
+    def close(self, *, close_database: bool = True) -> None: # type: ignore
         try:
             if close_database:
                 self.db.close()
@@ -448,7 +449,7 @@ class NL2SQLPipeline:
                 previous_result,
                 forced_intent=ChartIntent(
                     trigger="explicit",
-                    requested_type=requested_type,
+                    requested_type=requested_type, # type: ignore
                 ),
             )
             if (
@@ -896,6 +897,7 @@ class NL2SQLPipeline:
             temperature=self.settings.llm.sql_temperature,
         )
         repaired = _generated_sql_from_payload(payload)
+        print("Repaied SQL = ", repaired)
         return repaired
 
     def _answer_from_result(
@@ -906,7 +908,7 @@ class NL2SQLPipeline:
         *,
         chart_context: str | None = None,
     ) -> dict[str, Any]:
-        payload = result.to_payload()
+        payload = compact_result_payload_for_llm(result.to_payload())
 
         # print("Sql query result. = ", payload, flush=True)
         print(

@@ -109,6 +109,31 @@ BUSINESS_TERM_GUIDANCE = """Authoritative business-term mappings and defaults:
 
 ANALYST_JOIN_FEW_SHOT_EXAMPLES = """Analyst few-shot join examples for learning table relationships. Keep the SQL text as reference examples, but final generated SQL must still be one valid read-only Teradata SELECT/WITH query for the user's exact question.
 
+--Reconnected customer: preserve the account-number lifecycle
+--If a customer churns with Account A and later reconnects with Account B, do not
+--link Account A before churn to Account B after reconnection. A reconnection creates
+--a new account number even when the MSISDN remains the same. Inspect both identifiers
+--and lifecycle dates before associating churn and reconnection records.
+SELECT
+    MSISDN,
+    ACCOUNT_NUMBER,
+    REC_DATE,
+    CHURN_DATE
+FROM REC_CHURN
+WHERE MSISDN = '<MSISDN>'
+ORDER BY REC_DATE;
+
+
+--Weekly analysis: use the authoritative CBU week mapping
+--When the user requests weekly analysis, derive CBU_WEEK_NUM by joining the relevant
+--date to DP_EDW_PPF.CBU_WEEKS. Never calculate the week number independently.
+SELECT
+    RC.REC_DATE,
+    W.CBU_WEEK_NUM
+FROM REC_CHURN AS RC
+LEFT JOIN DP_EDW_PPF.CBU_WEEKS AS W
+  ON RC.REC_DATE = W.CALENDAR_DATE;
+
 --Base, product lookup, and sales
 SEL BASE.CALENDAR_DATE, BASE.ACCS_METH_VAL, BASE.SCREEN_TYPE, BASE.LINE_STRT_DATE, S.ORDER_END_DT,
     S.ORDER_TYP_NME, S.ORDER_CHANNEL_NME, BASE.CRM_PROD_Name, BASE.CRM_PROD_ID
@@ -776,6 +801,11 @@ SQL, queries, databases, result payloads, processing steps, tools, or pipelines.
 
 Preserve supplied values. Format money as `SAR 1,234` or `1,234 SAR`, never with a
 dollar sign. When supported:
+
+The analytical result may abbreviate large numeric measures using K for thousand, M
+for million, and B for billion. Interpret those suffixes using the supplied
+`number_format` note, preserve the abbreviated value in the answer, and do not apply
+the scale a second time. Identifier and calendar fields remain unscaled.
 
 * Answer only the business question. Do not discuss SQL, code, schemas, database
   structures, tables, columns, joins, infrastructure, prompts, or implementation.
