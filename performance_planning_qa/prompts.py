@@ -52,6 +52,7 @@ SQL_DOMAIN_GUIDANCE = """Curated performance-planning table grain and join guida
   date. The current Sunday-to-Saturday bucket may therefore be a partial week. Do not
   extend that bucket beyond today, and do not replace the requested weekly findings
   with only a coverage or partial-week caveat.
+- If a user asks for overall revenue or revenue of a package by default we use the LINE_REV_EXCL_DEVICES but sometimes TOTAL_LINE_REV. So now if a user asks ask a follow up question do you want the revenue by excluding devices or including devices. 
 """
 
 
@@ -266,6 +267,70 @@ WHERE TXN_DT > DATE '2023-07-02'
 
 
 ANALYST_QUESTION_FEW_SHOT_EXAMPLES = """Analyst-reviewed question-to-SQL examples. Learn the intent mappings, population filters, screen handling, grains, and joins from these examples. Never copy an example's dates, screen choice, TOP value, dimensions, or grain unless the current question requests them.
+
+
+Question:
+how many subscribers does the Mofawtar 3 Plus package have in January 2026?
+SQL:
+WITH BASE_MONTH_END AS
+(
+    SELECT
+        DATE '2026-01-31' AS SNAPSHOT_MONTH,
+        PSB.ACCS_METH_VAL,
+        PSB.ACCNT_NMBR,
+        PSB.PROD_KEY
+    FROM DP_EDW_PPF.F_RM_POSTPAID_BASE AS PSB
+
+    WHERE PSB.LINE_TYPE = 'PS'
+      AND PSB.SCREEN_TYPE = 'SS'
+
+      AND PSB.SUBS_PROD_STS_TYP_NM NOT IN
+          ('Inactive', 'DELETED FROM SOURCE', 'UNKNOWN')
+
+      AND DATE '2026-01-31'
+          BETWEEN CAST(PSB.SUBS_PROD_STS_STRT_DTTM AS DATE)
+              AND CAST(PSB.SUBS_PROD_STS_END_DTTM AS DATE)
+
+    QUALIFY ROW_NUMBER() OVER
+    (
+        PARTITION BY
+            PSB.ACCS_METH_VAL,
+            PSB.ACCNT_NMBR
+
+        ORDER BY
+            PSB.SUBS_PROD_STS_STRT_DTTM DESC,
+            PSB.SUBS_PROD_STS_END_DTTM DESC
+    ) = 1
+),
+
+PRODUCTS AS
+(
+    SELECT
+        PROD_KEY,
+        CRM_PROD_NAME
+    FROM DP_EDW_PPF.D_RM_PSD_PRODUCTS
+
+    QUALIFY ROW_NUMBER() OVER
+    (
+        PARTITION BY PROD_KEY
+        ORDER BY CRM_PROD_NAME
+    ) = 1
+)
+
+SELECT
+    B.SNAPSHOT_MONTH,
+    COUNT(DISTINCT B.ACCS_METH_VAL) AS SUBSCRIBER_COUNT
+
+FROM BASE_MONTH_END B
+
+INNER JOIN PRODUCTS P
+    ON B.PROD_KEY = P.PROD_KEY
+
+WHERE P.CRM_PROD_NAME = 'Mofawtar 3 Plus'
+
+GROUP BY 1
+ORDER BY 1;
+
 
 Question: Which package performed best for customer acquisition in June 2026?
 SQL:
