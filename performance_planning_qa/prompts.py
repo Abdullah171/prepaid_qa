@@ -263,6 +263,68 @@ SELECT
     BUSINESS_UNIT  -- Added for DMART-4527
 FROM DP_EDW_SMBB_VEW.PBB_PS_DLY_SMRY
 WHERE TXN_DT > DATE '2023-07-02'
+
+
+
+Now another these examples below are only for the churn reconnected customer because sometimes when a user churns and comes back his account number changes but msisdn remain the same:
+1. Reconnected Customer – Account Number
+Example: If a customer churns with Account A and later reconnects with Account B, we should not link Account A before churn to Account B after reconnection. The customer receives a new account number after reconnection, while the MSISDN remains the same.
+ 
+SELECT
+    MSISDN,
+    ACCOUNT_NUMBER,
+    REC_DATE,
+    CHURN_DATE
+FROM REC_CHURN
+WHERE MSISDN = '<MSISDN>'
+ORDER BY REC_DATE;
+
+
+Question:
+I want to have a view on reconnected customers in july 2026, SS only privide reconnect date, count of customers along with their churn date, churn type and churn channel
+
+SQL:
+WITH RECONNECT_SALES AS
+(
+    SELECT
+        S.ACCS_METH_VAL,
+        S.ACCNT_NMBR,
+        S.ORDER_END_DT AS RECONNECT_DATE
+    FROM DP_EDW_PPF.F_RM_PSD_SALES AS S
+    WHERE S.ORDER_SUBTYP_NME = 'Reconnect'
+      AND S.ORDER_END_DT BETWEEN DATE '2026-07-01' AND DATE '2026-07-31'
+      AND S.ACCS_METH_VAL LIKE '5%'
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY S.ACCS_METH_VAL, S.ACCNT_NMBR
+        ORDER BY S.ORDER_END_DT
+    ) = 1
+),
+ASSOCIATED_CHURN AS
+(
+    SELECT
+        RS.ACCS_METH_VAL,
+        RS.ACCNT_NMBR,
+        RS.RECONNECT_DATE,
+        C.CHURN_DATE,
+        C.CHURN_TYPE,
+        C.CHURN_CHANNEL_NAME,STREAM_TYPE
+    FROM RECONNECT_SALES AS RS
+    LEFT JOIN DP_EDW_PPF.AF_RET_GSM_CHURN AS C
+      ON C.MSISDN = RS.ACCS_METH_VAL
+     AND C.CHURN_DATE <= RS.RECONNECT_DATE
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY RS.ACCS_METH_VAL, RS.ACCNT_NMBR, RS.RECONNECT_DATE
+        ORDER BY C.CHURN_DATE DESC
+    ) = 1
+)
+SELECT
+    RECONNECT_DATE,
+    CHURN_DATE,
+    CHURN_TYPE,
+    CHURN_CHANNEL_NAME,
+    ACCS_METH_VAL ,STREAM_TYPE
+FROM ASSOCIATED_CHURN c
+
 """
 
 
@@ -689,19 +751,6 @@ SELECT
 FROM REC_CHURN RC
 LEFT JOIN DP_EDW_PPF.CBU_WEEKS W
     ON RC.REC_DATE = W.CALENDAR_DATE;
-
-Now another these examples below are only for the churn reconnected customer because sometimes when a user churns and comes back his account number changes but msisdn remain the same:
-1. Reconnected Customer – Account Number
-Example: If a customer churns with Account A and later reconnects with Account B, we should not link Account A before churn to Account B after reconnection. The customer receives a new account number after reconnection, while the MSISDN remains the same.
- 
-SELECT
-    MSISDN,
-    ACCOUNT_NUMBER,
-    REC_DATE,
-    CHURN_DATE
-FROM REC_CHURN
-WHERE MSISDN = '<MSISDN>'
-ORDER BY REC_DATE;
 
 """
 
