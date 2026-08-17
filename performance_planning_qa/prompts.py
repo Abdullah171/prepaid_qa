@@ -18,9 +18,9 @@ class ChatTurn:
 SQL_DOMAIN_GUIDANCE = """Curated performance-planning table grain and join guidance:
 - F_RM_POSTPAID_BASE is a subscription status-period table, not one row per line. Before joining it to sales, churn, or revenue for month-level analysis, deduplicate it to one row per month, access method, and account with QUALIFY ROW_NUMBER.
 - F_RM_PSD_SALES is an order/service-order line table. Use ORDER_END_DT for sales timing. Join to base on ACCS_METH_VAL + ACCNT_NMBR and, for activation/base-start analysis, ORDER_END_DT = LINE_STRT_DATE.
-- AF_RET_GSM_CHURN is a churn event/attribute table. Use CHURN_DATE for churn timing. Join to base on MSISDN = ACCS_METH_VAL and ACCNT_NUM = ACCNT_NMBR, then keep the first churn on or after the line start when a single churn record is needed.
+- AF_RET_GSM_CHURN is a churn event/attribute table. Use CHURN_DATE for churn timing. Join to base on MSISDN = ACCS_METH_VAL and ACCNT_NUM = ACCNT_NMBR, then keep the first churn on or after the line start when a single churn record is needed. This base-lifecycle join rule does not apply to the reconnect-to-prior-churn exception below.
 - D_RM_PSD_PRODUCTS is the shared product lookup. Join it to base or sales on PROD_KEY to obtain CRM_PROD_Name, CRM_PROD_ID, and PROD_PRICE_AMT. Reduce or deduplicate the lookup by PROD_KEY first if the supplied schema or data shows more than one lookup row per product key.
-- This application is postpaid-only. For every churn query, always filter AF_RET_GSM_CHURN with STREAM_TYPE = 'PS', even when the user does not mention postpaid or stream type; never use STREAM_TYPE = 'PP'. On base, use LINE_TYPE = 'PS'. For eligible subscriber-base reporting, retain every status except 'Inactive', 'DELETED FROM SOURCE', and 'UNKNOWN'; do not silently narrow the population to SUBS_PROD_STS_TYP_NM = 'Active'.
+- This application is normally postpaid-only. For churn queries, filter AF_RET_GSM_CHURN with STREAM_TYPE = 'PS', even when the user does not mention postpaid or stream type; never use STREAM_TYPE = 'PP'. The sole exception is a reconnect-to-prior-churn analysis: do not filter AF_RET_GSM_CHURN.STREAM_TYPE, because the same MSISDN can reconnect under a new account and the prior churn can belong to either stream. Return STREAM_TYPE as a dimension when churn attributes are returned or grouped. On base, use LINE_TYPE = 'PS'. For eligible subscriber-base reporting, retain every status except 'Inactive', 'DELETED FROM SOURCE', and 'UNKNOWN'; do not silently narrow the population to SUBS_PROD_STS_TYP_NM = 'Active'.
 - Before comparing metrics from different tables, identify the business entity represented by one row in each table and the entity the user wants counted. Do not assume that COUNT(*) from two fact tables measures comparable volumes.
 - Reduce each source independently to the requested business and time grain before joining or comparing it. When a source can contain multiple records for the same entity, use the schema relationships and lifecycle dates to select the single relevant record, or count a stable identifier at the requested grain.
 - Use all reliable business keys shared by the sources and apply any required temporal relationship so that an event is associated with the correct entity lifecycle. Avoid broad joins that can attach one event to multiple historical records.
@@ -35,7 +35,7 @@ SQL_DOMAIN_GUIDANCE = """Curated performance-planning table grain and join guida
 - If the user explicitly asks for the previous N complete months, exclude the current partial month and use the N full calendar months immediately before it. Do not silently replace a rolling-month request with complete calendar months.
 - F_RM_PS_MTHLY_REV is already monthly at line/account grain. REF_DATE is the monthly reference date, usually month-end in the samples. For a standalone monthly revenue question such as June 2026 revenue, use F_RM_PS_MTHLY_REV directly with REF_DATE = DATE '2026-06-30' or a bounded June date range. Do not join to base unless the user explicitly asks for a base-aligned revenue analysis or the documented screen-type default requires separate SS and LS results.
 - Revenue joins can multiply totals when one side is not reduced to the requested grain first. Pre-aggregate or QUALIFY each table to one row per requested grain before joining.
-- When both access method and account are available, join on both keys. Avoid joining only on MSISDN/access method unless the other table has no account key.
+- When both access method and account are available, normally join on both keys. The sole exception is associating a reconnect sale to its prior churn: join sales ACCS_METH_VAL to churn MSISDN only and do not use either account-number column anywhere in that reconnect association, because the account number can change at reconnection.
 - Do not use open-ended joins such as R.REF_DATE >= BASE.CALENDAR_DATE for standalone month revenue totals. That pattern returns the base month and later revenue months and can multiply a June-only answer.
 - The analyst examples below use Teradata SEL shorthand. In final generated SQL, use SELECT or WITH, not SEL.
 - In final generated SQL, use normal Teradata clause order: FROM/JOIN, WHERE, GROUP BY, HAVING, QUALIFY, ORDER BY.
@@ -86,7 +86,7 @@ BUSINESS_TERM_GUIDANCE = """Authoritative business-term mappings and defaults:
 - "churn ARPU" means SUM(LAST_3M_AVG_REV) / NULLIFZERO(TOTAL_CHURN). First reduce churn to the requested unique churn entity/grain so both the revenue sum and denominator use the same churn population.
 - Generic "ARPU" or "base ARPU" means SUM(LINE_REV_EXCL_DEVICES) / NULLIFZERO(TOTAL_BASE). Align deduplicated monthly base lines to revenue on access method + account and the exact reporting month before calculating it.
 - "QoS" or "quality of sales" means acquisition quality: how many and what percentage of acquired sales subsequently churned in elapsed-time buckets of 1 month, 2 months, 3 months, 4 months, and 5 or more months. Join sales to churn on access method + account, require CHURN_DATE >= ORDER_END_DT, keep the first qualifying churn per acquired line/account/sale lifecycle, and return the acquired-sales denominator as well as churned count/rate. Interpret the numbered bucket as the lifecycle month containing the churn: under 1 elapsed month = 1 month, 1 to under 2 = 2 months, 2 to under 3 = 3 months, 3 to under 4 = 4 months, and 4 or more elapsed months = 5+ months.
-- Map "large screen" to SCREEN_TYPE = 'LS' and "small screen" to SCREEN_TYPE = 'SS'. If the user explicitly names one, filter to it. If the user omits screen type for a postpaid sales, churn, base, revenue, ARPU, or QoS analysis, do not ask for clarification just for that omission: include both SS and LS, return SCREEN_TYPE as a result dimension, and report the measures separately for both. For a source without SCREEN_TYPE, derive it from a deduplicated base lifecycle using both line and account keys plus the applicable exact lifecycle/month relationship. A screen breakdown makes a revenue analysis base-aligned, so join monthly revenue to the deduplicated same-month base on both keys and exact month; never use an open-ended revenue join.
+- Map "large screen" to SCREEN_TYPE = 'LS' and "small screen" to SCREEN_TYPE = 'SS'. If the user explicitly names one, filter to it. If the user omits screen type for a postpaid sales, churn, base, revenue, ARPU, or QoS analysis, do not ask for clarification just for that omission: include both SS and LS, return SCREEN_TYPE as a result dimension, and report the measures separately for both. For a source without SCREEN_TYPE, derive it from a deduplicated base lifecycle using both line and account keys plus the applicable exact lifecycle/month relationship. A screen breakdown makes a revenue analysis base-aligned, so join monthly revenue to the deduplicated same-month base on both keys and exact month; never use an open-ended revenue join. Reconnect-to-prior-churn analysis is the sole exception: apply an explicit SS request to reconnect sales as S.ACCS_METH_VAL LIKE '5%' (or LS as LIKE '8%') and do not add C.SCREEN_TYPE or a base-table join.
 - PRODUCT_FAMILY -- we dont use this, instead use prod name or protifolio from this table DP_EDW_PPF.D_RM_PSD_PRODUCTS for products families
 - ORDER_SUBTYP_NME AS SUBTYPE we always use this as sales type not ORDER_TYP_NME.
 - For "weekly sales for PS SS by type", PS is the application's postpaid scope, SS
@@ -95,11 +95,17 @@ BUSINESS_TERM_GUIDANCE = """Authoritative business-term mappings and defaults:
   and every represented subtype. Do not answer with only a data-coverage statement;
   place a brief coverage or partial-week note after the weekly findings when needed.
 - "Reconnect", "re-connect", and "reconnection" sales mean
-  F_RM_PSD_SALES.ORDER_SUBTYP_NME = 'Reconnect'. For reconnect analysis, associate
-  each reconnect sale with the most recent churn for the same line and account whose
-  CHURN_DATE is before the reconnect ORDER_END_DT. If multiple earlier churn records
-  exist, keep only the latest one; never attach a later churn or an older churn when a
-  more recent qualifying churn exists.
+  F_RM_PSD_SALES.ORDER_SUBTYP_NME = 'Reconnect'. For the specific analysis that
+  associates reconnect sales with their prior churn, account number and normal
+  postpaid churn restrictions must not be used: do not select, join, filter, group,
+  or partition by S.ACCNT_NMBR or C.ACCNT_NUM; do not filter C.STREAM_TYPE = 'PS';
+  and do not filter C.SCREEN_TYPE. Join only C.MSISDN = S.ACCS_METH_VAL and require
+  C.CHURN_DATE <= S.ORDER_END_DT. This exception exists because a reconnect can keep
+  the same MSISDN while receiving a new account number. For each reconnect, keep the
+  latest qualifying earlier churn. If the question requests churn attributes or an
+  aggregate breakdown, include C.STREAM_TYPE in the result/grouping so both PP and PS
+  prior churn records remain visible. For an explicit SS request, filter reconnect
+  sales with S.ACCS_METH_VAL LIKE '5%'; for LS use LIKE '8%'.
 - "Active 30" is defined exactly as:
   CASE WHEN LAST_USAGE_DATE BETWEEN MNTH_END_DT - 29 AND MNTH_END_DT THEN 'Y' END AS ACTIVE_30_FLAG
   Apply this definition only when the supplied schema contains LAST_USAGE_DATE and
@@ -109,20 +115,6 @@ BUSINESS_TERM_GUIDANCE = """Authoritative business-term mappings and defaults:
 
 
 ANALYST_JOIN_FEW_SHOT_EXAMPLES = """Analyst few-shot join examples for learning table relationships. Keep the SQL text as reference examples, but final generated SQL must still be one valid read-only Teradata SELECT/WITH query for the user's exact question.
-
---Reconnected customer: preserve the account-number lifecycle
---If a customer churns with Account A and later reconnects with Account B, do not
---link Account A before churn to Account B after reconnection. A reconnection creates
---a new account number even when the MSISDN remains the same. Inspect both identifiers
---and lifecycle dates before associating churn and reconnection records.
-SELECT
-    MSISDN,
-    ACCOUNT_NUMBER,
-    REC_DATE,
-    CHURN_DATE
-FROM REC_CHURN
-WHERE MSISDN = '<MSISDN>'
-ORDER BY REC_DATE;
 
 
 --Weekly analysis: use the authoritative CBU week mapping
@@ -266,18 +258,11 @@ WHERE TXN_DT > DATE '2023-07-02'
 
 
 
-Now another these examples below are only for the churn reconnected customer because sometimes when a user churns and comes back his account number changes but msisdn remain the same:
-1. Reconnected Customer – Account Number
-Example: If a customer churns with Account A and later reconnects with Account B, we should not link Account A before churn to Account B after reconnection. The customer receives a new account number after reconnection, while the MSISDN remains the same.
- 
-SELECT
-    MSISDN,
-    ACCOUNT_NUMBER,
-    REC_DATE,
-    CHURN_DATE
-FROM REC_CHURN
-WHERE MSISDN = '<MSISDN>'
-ORDER BY REC_DATE;
+The following example applies only to reconnect-to-prior-churn analysis. A reconnect
+can receive a new account number while its MSISDN remains the same. Therefore, do not
+use account number, C.STREAM_TYPE = 'PS', or C.SCREEN_TYPE in this pattern. Match by
+MSISDN and lifecycle date only. Keep STREAM_TYPE unfiltered and expose it as an
+aggregate dimension. An SS request is applied on the reconnect-sale MSISDN pattern.
 
 
 Question:
@@ -305,7 +290,8 @@ ASSOCIATED_CHURN AS
         RS.RECONNECT_DATE,
         C.CHURN_DATE,
         C.CHURN_TYPE,
-        C.CHURN_CHANNEL_NAME,STREAM_TYPE
+        C.CHURN_CHANNEL_NAME,
+        C.STREAM_TYPE
     FROM RECONNECT_SALES AS RS
     LEFT JOIN DP_EDW_PPF.AF_RET_GSM_CHURN AS C
       ON C.MSISDN = RS.ACCS_METH_VAL
@@ -320,8 +306,11 @@ SELECT
     CHURN_DATE,
     CHURN_TYPE,
     CHURN_CHANNEL_NAME,
-    ACCS_METH_VAL ,STREAM_TYPE
-FROM ASSOCIATED_CHURN c
+    STREAM_TYPE,
+    COUNT(DISTINCT ACCS_METH_VAL) AS RECONNECTED_CUSTOMERS
+FROM ASSOCIATED_CHURN
+GROUP BY 1, 2, 3, 4, 5
+ORDER BY RECONNECT_DATE, RECONNECTED_CUSTOMERS DESC
  
  
 """
@@ -871,9 +860,16 @@ Use these date mappings unless authoritative guidance says otherwise:
 * Churn: CHURN_DATE
 * Monthly revenue: REF_DATE
 
-Every churn query must include:
+Every churn query except reconnect-to-prior-churn analysis must include:
 
 AF_RET_GSM_CHURN.STREAM_TYPE = 'PS'
+
+For reconnect-to-prior-churn analysis, this exception takes precedence over normal
+churn, account-key, and screen rules: join sales to churn only on ACCS_METH_VAL =
+MSISDN plus CHURN_DATE <= RECONNECT_DATE; do not use account number; do not filter
+churn STREAM_TYPE or SCREEN_TYPE; and apply explicit SS/LS to the reconnect-sale
+MSISDN pattern. Keep the latest qualifying churn and include STREAM_TYPE in the
+result grain when returning churn attributes.
 
 Revenue rules:
 
@@ -1112,7 +1108,7 @@ Rules:
 - Resolve business-language requests to the most appropriate available columns yourself using the schema descriptions, table grains, samples, curated guidance, and conversation context. Do not ask the user for table or column names when the intended business meaning can be determined confidently.
 - Re-check the supplied sample records and unique-value dictionaries while repairing. If the user's wording has one confident match, preserve or correct the filter using the exact stored value and schema-supported column; do not ask for a technical value or column name that the supplied context resolves.
 - Do not treat the absence of a value from the samples as proof that it cannot exist. Ask a concise business-language clarification only when multiple materially different mappings remain plausible after consulting all supplied context.
-- Preserve and apply the authoritative business-term mappings, product lookup, ARPU formulas, QoS lifecycle definition, postpaid filters, analyst comment corrections, and SS/LS behavior supplied with the repair context.
+- Preserve and apply the authoritative business-term mappings, product lookup, ARPU formulas, QoS lifecycle definition, postpaid filters, analyst comment corrections, and SS/LS behavior supplied with the repair context. The documented reconnect-to-prior-churn exception takes precedence over normal postpaid, account-key, and screen rules during repair as well.
 - During repair, preserve any documented business default or disclosed proxy used by the original analysis. Do not turn a resolvable executive request into a technical clarification question.
 - Ask for clarification only when required business meaning or scope is missing or genuinely ambiguous, not for implementation details that can be determined from the supplied database context.
 - If the error shows that required user scope is missing, such as the exact metric, dimension, filter, date, month, year, or date range, do not guess. Return needs_clarification true, a concise clarifying_question, direct_answer null, and sql null.

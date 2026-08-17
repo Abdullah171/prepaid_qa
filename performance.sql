@@ -75,6 +75,10 @@
      method/MSISDN and account number:
        base.ACCS_METH_VAL = sales.ACCS_METH_VAL / churn.MSISDN / revenue.ACCS_METH_NUM
        base.ACCNT_NMBR    = sales.ACCNT_NMBR    / churn.ACCNT_NUM / revenue.ACCT_NUM
+     Exception: when associating a reconnect sale to the customer's prior churn,
+     the account can change. For that pattern only, join sales ACCS_METH_VAL to
+     churn MSISDN without either account-number key, and require the churn date
+     to be on or before the reconnect date.
    - Before joining F_RM_POSTPAID_BASE to another table for month-level analysis,
      reduce base to one row per Last_Day(CALENDAR_DATE), ACCS_METH_VAL,
      and ACCNT_NMBR using QUALIFY ROW_NUMBER.
@@ -100,7 +104,9 @@
      rate-plan name after joining on PROD_KEY.
    - For postpaid churn questions, use AF_RET_GSM_CHURN with STREAM_TYPE = 'PS'
      and aggregate by CHURN_DATE, CHURN_TYPE, NATIONALITY, SAUDI_FLAG, REGION,
-     CITY, VALUE_SEGMENT_NAME, etc.
+     CITY, VALUE_SEGMENT_NAME, etc. Exception: a reconnect-to-prior-churn
+     analysis must not filter churn STREAM_TYPE or SCREEN_TYPE and must not use
+     account number; match the unchanged MSISDN and lifecycle dates instead.
    - For revenue questions, use F_RM_PS_MTHLY_REV directly unless the user
      explicitly asks for a lifecycle/base/sales/churn relationship. Aggregate by
      REF_DATE, ACCS_METH_NUM, ACCT_NUM, value band, and revenue fields such as
@@ -260,7 +266,10 @@ Column guide: DP_EDW_PPF.F_RM_PSD_SALES
      segment, and exclusion segments. Samples include both prepaid stream records
      such as STREAM_TYPE = 'PP' and postpaid/service records such as STREAM_TYPE = 'PS'.
      This application is scoped exclusively to postpaid performance. Every churn
-     query must use STREAM_TYPE = 'PS'; never query STREAM_TYPE = 'PP'.
+     query must use STREAM_TYPE = 'PS'; never query STREAM_TYPE = 'PP', except for
+     reconnect-to-prior-churn analysis. For that exception only, leave STREAM_TYPE
+     unfiltered so a reconnect can be associated with its latest earlier churn by
+     unchanged MSISDN even if its account number or stream changed.
 ============================================================================ */
 
 CREATE SET TABLE DP_EDW_PPF.AF_RET_GSM_CHURN ,FALLBACK ,
