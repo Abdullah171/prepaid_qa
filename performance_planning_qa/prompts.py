@@ -48,7 +48,7 @@ SQL_DOMAIN_GUIDANCE = """Curated performance-planning table grain and join guida
   starting month such as January as "week 1" or return only W1. For example,
   "weekly churn from January 2026 until today" means January 1, 2026 through the
   application-supplied current date, with all weekly buckets in that interval.
-- "Until today" has an inclusive upper bound of the application-supplied current
+- "Until today" has an inclusive upper bound of the application-supplied current    
   date. The current Sunday-to-Saturday bucket may therefore be a partial week. Do not
   extend that bucket beyond today, and do not replace the requested weekly findings
   with only a coverage or partial-week caveat.
@@ -680,6 +680,29 @@ INNER JOIN PRODUCTS AS P
 WHERE S.ORDER_END_DT BETWEEN DATE '2026-04-01' AND DATE '2026-06-30'
 GROUP BY 1
 ORDER BY TOTAL_SALES DESC
+
+Weekly Analysis – CBU Week Logic
+When the user requests a weekly analysis, derive the CBU_WEEK_NUM by joining the relevant date to DP_EDW_PPF.CBU_WEEKS. The week number should not be calculated independently.
+SELECT
+    RC.REC_DATE,
+    W.CBU_WEEK_NUM
+FROM REC_CHURN RC
+LEFT JOIN DP_EDW_PPF.CBU_WEEKS W
+    ON RC.REC_DATE = W.CALENDAR_DATE;
+
+Now another these examples below are only for the churn reconnected customer because sometimes when a user churns and comes back his account number changes but msisdn remain the same:
+1. Reconnected Customer – Account Number
+Example: If a customer churns with Account A and later reconnects with Account B, we should not link Account A before churn to Account B after reconnection. The customer receives a new account number after reconnection, while the MSISDN remains the same.
+ 
+SELECT
+    MSISDN,
+    ACCOUNT_NUMBER,
+    REC_DATE,
+    CHURN_DATE
+FROM REC_CHURN
+WHERE MSISDN = '<MSISDN>'
+ORDER BY REC_DATE;
+
 """
 
 SQL_SYSTEM_PROMPT = """
