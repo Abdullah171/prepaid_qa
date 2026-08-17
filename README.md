@@ -482,8 +482,8 @@ input is written to a timestamped `.txt` file in `LLM_PROMPT_LOG_DIR`.
 - `performance_planning_qa/database.py`: Teradata connection and query execution via `teradataml`.
 - `performance_planning_qa/charting.py`: conditional chart intent, result-field validation,
   and versioned renderer-neutral chart payloads.
-- `performance_planning_qa/csv_export.py`: displayed-table extraction, CSV intent,
-  persisted export state, filenames, and standards-compliant serialization.
+- `performance_planning_qa/csv_export.py`: displayed-table and full-query-result CSV
+  exports, persisted export state, filenames, and standards-compliant serialization.
 - `performance_planning_qa/pipeline.py`: end-to-end orchestration.
 
 ## Local Tests

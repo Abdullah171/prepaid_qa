@@ -24,6 +24,7 @@ DEFAULT_READ_TIMEOUT_SECONDS = 15.0
 DEFAULT_STREAM_READ_TIMEOUT_SECONDS = 45.0
 DEFAULT_CANCEL_CONNECT_TIMEOUT_SECONDS = 1.0
 DEFAULT_CANCEL_READ_TIMEOUT_SECONDS = 2.0
+SSE_READ_CHUNK_BYTES = 16 * 1024
 
 
 class ApiError(RuntimeError):
@@ -359,7 +360,10 @@ def _iter_sse(
 
     event_name = "message"
     data_lines: list[str] = []
-    for raw_line in response.iter_lines(chunk_size=1, decode_unicode=True):
+    for raw_line in response.iter_lines(
+        chunk_size=SSE_READ_CHUNK_BYTES,
+        decode_unicode=True,
+    ):
         if cancellation_token is not None:
             cancellation_token.raise_if_cancelled()
         line = raw_line.decode("utf-8") if isinstance(raw_line, bytes) else raw_line

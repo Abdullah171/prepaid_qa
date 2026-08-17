@@ -533,11 +533,16 @@ def _render_assistant_artifacts(
     _render_chart(metadata.get("chart"), chart_key=chart_key)
     _render_csv_download(
         metadata.get("csv_export"),
+        query_result=query_result,
         artifact_key=chart_key,
     )
+    answer_generation_limited = bool(metadata.get("answer_generation_limited"))
+    if answer_generation_limited and sql:
+        with st.expander("SQL used for this export", expanded=True):
+            st.code(sql, language="sql")
     if not st.session_state.get("show_source", False):
         return
-    if sql:
+    if sql and not answer_generation_limited:
         with st.expander("SQL", expanded=False):
             st.code(sql, language="sql")
 
@@ -568,6 +573,7 @@ def _render_assistant_artifacts(
 def _render_csv_download(
     export: Any,
     *,
+    query_result: Any = None,
     artifact_key: str | None,
 ) -> None:
     """Render a persistent download button only after CSV was requested."""
@@ -575,7 +581,10 @@ def _render_csv_download(
     if not isinstance(export, dict) or export.get("status") != "ready":
         return
     try:
-        csv_data = csv_export_to_bytes(export)
+        csv_data = csv_export_to_bytes(
+            export,
+            query_result=query_result if isinstance(query_result, dict) else None,
+        )
     except (TypeError, ValueError):
         logger.warning("Could not serialize persisted result as CSV", exc_info=True)
         return
@@ -583,8 +592,7 @@ def _render_csv_download(
     filename = str(export.get("filename") or "performance-planning-data.csv").strip()
     if not filename.lower().endswith(".csv"):
         filename = "performance-planning-data.csv"
-    rows = export.get("rows")
-    row_count = len(rows) if isinstance(rows, list) else 0
+    row_count = int(export.get("row_count") or 0)
     label = f"Download CSV ({row_count:,} rows)"
     st.download_button(
         label,

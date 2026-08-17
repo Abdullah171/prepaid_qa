@@ -22,6 +22,16 @@ logger = logging.getLogger(__name__)
 RETRYABLE_STATUS_CODES = frozenset({502, 503, 504})
 GLM_REASONING_CHAR_LIMIT = 40_000
 
+_CONTEXT_WINDOW_ERROR_MARKERS = (
+    "contextwindowexceeded",
+    "context_window_exceeded",
+    "context window exceeded",
+    "maximum context length",
+    "maximum context window",
+    "prompt is too long",
+    "too many input tokens",
+)
+
 ChatMessage = dict[str, str]
 ReasoningCallback = Callable[[str], None]
 
@@ -31,6 +41,10 @@ class _StreamCompletion:
     content: str
     captured_reasoning: str
     reasoning_limit_reached: bool
+
+
+class LLMContextWindowExceededError(RuntimeError):
+    """Raised when an LLM rejects a request because its prompt is too large."""
 
 
 def _with_current_date_context(messages: list[ChatMessage]) -> list[ChatMessage]:
@@ -186,6 +200,16 @@ class LiteLLMClient:
                     diagnostics["status_code"] = response.status_code
                     diagnostics["response"] = _safe_error_response(response)
 
+                if is_context_window_exceeded_error(exc):
+                    logger.warning(
+                        "LLM context window was exceeded; provider=%s model=%s",
+                        self.settings.provider,
+                        self.settings.model,
+                    )
+                    raise LLMContextWindowExceededError(
+                        "The LLM context window was exceeded."
+                    ) from exc
+
                 if attempt < self.settings.max_retries and _is_retryable_error(exc):
                     delay = self.settings.retry_backoff_seconds * (2**attempt)
                     logger.warning(
@@ -319,6 +343,17 @@ class LiteLLMClient:
                     diagnostics["status_code"] = response.status_code
                     diagnostics["response"] = _safe_error_response(response)
 
+                if is_context_window_exceeded_error(exc):
+                    logger.warning(
+                        "LLM context window was exceeded during non-thinking fallback; "
+                        "provider=%s model=%s",
+                        self.settings.provider,
+                        self.settings.model,
+                    )
+                    raise LLMContextWindowExceededError(
+                        "The LLM context window was exceeded."
+                    ) from exc
+
                 if attempt < self.settings.max_retries and _is_retryable_error(exc):
                     delay = self.settings.retry_backoff_seconds * (2**attempt)
                     logger.warning(
@@ -376,6 +411,37 @@ class LiteLLMClient:
             return
         self._client.close()
         self._client = None
+
+
+def is_context_window_exceeded_error(exc: BaseException) -> bool:
+    """Return whether an exception chain contains an LLM context-limit response."""
+
+    pending: list[BaseException] = [exc]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+
+        messages = [str(current)]
+        response = getattr(current, "response", None)
+        if response is not None:
+            try:
+                messages.append(response.text)
+            except Exception:
+                pass
+        normalized = " ".join(messages).casefold()
+        if any(marker in normalized for marker in _CONTEXT_WINDOW_ERROR_MARKERS):
+            return True
+
+        for linked in (current.__cause__, current.__context__):
+            if isinstance(linked, BaseException):
+                pending.append(linked)
+        for arg in getattr(current, "args", ()):
+            if isinstance(arg, BaseException):
+                pending.append(arg)
+    return False
 
 
 def _completion_url(endpoint: str) -> str:

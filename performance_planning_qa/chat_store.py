@@ -535,6 +535,7 @@ def _message_from_row(row: dict[str, Any]) -> ChatMessage:
     metadata = row.get("metadata") or {}
     if isinstance(metadata, str):
         metadata = json.loads(metadata)
+    metadata = _without_legacy_query_result_csv_rows(metadata)
     return ChatMessage(
         id=str(row["id"]),
         session_id=str(row["session_id"]),
@@ -544,3 +545,25 @@ def _message_from_row(row: dict[str, Any]) -> ChatMessage:
         metadata=dict(metadata),
         created_at=row["created_at"],
     )
+
+
+def _without_legacy_query_result_csv_rows(metadata: Any) -> dict[str, Any]:
+    """Drop CSV rows duplicated by older context-limit fallback messages."""
+
+    if not isinstance(metadata, dict):
+        return {}
+    export = metadata.get("csv_export")
+    query_result = metadata.get("query_result")
+    if (
+        not isinstance(export, dict)
+        or export.get("source") != "query_result"
+        or not export.get("rows")
+        or not isinstance(query_result, dict)
+        or not query_result.get("rows")
+    ):
+        return metadata
+    compacted = dict(metadata)
+    compacted_export = dict(export)
+    compacted_export["rows"] = []
+    compacted["csv_export"] = compacted_export
+    return compacted

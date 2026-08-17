@@ -140,7 +140,7 @@ class CSVExportResponse(BaseModel):
     columns: list[str]
     rows: list[list[str]]
     row_count: int
-    source: Literal["displayed_answer_table"]
+    source: Literal["displayed_answer_table", "query_result"]
 
 
 class AskResponse(BaseModel):
@@ -156,6 +156,7 @@ class AskResponse(BaseModel):
     csv_export: CSVExportResponse | None = None
     error: str | None
     error_stage: str | None = None
+    answer_generation_limited: bool = False
     prompt_log_paths: list[str]
     query_result: QueryResultResponse | None
     diagnostic_request_id: str | None = None

@@ -6,9 +6,10 @@ import csv
 from dataclasses import dataclass
 import html
 import io
+import json
 import re
 import unicodedata
-from typing import Any, Literal
+from typing import Any, Literal, Mapping, Sequence
 
 
 CSV_OFFER_TEXT = "Do you need this data in CSV format?"
@@ -53,15 +54,21 @@ class DisplayedTable:
 
 @dataclass(frozen=True)
 class CSVExportSpec:
-    """Persisted CSV artifact containing only the displayed answer table."""
+    """Persisted CSV artifact created from a displayed table or query result."""
 
     status: Literal["offered", "ready"]
     filename: str
     columns: tuple[str, ...]
     rows: tuple[tuple[str, ...], ...]
+    source: Literal["displayed_answer_table", "query_result"] = (
+        "displayed_answer_table"
+    )
+    source_row_count: int | None = None
 
     @property
     def row_count(self) -> int:
+        if self.source_row_count is not None:
+            return self.source_row_count
         return len(self.rows)
 
     def to_payload(self) -> dict[str, Any]:
@@ -73,7 +80,7 @@ class CSVExportSpec:
             "columns": list(self.columns),
             "rows": [list(row) for row in self.rows],
             "row_count": self.row_count,
-            "source": "displayed_answer_table",
+            "source": self.source,
         }
 
 
@@ -236,6 +243,27 @@ def build_csv_export_spec(
     )
 
 
+def build_query_result_csv_export_spec(
+    question: str,
+    *,
+    columns: Sequence[str],
+    row_count: int,
+) -> CSVExportSpec | None:
+    """Build a CSV reference that reuses rows already stored in query_result."""
+
+    normalized_columns = tuple(str(column) for column in columns)
+    if not normalized_columns or row_count <= 0:
+        return None
+    return CSVExportSpec(
+        status="ready",
+        filename=build_csv_filename(question),
+        columns=normalized_columns,
+        rows=(),
+        source="query_result",
+        source_row_count=row_count,
+    )
+
+
 def build_ready_csv_export_spec(previous_export: dict[str, Any]) -> CSVExportSpec | None:
     """Promote an earlier offer while retaining its exact displayed table."""
 
@@ -253,6 +281,11 @@ def build_ready_csv_export_spec(previous_export: dict[str, Any]) -> CSVExportSpe
         filename=filename,
         columns=table.columns,
         rows=table.rows,
+        source=(
+            "query_result"
+            if previous_export.get("source") == "query_result"
+            else "displayed_answer_table"
+        ),
     )
 
 
@@ -288,12 +321,20 @@ def append_csv_message(answer: str | None, export: CSVExportSpec | None) -> str:
     return f"{cleaned_answer}\n\n{suffix}".strip()
 
 
-def csv_export_to_bytes(export: dict[str, Any]) -> bytes:
-    """Serialize the stored displayed table as an Excel-friendly UTF-8 CSV."""
+def csv_export_to_bytes(
+    export: dict[str, Any],
+    *,
+    query_result: dict[str, Any] | None = None,
+) -> bytes:
+    """Serialize a stored export artifact as an Excel-friendly UTF-8 CSV."""
 
-    table = displayed_table_from_payload(export)
+    table = (
+        _query_result_table(query_result, export=export)
+        if export.get("source") == "query_result"
+        else displayed_table_from_payload(export)
+    )
     if table is None:
-        raise ValueError("csv_export does not contain a valid displayed table")
+        raise ValueError("csv_export does not contain a valid table")
 
     output = io.StringIO(newline="")
     writer = csv.writer(output, lineterminator="\r\n")
@@ -303,6 +344,28 @@ def csv_export_to_bytes(export: dict[str, Any]) -> bytes:
     # The BOM keeps Arabic and other non-ASCII labels readable in Excel while
     # remaining valid UTF-8 for standards-compliant CSV readers.
     return ("\ufeff" + output.getvalue()).encode("utf-8")
+
+
+def _query_result_table(
+    query_result: dict[str, Any] | None,
+    *,
+    export: dict[str, Any],
+) -> DisplayedTable | None:
+    if not isinstance(query_result, dict):
+        return None
+    raw_columns = export.get("columns") or query_result.get("columns")
+    raw_rows = query_result.get("rows")
+    if not isinstance(raw_columns, list) or not raw_columns:
+        return None
+    if not isinstance(raw_rows, list) or not raw_rows:
+        return None
+    columns = tuple(str(column) for column in raw_columns)
+    rows: list[tuple[str, ...]] = []
+    for raw_row in raw_rows:
+        if not isinstance(raw_row, Mapping):
+            return None
+        rows.append(tuple(_query_result_cell(raw_row.get(column)) for column in columns))
+    return DisplayedTable(columns=columns, rows=tuple(rows))
 
 
 def build_csv_filename(question: str) -> str:
@@ -318,6 +381,20 @@ def build_csv_filename(question: str) -> str:
     if not slug:
         slug = "performance-planning-data"
     return f"{slug}.csv"
+
+
+def _query_result_cell(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, (dict, list, tuple)):
+        return json.dumps(value, ensure_ascii=False, default=str)
+    isoformat = getattr(value, "isoformat", None)
+    if callable(isoformat):
+        try:
+            return str(isoformat())
+        except (TypeError, ValueError):
+            pass
+    return str(value)
 
 
 def _split_markdown_row(line: str) -> list[str] | None:

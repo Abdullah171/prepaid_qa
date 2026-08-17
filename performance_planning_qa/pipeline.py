@@ -27,6 +27,7 @@ from performance_planning_qa.csv_export import (
     CSV_READY_TEXT,
     append_csv_message,
     build_csv_export_spec,
+    build_query_result_csv_export_spec,
     build_ready_csv_export_spec,
     extract_displayed_table,
     has_explicit_csv_request,
@@ -40,7 +41,11 @@ from performance_planning_qa.diagnostics import (
     diagnostic_exception,
     diagnostic_failure_summary,
 )
-from performance_planning_qa.llm import LiteLLMClient, extract_json_object
+from performance_planning_qa.llm import (
+    LLMContextWindowExceededError,
+    LiteLLMClient,
+    extract_json_object,
+)
 from performance_planning_qa.prompt_logger import PromptLogger
 from performance_planning_qa.prompts import (
     ANSWER_NON_THINKING_FINALIZER_PROMPT,
@@ -87,6 +92,7 @@ class PipelineResult:
     dry_run: bool = False
     error: str | None = None
     error_stage: str | None = None
+    answer_generation_limited: bool = False
 
     @property
     def sql(self) -> str | None:
@@ -106,6 +112,7 @@ class PipelineResult:
             "csv_export": self.csv_export.to_payload() if self.csv_export else None,
             "error": self.error,
             "error_stage": self.error_stage,
+            "answer_generation_limited": self.answer_generation_limited,
             "prompt_log_paths": [str(path) for path in self.prompt_log_paths],
             "query_result": self.query_result.to_payload() if self.query_result else None,
         }
@@ -305,12 +312,18 @@ class NL2SQLPipeline:
             self._inherited_chart_context(question, previous_result)
         )
         self._report_progress("Analyzing the findings")
-        answer_payload = self._answer_from_result(
-            question,
-            executed.validation.sql,
-            executed.query_result,
-            chart_context=chart_context,
-        )
+        try:
+            answer_payload = self._answer_from_result(
+                question,
+                executed.validation.sql,
+                executed.query_result,
+                chart_context=chart_context,
+            )
+        except LLMContextWindowExceededError:
+            return self._context_window_csv_result(
+                question=question,
+                executed=executed,
+            )
         answer_payload = _normalize_answer_payload(answer_payload)
         answer_candidate = answer_payload.get("chart")
         if inherited_candidate is not None:
@@ -364,6 +377,49 @@ class NL2SQLPipeline:
             csv_export=csv_export,
             prompt_log_paths=tuple(self._current_prompt_logs),
             dry_run=False,
+        )
+
+    def _context_window_csv_result(
+        self,
+        *,
+        question: str,
+        executed: SQLExecutionResult,
+    ) -> PipelineResult:
+        """Return successful query data when it is too large for answer generation."""
+
+        assert executed.validation is not None
+        assert executed.query_result is not None
+        self._report_progress("Preparing the complete result as a CSV file")
+        result = executed.query_result
+        csv_export = build_query_result_csv_export_spec(
+            question,
+            columns=result.columns,
+            row_count=result.row_count,
+        )
+        answer = (
+            f"The query completed successfully and returned {result.row_count:,} rows, "
+            "but that result is too large for the AI model to analyze in one response. "
+            "The complete result is available below as a CSV file that opens in Excel. "
+            "The SQL used to produce it is also shown below."
+        )
+        diagnostic_event(
+            component="pipeline",
+            stage="answer_context_fallback",
+            status="completed",
+            request_id=self._diagnostic_request_id,
+            row_count=result.row_count,
+            has_csv=csv_export is not None,
+        )
+        return PipelineResult(
+            question=question,
+            generated_sql=executed.generated,
+            validation_tables=executed.validation.table_references,
+            query_result=result,
+            answer=answer,
+            csv_export=csv_export,
+            prompt_log_paths=tuple(self._current_prompt_logs),
+            dry_run=False,
+            answer_generation_limited=True,
         )
 
     def fork(self) -> NL2SQLPipeline:
