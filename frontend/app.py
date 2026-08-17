@@ -538,7 +538,7 @@ def _render_assistant_artifacts(
     )
     answer_generation_limited = bool(metadata.get("answer_generation_limited"))
     if answer_generation_limited and sql:
-        with st.expander("SQL used for this export", expanded=True):
+        with st.expander("SQL used for this export", expanded=False):
             st.code(sql, language="sql")
     if not st.session_state.get("show_source", False):
         return
