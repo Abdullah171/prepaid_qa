@@ -98,6 +98,14 @@ BUSINESS_TERM_GUIDANCE = """Authoritative business-term mappings and defaults:
   means AF_RET_GSM_CHURN.CHURN_TYPE = 'DowngradetoPrepaid' with STREAM_TYPE =
   'PS'. This is a churn outcome and must not be interpreted as the reverse of the
   prepaid-to-postpaid migration cohort above.
+- Treat "Pro", "Super", and "Prime" as aliases for the same package family, whose
+  canonical searchable name is "Super". Normalize any of these three user terms to
+  "Super" before generating SQL, regardless of capitalization. Apply the canonical
+  contains filter to the appropriate schema-supported package-name column; for a
+  churn-specific package request, use AF_RET_GSM_CHURN.PACKAGE_ANME LIKE '%Super%'.
+  Never search PACKAGE_ANME for 'Pro' or 'Prime', and never use a prefix-only filter
+  such as TRIM(PACKAGE_ANME) LIKE 'Pro%'. Thus Pro, Super, and Prime requests must
+  all select the same Super package-family population.
 - Map "large screen" to SCREEN_TYPE = 'LS' and "small screen" to SCREEN_TYPE = 'SS'. If the user explicitly names one, filter to it. If the user omits screen type for a postpaid sales, churn, base, revenue, ARPU, or QoS analysis, do not ask for clarification just for that omission: include both SS and LS, return SCREEN_TYPE as a result dimension, and report the measures separately for both. For a source without SCREEN_TYPE, derive it from a deduplicated base lifecycle using both line and account keys plus the applicable exact lifecycle/month relationship. A screen breakdown makes a revenue analysis base-aligned, so join monthly revenue to the deduplicated same-month base on both keys and exact month; never use an open-ended revenue join. Reconnect-to-prior-churn analysis is the sole exception: apply an explicit SS request to reconnect sales as S.ACCS_METH_VAL LIKE '5%' (or LS as LIKE '8%') and do not add C.SCREEN_TYPE or a base-table join.
 - PRODUCT_FAMILY -- we dont use this, instead use prod name or protifolio from this table DP_EDW_PPF.D_RM_PSD_PRODUCTS for products families
 - ORDER_SUBTYP_NME AS SUBTYPE we always use this as sales type not ORDER_TYP_NME.
@@ -329,6 +337,19 @@ ORDER BY RECONNECT_DATE, RECONNECTED_CUSTOMERS DESC
 
 
 ANALYST_QUESTION_FEW_SHOT_EXAMPLES = """Analyst-reviewed question-to-SQL examples. Learn the intent mappings, population filters, screen handling, grains, and joins from these examples. Never copy an example's dates, screen choice, TOP value, dimensions, or grain unless the current question requests them.
+
+
+Question:
+How many people went from postpaid to prepaid in July 2026 on Pro packages?
+SQL:
+SELECT
+    COUNT(DISTINCT C.MSISDN) AS POSTPAID_TO_PREPAID_CUSTOMERS
+FROM DP_EDW_PPF.AF_RET_GSM_CHURN AS C
+WHERE C.CHURN_DATE BETWEEN DATE '2026-07-01' AND DATE '2026-07-31'
+  AND C.STREAM_TYPE = 'PS'
+  AND C.SCREEN_TYPE = 'SS'
+  AND C.CHURN_TYPE = 'DowngradetoPrepaid'
+  AND C.PACKAGE_ANME LIKE '%Super%';
 
 
 Question:
