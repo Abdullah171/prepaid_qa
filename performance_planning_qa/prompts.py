@@ -98,7 +98,7 @@ BUSINESS_TERM_GUIDANCE = """Authoritative business-term mappings and defaults:
   means AF_RET_GSM_CHURN.CHURN_TYPE = 'DowngradetoPrepaid' with STREAM_TYPE =
   'PS'. This is a churn outcome and must not be interpreted as the reverse of the
   prepaid-to-postpaid migration cohort above.
-- Treat "Pro", "Super", and "Prime" as aliases for the same package family, whose
+- Treat "Pro", "Mofawtar Pro", "Super", and "Prime" as aliases for the same package family, whose
   canonical searchable name is "Super". Normalize any of these three user terms to
   "Super" before generating SQL, regardless of capitalization. Apply the canonical
   contains filter to the appropriate schema-supported package-name column; for a
