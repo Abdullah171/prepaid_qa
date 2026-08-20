@@ -953,8 +953,10 @@ class NL2SQLPipeline:
             temperature=self.settings.llm.sql_temperature,
         )
         repaired = _generated_sql_from_payload(payload)
-        print("Repaied SQL = ", repaired)
-        return repaired
+        # A repair phase may only contribute replacement SQL. If it cannot do
+        # that, let the normal failure path produce the application's safe,
+        # non-technical message instead of surfacing model-authored repair prose.
+        return GeneratedSQL(sql=repaired.sql)
 
     def _answer_from_result(
         self,
@@ -1000,7 +1002,16 @@ class NL2SQLPipeline:
     ) -> dict[str, Any]:
         # self.prompt_logger.log(phase=phase, messages=messages, temperature=temperature)  # DEBUG: comment out this line to stop writing LLM input files.
         is_answer_generation = phase == "answer_generation"
-        fallback_key = "answer" if is_answer_generation else "direct_answer"
+        # SQL generation and repair responses must honor their JSON contract.
+        # Treating arbitrary prose as a direct answer can expose invalid SQL,
+        # database errors, and repair notes to business users.
+        fallback_key = "answer" if is_answer_generation else None
+        # SQL construction and database-error repair are internal implementation
+        # phases. Only answer-generation reasoning is suitable for the visible
+        # Thinking panel.
+        visible_reasoning_callback = (
+            self._reasoning_callback if is_answer_generation else None
+        )
         reasoning_fallback_instruction = (
             ANSWER_NON_THINKING_FINALIZER_PROMPT
             if is_answer_generation
@@ -1030,7 +1041,7 @@ class NL2SQLPipeline:
                 messages,
                 temperature=temperature,
                 fallback_key=fallback_key,
-                reasoning_callback=self._reasoning_callback,
+                reasoning_callback=visible_reasoning_callback,
                 cancellation_token=self._cancellation_token,
                 reasoning_fallback_instruction=reasoning_fallback_instruction,
                 **completion_options,

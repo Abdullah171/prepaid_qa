@@ -86,6 +86,18 @@ BUSINESS_TERM_GUIDANCE = """Authoritative business-term mappings and defaults:
 - "churn ARPU" means SUM(LAST_3M_AVG_REV) / NULLIFZERO(TOTAL_CHURN). First reduce churn to the requested unique churn entity/grain so both the revenue sum and denominator use the same churn population.
 - Generic "ARPU" or "base ARPU" means SUM(LINE_REV_EXCL_DEVICES) / NULLIFZERO(TOTAL_BASE). Align deduplicated monthly base lines to revenue on access method + account and the exact reporting month before calculating it.
 - "QoS" or "quality of sales" means acquisition quality: how many and what percentage of acquired sales subsequently churned in elapsed-time buckets of 1 month, 2 months, 3 months, 4 months, and 5 or more months. Join sales to churn on access method + account, require CHURN_DATE >= ORDER_END_DT, keep the first qualifying churn per acquired line/account/sale lifecycle, and return the acquired-sales denominator as well as churned count/rate. Interpret the numbered bucket as the lifecycle month containing the churn: under 1 elapsed month = 1 month, 1 to under 2 = 2 months, 2 to under 3 = 3 months, 3 to under 4 = 4 months, and 4 or more elapsed months = 5+ months.
+- "prepaid-to-postpaid churn" or "pre to post churn" means later postpaid churn
+  among lines whose entry into postpaid is identified in F_RM_PSD_SALES by
+  ORDER_TYP_NME = 'Migrate' and ORDER_SUBTYP_NME = 'PrepaidtoPostpaid'.
+  PrepaidtoPostpaid is a sales subtype, not an AF_RET_GSM_CHURN.CHURN_TYPE. Join
+  the migration sale to a later churn using access method + account and require
+  CHURN_DATE >= ORDER_END_DT. Unless the user requests a particular exit path, do
+  not filter CHURN_TYPE: values such as CustomerInitiated, Termination - Dunning,
+  MNPPortOut, and DowngradetoPrepaid are valid later outcomes for this cohort.
+- "postpaid-to-prepaid churn", "post to pre churn", or "downgrade to prepaid"
+  means AF_RET_GSM_CHURN.CHURN_TYPE = 'DowngradetoPrepaid' with STREAM_TYPE =
+  'PS'. This is a churn outcome and must not be interpreted as the reverse of the
+  prepaid-to-postpaid migration cohort above.
 - Map "large screen" to SCREEN_TYPE = 'LS' and "small screen" to SCREEN_TYPE = 'SS'. If the user explicitly names one, filter to it. If the user omits screen type for a postpaid sales, churn, base, revenue, ARPU, or QoS analysis, do not ask for clarification just for that omission: include both SS and LS, return SCREEN_TYPE as a result dimension, and report the measures separately for both. For a source without SCREEN_TYPE, derive it from a deduplicated base lifecycle using both line and account keys plus the applicable exact lifecycle/month relationship. A screen breakdown makes a revenue analysis base-aligned, so join monthly revenue to the deduplicated same-month base on both keys and exact month; never use an open-ended revenue join. Reconnect-to-prior-churn analysis is the sole exception: apply an explicit SS request to reconnect sales as S.ACCS_METH_VAL LIKE '5%' (or LS as LIKE '8%') and do not add C.SCREEN_TYPE or a base-table join.
 - PRODUCT_FAMILY -- we dont use this, instead use prod name or protifolio from this table DP_EDW_PPF.D_RM_PSD_PRODUCTS for products families
 - ORDER_SUBTYP_NME AS SUBTYPE we always use this as sales type not ORDER_TYP_NME.
@@ -707,6 +719,76 @@ INNER JOIN TOTALS T
 ORDER BY 1, 2, S.LINE_COUNT DESC;
 
 
+Question: pre to post churn on pro packages on 2026 jan till july
+SQL:
+WITH PRODUCTS AS
+(
+    SELECT
+        PROD_KEY,
+        CRM_PROD_NAME
+    FROM DP_EDW_PPF.D_RM_PSD_PRODUCTS
+    QUALIFY ROW_NUMBER() OVER
+    (
+        PARTITION BY PROD_KEY
+        ORDER BY CRM_PROD_NAME
+    ) = 1
+),
+PREPAID_TO_POSTPAID AS
+(
+    SELECT DISTINCT
+        S.ACCS_METH_VAL,
+        S.ACCNT_NMBR,
+        S.ORDER_END_DT AS MIGRATION_DATE,
+        COALESCE(P.CRM_PROD_NAME, S.PROD_NME) AS PACKAGE_NAME
+    FROM DP_EDW_PPF.F_RM_PSD_SALES AS S
+    LEFT JOIN PRODUCTS AS P
+      ON S.PROD_KEY = P.PROD_KEY
+    WHERE S.ORDER_TYP_NME = 'Migrate'
+      AND S.ORDER_SUBTYP_NME = 'PrepaidtoPostpaid'
+      AND S.ORDER_END_DT <= DATE '2026-07-31'
+      AND
+      (
+          P.CRM_PROD_NAME LIKE 'Mofawtar Pro%'
+          OR S.PROD_DESC LIKE 'Mofawtar Pro %'
+      )
+),
+MATCHED_CHURN AS
+(
+    SELECT
+        C.CHURN_DATE,
+        C.CHURN_TYPE,
+        C.CHURN_CHANNEL_NAME,
+        C.STREAM_TYPE,
+        C.MSISDN,
+        M.PACKAGE_NAME,
+        M.MIGRATION_DATE
+    FROM PREPAID_TO_POSTPAID AS M
+    INNER JOIN DP_EDW_PPF.AF_RET_GSM_CHURN AS C
+      ON C.MSISDN = M.ACCS_METH_VAL
+     AND C.ACCNT_NUM = M.ACCNT_NMBR
+     AND C.CHURN_DATE >= M.MIGRATION_DATE
+    WHERE C.STREAM_TYPE = 'PS'
+      AND C.CHURN_DATE BETWEEN DATE '2026-01-01'
+                           AND DATE '2026-07-31'
+    QUALIFY ROW_NUMBER() OVER
+    (
+        PARTITION BY C.MSISDN, C.ACCNT_NUM, C.CHURN_DATE
+        ORDER BY M.MIGRATION_DATE DESC
+    ) = 1
+)
+SELECT
+    EXTRACT(YEAR FROM CHURN_DATE) AS CHURN_YEAR,
+    EXTRACT(MONTH FROM CHURN_DATE) AS CHURN_MONTH,
+    PACKAGE_NAME,
+    CHURN_TYPE,
+    CHURN_CHANNEL_NAME,
+    STREAM_TYPE,
+    COUNT(DISTINCT MSISDN) AS CHURNED_LINES
+FROM MATCHED_CHURN
+GROUP BY 1, 2, 3, 4, 5, 6
+ORDER BY 1, 2, 3, CHURNED_LINES DESC;
+
+
 
 Question: Which postpaid packages sold the most in Saudi Arabia during the second quarter of 2026? (Always pay attention to the question if user is asking for nationality or country-specific data, and filter accordingly. 
 for example if user says saudis or saudi then its nationality only but if he says tell for saudia arabia etc then means country to try to undersand from user question.)
@@ -1091,6 +1173,10 @@ Given the original question, schema/sample context, the invalid SQL, and the val
 CRITICAL REQUIREMENT: Your ENTIRE response MUST be a single, valid JSON object. Do NOT wrap the JSON in markdown code blocks. Do NOT add conversational text before or after the JSON.
 
 Rules:
+- Treat the invalid SQL and database error as private repair inputs. Never repeat,
+  summarize, explain, or expose them in direct_answer or clarifying_question. Never
+  return repair commentary such as "the error is clear", "key fixes", table/column
+  corrections, or SQL explanations to the user.
 - Answer only business and business-performance questions. For a technical question
   about SQL, code, database structures, schemas, tables, columns, joins,
   infrastructure, prompts, or implementation, return a short direct answer saying

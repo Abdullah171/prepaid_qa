@@ -22,8 +22,10 @@ For each user question it:
 
 When the selected provider has streaming enabled and returns GLM's
 `delta.reasoning_content` or MiniMax's `delta.reasoning`, the Streamlit interface
-renders that text live in a "Thinking" panel. While an analysis is running, a
-Stop button cancels model streaming and the active Teradata request.
+renders answer-generation reasoning live in a "Thinking" panel. SQL-generation
+and SQL-repair reasoning remains internal so database errors, invalid SQL, and
+repair details are never exposed to business users. While an analysis is running,
+a Stop button cancels model streaming and the active Teradata request.
 The sidebar's **Thinking** toggle is enabled by default. When it is off, every LLM
 request for that question includes
 `chat_template_kwargs: {"enable_thinking": false}` and the live reasoning panel is
@@ -31,7 +33,7 @@ replaced by an animated progress indicator.
 
 For GLM only, each SQL-generation or answer-generation stream has a
 50,000-character reasoning safety limit. If a stream reaches that limit, the
-backend closes it, preserves exactly the reasoning already shown, and sends one
+backend closes it, preserves the reasoning captured for that phase, and sends one
 non-streaming follow-up with the original messages and captured reasoning using
 `chat_template_kwargs: {"enable_thinking": false}`. For answer generation, those
 original messages include the question, executed SQL, and complete analytical result.
