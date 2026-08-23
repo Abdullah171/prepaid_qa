@@ -1,4 +1,4 @@
-"""Streamlit frontend for the Performance Planning Q&A backend."""
+"""Streamlit frontend for the Prepaid QA analytics assistant."""
 
 from __future__ import annotations
 
@@ -68,11 +68,11 @@ ALLOW_API_URL_EDIT = os.getenv("PPQA_ALLOW_API_URL_EDIT", "").strip().lower() in
 }
 STC_CHART_COLORS = (
     "#4F008C",
-    "#00C2C7",
-    "#FF375E",
-    "#FFB71B",
-    "#1D252D",
-    "#8F5DA2",
+    "#00AEB3",
+    "#E9345A",
+    "#D99A00",
+    "#53606C",
+    "#9B6BB0",
 )
 _ISO_TEMPORAL_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$"
@@ -102,7 +102,8 @@ def _get_analysis_runner() -> AnalysisRunner:
 
 def main() -> None:
     st.set_page_config(
-        page_title="Performance Planning Q&A",
+        page_title="Prepaid QA",
+        page_icon=":material/query_stats:",
         layout="wide",
         initial_sidebar_state="expanded",
     )
@@ -302,10 +303,10 @@ def _sidebar(client: ApiClient, *, analysis_running: bool) -> None:
         st.markdown(
             """
             <div class="ppqa-brand">
-              <div class="ppqa-brand-mark">stc</div>
-              <div>
-                <div class="ppqa-brand-title">Performance Planning</div>
-                <div class="ppqa-brand-subtitle">Analytics Q&A</div>
+              <div class="ppqa-brand-mark" aria-hidden="true">PQ</div>
+              <div class="ppqa-brand-copy">
+                <div class="ppqa-brand-title">Prepaid QA</div>
+                <div class="ppqa-brand-subtitle">Analytics workspace</div>
               </div>
             </div>
             """,
@@ -320,28 +321,34 @@ def _sidebar(client: ApiClient, *, analysis_running: bool) -> None:
                 help="Development override. Configure PPQA_API_BASE_URL in production.",
             )
         st.toggle(
-            "Thinking",
+            "Deep analysis",
             key="enable_thinking",
             disabled=analysis_running,
-            help="Allow the model to reason before returning its answer.",
+            help="Give the assistant more time to reason through complex questions.",
         )
         st.toggle(
-            "See source",
+            "Show query details",
             key="show_source",
-            help="Show generated SQL, query metrics, and returned rows.",
+            help="Include generated SQL, query metrics, and returned rows.",
         )
 
         sessions = _load_sessions(client)
         connection_error = st.session_state.get("connection_error")
         if connection_error:
             st.markdown(
-                '<div class="ppqa-health-bad">API unavailable</div>',
+                (
+                    '<div class="ppqa-health ppqa-health-bad">'
+                    '<span></span>Data service unavailable</div>'
+                ),
                 unsafe_allow_html=True,
             )
             st.caption(SERVICE_UNAVAILABLE_MESSAGE)
         else:
             st.markdown(
-                '<div class="ppqa-health-ok">API connected</div>',
+                (
+                    '<div class="ppqa-health ppqa-health-ok">'
+                    '<span></span>Data service online</div>'
+                ),
                 unsafe_allow_html=True,
             )
         if st.session_state.get("sidebar_action_error"):
@@ -350,15 +357,19 @@ def _sidebar(client: ApiClient, *, analysis_running: bool) -> None:
         st.divider()
 
         st.button(
-            "New chat",
+            "New analysis",
             width="stretch",
             type="primary",
+            icon=":material/add:",
             disabled=analysis_running,
             on_click=_start_new_chat,
         )
 
         history_cols = st.columns([0.65, 0.35], vertical_alignment="center")
-        history_cols[0].caption("Chat history")
+        history_cols[0].markdown(
+            '<div class="ppqa-section-label">Recent conversations</div>',
+            unsafe_allow_html=True,
+        )
         history_cols[1].button(
             "Refresh",
             key="refresh-sessions",
@@ -397,22 +408,21 @@ def _render_session_row(
 ) -> None:
     session_id = session["id"]
     is_active = st.session_state.active_session_id == session_id
-    title = session.get("title") or "New chat"
+    title = session.get("title") or "New analysis"
     max_title_length = 30 if is_active else 38
     label = (
         title
         if len(title) <= max_title_length
         else f"{title[: max_title_length - 3].rstrip()}..."
     )
-    if is_active:
-        label = f"Active: {label}"
-
     cols = st.sidebar.columns([0.72, 0.28], gap="small")
     cols[0].button(
         label,
         key=f"select-{session_id}",
         help=title,
         width="stretch",
+        type="primary" if is_active else "secondary",
+        icon=":material/chat_bubble:" if is_active else ":material/chat_bubble_outline:",
         disabled=disabled,
         on_click=_select_session,
         args=(session_id,),
@@ -441,20 +451,25 @@ def _render_header(
 ) -> None:
     if session_detail:
         session = session_detail["session"]
-        title = session.get("title") or "New chat"
+        title = session.get("title") or "New analysis"
         subtitle = (
             "Analysis in progress"
             if analysis_running
             else _message_count_label(session.get("message_count", 0))
         )
     else:
-        title = "New chat"
-        subtitle = "Analysis in progress" if analysis_running else "Draft session"
+        title = "New analysis"
+        subtitle = "Analysis in progress" if analysis_running else "Ready for your question"
+    status_label = "Working" if analysis_running else "Ready"
     st.markdown(
         f"""
         <div class="ppqa-header">
-          <div class="ppqa-title">{_html_escape(title)}</div>
-          <div class="ppqa-subtitle">{_html_escape(subtitle)}</div>
+          <div>
+            <div class="ppqa-eyebrow">Prepaid intelligence</div>
+            <div class="ppqa-title">{_html_escape(title)}</div>
+            <div class="ppqa-subtitle">{_html_escape(subtitle)}</div>
+          </div>
+          <div class="ppqa-header-status"><span></span>{status_label}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -465,12 +480,35 @@ def _render_empty_state() -> None:
     st.markdown(
         """
         <div class="ppqa-empty">
-          <div class="ppqa-empty-inner">
-            <div class="ppqa-empty-kicker">Performance Planning</div>
-            <div class="ppqa-empty-title">Start a new analysis</div>
-            <div class="ppqa-empty-copy">
-              Postpaid base, sales, churn, and monthly revenue are ready for review.
+          <div class="ppqa-empty-lead">
+            <div class="ppqa-empty-icon" aria-hidden="true"><span></span></div>
+            <div>
+              <div class="ppqa-empty-kicker">Your prepaid data, ready to explore</div>
+              <div class="ppqa-empty-title">What would you like to understand?</div>
+              <div class="ppqa-empty-copy">
+                Ask a plain-language question and get a concise answer grounded in your data.
+              </div>
             </div>
+          </div>
+          <div class="ppqa-topics" aria-label="Available prepaid topics">
+            <div class="ppqa-topic">
+              <span class="ppqa-topic-dot ppqa-topic-purple"></span>
+              <div><strong>Subscriber base</strong><small>Active lines and movement</small></div>
+            </div>
+            <div class="ppqa-topic">
+              <span class="ppqa-topic-dot ppqa-topic-cyan"></span>
+              <div><strong>Sales & packages</strong><small>Acquisition and product mix</small></div>
+            </div>
+            <div class="ppqa-topic">
+              <span class="ppqa-topic-dot ppqa-topic-magenta"></span>
+              <div>
+                <strong>Churn & reconnects</strong><small>Retention signals and trends</small>
+              </div>
+            </div>
+          </div>
+          <div class="ppqa-empty-hint">
+            <span>Try asking</span>
+            “Compare prepaid churn by package over the last six months.”
           </div>
         </div>
         """,
@@ -589,9 +627,9 @@ def _render_csv_download(
         logger.warning("Could not serialize persisted result as CSV", exc_info=True)
         return
 
-    filename = str(export.get("filename") or "performance-planning-data.csv").strip()
+    filename = str(export.get("filename") or "prepaid-qa-data.csv").strip()
     if not filename.lower().endswith(".csv"):
-        filename = "performance-planning-data.csv"
+        filename = "prepaid-qa-data.csv"
     row_count = int(export.get("row_count") or 0)
     label = f"Download CSV ({row_count:,} rows)"
     st.download_button(
@@ -686,16 +724,16 @@ def _render_chart(chart: Any, *, chart_key: str | None = None) -> None:
     spec["config"] = {
         "range": {"category": list(STC_CHART_COLORS)},
         "axis": {
-            "domainColor": "#D9DEE7",
-            "gridColor": "#E5E8EF",
-            "labelColor": "#5B667A",
-            "titleColor": "#1D252D",
+            "domainColor": "#D8CEE0",
+            "gridColor": "#EEE8F2",
+            "labelColor": "#625A6A",
+            "titleColor": "#251A2D",
         },
         "legend": {
-            "labelColor": "#5B667A",
-            "titleColor": "#1D252D",
+            "labelColor": "#625A6A",
+            "titleColor": "#251A2D",
         },
-        "title": {"color": "#1D252D", "fontSize": 18},
+        "title": {"color": "#251A2D", "fontSize": 18},
         "view": {"stroke": None},
     }
     title = chart.get("title")
@@ -920,7 +958,7 @@ def _render_question_composer() -> None:
 
     with st.bottom:
         submission = st.chat_input(
-            "Ask a performance planning question",
+            "Ask about prepaid sales, churn, packages, or subscribers…",
             key="question-composer",
             max_chars=MAX_QUESTION_CHARS,
             submit_mode="disable",

@@ -1,4 +1,4 @@
-"""HTTP client for the Performance Planning Q&A FastAPI backend."""
+"""HTTP client for the Prepaid QA FastAPI backend."""
 
 from __future__ import annotations
 
