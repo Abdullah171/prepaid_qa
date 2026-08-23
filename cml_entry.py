@@ -41,7 +41,7 @@ CML_ENV = {
     "TERADATA_PASSWORD": "G15c6n19$",
 
     # Schema, sample context, and chat history
-    "SCHEMA_PATH": "performance.sql",
+    "SCHEMA_PATH": "prepaid.sql",
     "SAMPLE_DATA_DIR": "sample_data",
     "chat_db": "duckdb",
     "CHAT_DUCKDB_PATH": "data/chat_history.duckdb",

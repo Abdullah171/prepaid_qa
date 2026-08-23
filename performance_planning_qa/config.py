@@ -213,7 +213,7 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
     load_environment(env_path)
 
     root = PROJECT_ROOT
-    schema_path = Path(_get_any("SCHEMA_PATH", default=str(root / "performance.sql")) or "")
+    schema_path = Path(_get_any("SCHEMA_PATH", default=str(root / "prepaid.sql")) or "")
     sample_dir = Path(_get_any("SAMPLE_DATA_DIR", default=str(root / "sample_data")) or "")
 
     llm_provider = (_get_any("LLM_PROVIDER", default="glm") or "").lower()

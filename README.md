@@ -1,6 +1,6 @@
-# performance_planning_qa
+# prepaid_qa
 
-Natural-language to Teradata SQL and analytical Q&A for the performance-planning tables and helpers documented in `performance.sql`.
+Natural-language to Teradata SQL and analytical Q&A for the prepaid tables and helpers documented in `prepaid.sql`.
 
 ## What It Does
 
@@ -8,7 +8,7 @@ The app loads:
 
 - Teradata credentials from `.env`
 - STC LiteLLM OpenAI-compatible endpoint settings from `.env`
-- `performance.sql` as the canonical schema and business metadata
+- `prepaid.sql` as the canonical schema and business metadata
 - all raw JSON and CSV files in `sample_data/` as prompt context
 
 For each user question it:
@@ -476,7 +476,7 @@ input is written to a timestamped `.txt` file in `LLM_PROMPT_LOG_DIR`.
 
 - `main.py`: FastAPI application entry point.
 - `performance_planning_qa/config.py`: `.env` and runtime settings.
-- `performance_planning_qa/context_loader.py`: loads `performance.sql` and all raw sample files.
+- `performance_planning_qa/context_loader.py`: loads `prepaid.sql` and all raw sample files.
 - `performance_planning_qa/prompts.py`: SQL-generation, repair, and answer prompts.
 - `performance_planning_qa/llm.py`: STC LiteLLM OpenAI-compatible client.
 - `performance_planning_qa/prompt_logger.py`: optional prompt logging helper.
