@@ -1,0 +1,455 @@
+column_name,unique_value
+PCKG_CATE,Basic
+PCKG_CATE,Bundles
+PCKG_CATE,Captain
+PCKG_CATE,Data
+PCKG_CATE,Flex
+PCKG_CATE,Hero
+PCKG_CATE,International
+PCKG_CATE,Legacy
+PCKG_CATE,Like/Like+
+PCKG_CATE,Others
+PCKG_CATE,Post/Post+
+PCKG_CATE,Recharge
+PCKG_CATE,Roaming
+PCKG_CATE,Sawa 120
+PCKG_CATE,Sawa 150
+PCKG_CATE,Sawa 175
+PCKG_CATE,Sawa 50
+PCKG_CATE,Share/Share+
+PCKG_CATE,Social
+PCKG_CATE,Star/Star+
+PCKG_CATE,Visitor
+PCKG_CATE,Voice
+PCKG_CATE,Weekly
+PCKG_GROU,01-HERO
+PCKG_GROU,02-FLEX-340
+PCKG_GROU,03-BTL_241-360
+PCKG_GROU,04-STAR_PLUS
+PCKG_GROU,05-FLEX_240
+PCKG_GROU,06-STAR
+PCKG_GROU,07-BTL_171-240
+PCKG_GROU,07-SAWA 175
+PCKG_GROU,08-POST_PLUS
+PCKG_GROU,09-POST
+PCKG_GROU,10-FLEX_150
+PCKG_GROU,10-SAWA 150
+PCKG_GROU,11-BTL_116-170
+PCKG_GROU,11-SAWA 120
+PCKG_GROU,12-SHARE_PLUS
+PCKG_GROU,13-SHARE
+PCKG_GROU,14-BTL_101-115
+PCKG_GROU,15-FLEX_100
+PCKG_GROU,16-FLEX_90
+PCKG_GROU,17-CAPTAIN
+PCKG_GROU,18-BTL_76-100
+PCKG_GROU,19-LIKE_PLUS
+PCKG_GROU,20-LIKE
+PCKG_GROU,21-FLEX_65
+PCKG_GROU,22-BTL_36-75
+PCKG_GROU,22-SAWA 50
+PCKG_GROU,23-FLEX_25
+PCKG_GROU,23-FLEX_35
+PCKG_GROU,24-BASIC
+PCKG_GROU,25-BTL<=35
+PCKG_GROU,26-ATL_DATA-ONLY
+PCKG_GROU,27-BTL_DATA-ONLY
+PCKG_GROU,28-ATL_IDD
+PCKG_GROU,29-BTL_IDD
+PCKG_GROU,30-VISITOR
+PCKG_GROU,31-OTHER_BTLS
+PCKG_GROU,32-OTHER_ATLS
+PCKG_GROU,33-OTHER_BTLS
+PCKG_GROU,FREE
+PCKG_NAME,تجربة الاسم
+PCKG_NAME,1 Day Bundle 3 SAR
+PCKG_NAME,Flex
+PCKG_NAME,Flex 100
+PCKG_NAME,Flex 120
+PCKG_NAME,Flex 125
+PCKG_NAME,Flex 130
+PCKG_NAME,Flex 145
+PCKG_NAME,Flex 150
+PCKG_NAME,Flex 165
+PCKG_NAME,Flex 175
+PCKG_NAME,Flex 205
+PCKG_NAME,Flex 240
+PCKG_NAME,Flex 25
+PCKG_NAME,Flex 30
+PCKG_NAME,Flex 30 Weekly
+PCKG_NAME,Flex 340
+PCKG_NAME,Flex 45
+PCKG_NAME,Flex 45 / 10 days
+PCKG_NAME,Flex 50
+PCKG_NAME,Flex 65
+PCKG_NAME,Flex 90 days
+PCKG_NAME,Flex Basic
+PCKG_NAME,Flex Ethiopia 120
+PCKG_NAME,Flex Ethiopia 80
+PCKG_NAME,Flex Ethiopia monthly
+PCKG_NAME,Flex Ethiopia Weekly
+PCKG_NAME,Flex India
+PCKG_NAME,flex Offer 15 SAR / 7 days
+PCKG_NAME,flex Offer 20 SAR / 28 Days
+PCKG_NAME,Flex offer 30 / 4 weeks
+PCKG_NAME,Flex Pakistan
+PCKG_NAME,Sanity PP offer 1day
+PCKG_NAME,Sawa  100 / 4 weeks
+PCKG_NAME,Sawa  110 / 28 Days
+PCKG_NAME,Sawa  110 / 4 weeks
+PCKG_NAME,Sawa  115 / 4 weeks
+PCKG_NAME,Sawa  119 / 4 weeks
+PCKG_NAME,Sawa  120 / 30 Days
+PCKG_NAME,Sawa  120 / 4 weeks
+PCKG_NAME,Sawa  125 / 4 weeks
+PCKG_NAME,Sawa  140 / 28 Days
+PCKG_NAME,Sawa  149 / 28 Days
+PCKG_NAME,Sawa  160 / 28 Days
+PCKG_NAME,Sawa  160 / 4 weeks
+PCKG_NAME,Sawa  170 / 4 weeks
+PCKG_NAME,Sawa  175 / 4 weeks
+PCKG_NAME,Sawa  180 / 28 Days
+PCKG_NAME,Sawa  199 / 28 Days
+PCKG_NAME,Sawa  1GB / 28 Days
+PCKG_NAME,Sawa  1GB / 30 Days
+PCKG_NAME,Sawa  20 / 28 Days
+PCKG_NAME,Sawa  200 / 28 Days
+PCKG_NAME,Sawa  225 / 28 Days
+PCKG_NAME,Sawa  240 / 28 Days
+PCKG_NAME,Sawa  25 / 28 Days
+PCKG_NAME,Sawa  280 / 28 Days
+PCKG_NAME,Sawa  30 / 28 Days
+PCKG_NAME,Sawa  30 / 4 weeks
+PCKG_NAME,Sawa  35 / 28 Days
+PCKG_NAME,Sawa  3GB / 30 Days
+PCKG_NAME,Sawa  40 / 28 Days
+PCKG_NAME,Sawa  40 / 30 Days
+PCKG_NAME,Sawa  40 / 4 weeks
+PCKG_NAME,Sawa  50 / 28 Days
+PCKG_NAME,Sawa  50 / 4 weeks
+PCKG_NAME,Sawa  65 / 28 Days
+PCKG_NAME,Sawa  65 / 4 weeks
+PCKG_NAME,Sawa  80 / 30 Days
+PCKG_NAME,Sawa  85 / 4 weeks
+PCKG_NAME,Sawa  89 / 4 weeks
+PCKG_NAME,Sawa  99 / 28 Days
+PCKG_NAME,Sawa  99 / 4 weeks
+PCKG_NAME,Sawa  Social / 1 Day
+PCKG_NAME,Sawa  Social / 28 Days
+PCKG_NAME,Sawa  Social / 7 Days
+PCKG_NAME,Sawa  Tik-Tok / 1 Day
+PCKG_NAME,Sawa  Tik-Tok / 28 Days
+PCKG_NAME,Sawa  Tik-Tok / 7 Days
+PCKG_NAME,Sawa  Youtube / 1 Day
+PCKG_NAME,Sawa  Youtube / 28 Days
+PCKG_NAME,Sawa  Youtube / 7 Days
+PCKG_NAME,Sawa 10
+PCKG_NAME,Sawa 10  / 14 Days
+PCKG_NAME,Sawa 10 / 1 Day
+PCKG_NAME,Sawa 10 / 3 Days
+PCKG_NAME,Sawa 10 / 7 Days
+PCKG_NAME,Sawa 100 / 4 Weeks
+PCKG_NAME,Sawa 110
+PCKG_NAME,Sawa 110 / 4 Weeks
+PCKG_NAME,Sawa 115
+PCKG_NAME,SAWA 119
+PCKG_NAME,Sawa 120
+PCKG_NAME,Sawa 125 / 4 Weeks
+PCKG_NAME,Sawa 130
+PCKG_NAME,SAWA 130 NEW
+PCKG_NAME,SAWA 140
+PCKG_NAME,Sawa 15
+PCKG_NAME,Sawa 15 / 4 Weeks
+PCKG_NAME,Sawa 15 / 5 Days
+PCKG_NAME,Sawa 15 / 7 Days
+PCKG_NAME,Sawa 15 days bundle
+PCKG_NAME,SAWA 15 New
+PCKG_NAME,Sawa 15 Package
+PCKG_NAME,SAWA 15 Plus
+PCKG_NAME,SAWA 15 Special
+PCKG_NAME,Sawa 150
+PCKG_NAME,Sawa 150 / 4 weeks
+PCKG_NAME,Sawa 160
+PCKG_NAME,Sawa 160 BTL
+PCKG_NAME,Sawa 170
+PCKG_NAME,Sawa 175
+PCKG_NAME,Sawa 180 BTL
+PCKG_NAME,Sawa 190
+PCKG_NAME,SAWA 199
+PCKG_NAME,Sawa 1GB / 2 Days
+PCKG_NAME,Sawa 20 / 3 Days
+PCKG_NAME,Sawa 20 / 4 Weeks
+PCKG_NAME,Sawa 20 / 7 Days
+PCKG_NAME,SAWA 20 Calls and Data
+PCKG_NAME,SAWA 20 Calls and Data Plus
+PCKG_NAME,Sawa 20 daily unlimited STC calls
+PCKG_NAME,SAWA 20 Data
+PCKG_NAME,SAWA 20 National Calls
+PCKG_NAME,Sawa 200
+PCKG_NAME,Sawa 220
+PCKG_NAME,Sawa 240
+PCKG_NAME,Sawa 25 / 4 Weeks
+PCKG_NAME,Sawa 25 / 7 Days
+PCKG_NAME,Sawa 2GB / 7 Days
+PCKG_NAME,Sawa 3 / 1 Day
+PCKG_NAME,SAWA 30
+PCKG_NAME,SAWA 30 +
+PCKG_NAME,Sawa 30 / 10 Days
+PCKG_NAME,Sawa 30 / 4 Weeks
+PCKG_NAME,Sawa 30 / 7 Days
+PCKG_NAME,Sawa 30 days bundle
+PCKG_NAME,Sawa 30 Discount Eligibility
+PCKG_NAME,Sawa 30 international  20% Bonus
+PCKG_NAME,Sawa 30 Plus
+PCKG_NAME,Sawa 30 Plus Discount Eligibility
+PCKG_NAME,Sawa 30 plus International
+PCKG_NAME,Sawa 30 plus international  20% Bonus
+PCKG_NAME,Sawa 30+
+PCKG_NAME,Sawa 300
+PCKG_NAME,Sawa 320 / 30 Days
+PCKG_NAME,Sawa 35 / 4 Weeks
+PCKG_NAME,SAWA 35 Calls and Data
+PCKG_NAME,SAWA 35 Calls and Data Plus
+PCKG_NAME,SAWA 35 Data
+PCKG_NAME,SAWA 35 HYBRID
+PCKG_NAME,SAWA 35 National Calls
+PCKG_NAME,SAWA 39 Monthly
+PCKG_NAME,Sawa 3GB / 28 Days
+PCKG_NAME,Sawa 3GB / 7 Days
+PCKG_NAME,Sawa 40
+PCKG_NAME,SAWA 40 Data Offer
+PCKG_NAME,SAWA 40 New
+PCKG_NAME,Sawa 45 / 60 Days
+PCKG_NAME,SAWA 45 Calls and Data
+PCKG_NAME,SAWA 45 Calls and Data Plus
+PCKG_NAME,SAWA 45 Data
+PCKG_NAME,SAWA 45 National Calls
+PCKG_NAME,SAWA 45 NEW
+PCKG_NAME,Sawa 5 / 1 Day
+PCKG_NAME,Sawa 50
+PCKG_NAME,Sawa 55
+PCKG_NAME,Sawa 55 / 90 Days
+PCKG_NAME,SAWA 59
+PCKG_NAME,Sawa 6 / 1 Day
+PCKG_NAME,SAWA 65 -5GB
+PCKG_NAME,SAWA 65 National
+PCKG_NAME,Sawa 7 / 1 Day
+PCKG_NAME,SAWA 70 Monthly
+PCKG_NAME,SAWA 70 National
+PCKG_NAME,Sawa 70/4 weeks
+PCKG_NAME,SAWA 75 Monthly
+PCKG_NAME,Sawa 75/ 4 weeks
+PCKG_NAME,Sawa 80 / 4 Weeks
+PCKG_NAME,SAWA 80 National
+PCKG_NAME,SAWA 85 NEW
+PCKG_NAME,SAWA 90
+PCKG_NAME,Sawa 90 / 4 Weeks
+PCKG_NAME,Sawa 95
+PCKG_NAME,SAWA 99
+PCKG_NAME,Sawa Bangladesh / 1 Day
+PCKG_NAME,Sawa Bangladesh / 30 Days
+PCKG_NAME,Sawa Bangladesh / 7 Days
+PCKG_NAME,Sawa basic
+PCKG_NAME,SAWA Bundle
+PCKG_NAME,Sawa calls / 1 Day
+PCKG_NAME,Sawa Data / 1 Day
+PCKG_NAME,Sawa Data / 7 Days
+PCKG_NAME,SAWA Double Offer
+PCKG_NAME,Sawa Egypt / 30 Days
+PCKG_NAME,Sawa Ethiopia / 1 Day
+PCKG_NAME,Sawa Ethiopia / 7 Days
+PCKG_NAME,Sawa Flex
+PCKG_NAME,SAWA Flex -  India
+PCKG_NAME,SAWA Flex - Bangladesh
+PCKG_NAME,SAWA Flex - Pakistan
+PCKG_NAME,Sawa Flex 100
+PCKG_NAME,Sawa Flex 115
+PCKG_NAME,Sawa Flex 120
+PCKG_NAME,Sawa Flex 140
+PCKG_NAME,Sawa Flex 150
+PCKG_NAME,Sawa Flex 160
+PCKG_NAME,Sawa Flex 170
+PCKG_NAME,Sawa Flex 200
+PCKG_NAME,Sawa Flex 240
+PCKG_NAME,Sawa Flex 25
+PCKG_NAME,Sawa Flex 25 / 3 days
+PCKG_NAME,Sawa Flex 340
+PCKG_NAME,Sawa Flex 35
+PCKG_NAME,Sawa Flex 45
+PCKG_NAME,Sawa Flex 50
+PCKG_NAME,Sawa Flex 65
+PCKG_NAME,Sawa Flex 70
+PCKG_NAME,Sawa Flex 80
+PCKG_NAME,Sawa Flex 90 / 4 weeks
+PCKG_NAME,Sawa Flex Basic
+PCKG_NAME,Sawa Flex Device
+PCKG_NAME,Sawa Flex Discount Eligibility
+PCKG_NAME,Sawa Hero
+PCKG_NAME,Sawa India / 1 Day
+PCKG_NAME,Sawa India / 30 Days
+PCKG_NAME,Sawa India / 7 Days
+PCKG_NAME,Sawa Indonesia / 1 Day
+PCKG_NAME,Sawa Indonesia / 7 Days
+PCKG_NAME,Sawa Like
+PCKG_NAME,SAWA Like +
+PCKG_NAME,Sawa Like + %50 discount
+PCKG_NAME,Sawa Like Discount Eligibility
+PCKG_NAME,Sawa Like Plus
+PCKG_NAME,Sawa Like Plus Discount Eligibility
+PCKG_NAME,Sawa like special/4weeks
+PCKG_NAME,sawa occasions
+PCKG_NAME,Sawa Pakistan / 1 Day
+PCKG_NAME,Sawa Pakistan / 30 Days
+PCKG_NAME,Sawa Pakistan / 7 Days
+PCKG_NAME,Sawa Post
+PCKG_NAME,SAWA Post +
+PCKG_NAME,Sawa Post +  %50 discount
+PCKG_NAME,Sawa Post Discount Eligibility
+PCKG_NAME,Sawa Post Plus
+PCKG_NAME,Sawa Post Plus Discount Eligibility
+PCKG_NAME,Sawa Post special/4 weeks
+PCKG_NAME,Sawa Share
+PCKG_NAME,SAWA Share +
+PCKG_NAME,Sawa Share + %50 discount
+PCKG_NAME,Sawa Share Discount Eligibility
+PCKG_NAME,Sawa Share Plus
+PCKG_NAME,Sawa Share Plus Discount Eligibility
+PCKG_NAME,Sawa Share special/4 weeks
+PCKG_NAME,Sawa SMS
+PCKG_NAME,Sawa social / 1 Day
+PCKG_NAME,Sawa social / 7 Days
+PCKG_NAME,Sawa Star
+PCKG_NAME,SAWA Star +
+PCKG_NAME,Sawa Star + %50 discount
+PCKG_NAME,Sawa Star Discount Eligibility
+PCKG_NAME,Sawa Star Plus
+PCKG_NAME,Sawa Star Plus 12 Weeks
+PCKG_NAME,Sawa Star Plus Discount Eligibility
+PCKG_NAME,Sawa Star special/4 weeks
+PCKG_NAME,Sawa Sudan / 1 Day
+PCKG_NAME,Sawa Sudan / 7 Days
+PCKG_NAME,Sawa Super Star
+PCKG_NAME,Sawa UL calls / 7 Days
+PCKG_NAME,Sawa UL Data / 2 Days
+PCKG_NAME,Sawa UL Data / 3 Days
+PCKG_NAME,Sawa Unlimited
+PCKG_NAME,SAWA Weekly x5
+PCKG_NAME,SAWA Weekly x7
+PCKG_NAME,Sawa x4
+PCKG_NAME,Sawa X5
+PCKG_NAME,Sawa x7
+PCKG_NAME,Sawa Yemen / 1 Day
+PCKG_NAME,Sawa Yemen / 30 Days
+PCKG_NAME,Sawa Yemen / 7 Days
+PCKG_NAME,Sawa Ziyara 110
+PCKG_NAME,Sawa Ziyara 190
+PCKG_NAME,Sawa Ziyara 25
+PCKG_NAME,Sawa Ziyara 30 for 7 days
+PCKG_NAME,Sawa Ziyara 40
+PCKG_NAME,Sawa Ziyara 5
+PCKG_NAME,Sawa Ziyara 50
+PCKG_NAME,Sawa Ziyara 85
+PCKG_NAME,Sawa Ziyara 95
+PCKG_NAME,Sawa Ziyara Recharge Offer
+PCKG_NAME,Sawa-off-net
+PCKG_NAME,Sawa-off-net plus
+PCKG_NAME,Sawa115
+PCKG_NAME,VIP 250 Offer
+PCKG_NAME,VIP 300 Offer
+PCKG_NAME,VIP 350 Offer
+PCKG_NAME,Visitor 100
+PCKG_NAME,Visitor 100 2 Week
+PCKG_NAME,Visitor 165
+PCKG_NAME,Visitor 35
+PCKG_NAME,Visitor 52
+PCKG_NAME,Visitor 65
+PCKG_NAME,Visitor 70
+PCKG_NAME,Visitor Flex 130
+PCKG_NAME,Visitor Flex 20
+PCKG_NAME,Visitor Flex 55
+PCKG_NAME,Visitor Gamers 120
+PCKG_NAME,Visitor Indonesia 100
+PCKG_NAME,Visitor Indonesia 50
+PCKG_NAME,Visitor Pakistan 100
+PCKG_NAME,Visitor Pakistan 70
+PCKG_NAME,Visitor Turkey 185
+PCKG_NAME,Visitor Turkey 246
+PCKG_NAME,Visitor Turkey 95
+PCKG_NAME,Voice Advanced Daily
+PCKG_NAME,Voice Advanced Large
+PCKG_NAME,Voice Advanced Small
+PCKG_NAME,Voice Advanced Special
+PCKG_NAME,Voice+WhatsApp Package
+PCKG_NAME,Weekly 1 GB Offer
+PCKG_NAME,Weekly 2 GB
+PCKG_NAME,Weekly 2 GB + 2 GB Social and 50 Minutes offer 14 SAR
+PCKG_NAME,Weekly 2 GB Offer
+PCKG_NAME,Weekly 25
+PCKG_NAME,Weekly 300 Minutes offer 5 SAR
+PCKG_NAME,Weekly 4 GB Offer
+PCKG_NAME,Weekly 5 GB Offer
+PCKG_NAME,Weekly 5 SAR
+PCKG_NAME,Weekly Allnet
+PCKG_NAME,Weekly Bangladesh
+PCKG_NAME,Weekly Data & Onnet
+PCKG_NAME,Weekly data bundle
+PCKG_NAME,Weekly Data Offer
+PCKG_NAME,Weekly data offer 10 SAR
+PCKG_NAME,Weekly data offer 5 SAR
+PCKG_NAME,Weekly Egypt
+PCKG_NAME,Weekly Egypt Package
+PCKG_NAME,weekly Egypt with data
+PCKG_NAME,Weekly Flex
+PCKG_NAME,Weekly Hybrid Bundle 25
+PCKG_NAME,Weekly Hybrid Bundle 45
+PCKG_NAME,Weekly India
+PCKG_NAME,Weekly National Offer
+PCKG_NAME,Weekly Onnet Calls
+PCKG_NAME,Weekly Onnet Offer
+PCKG_NAME,Weekly Onnet SMS
+PCKG_NAME,Weekly Onnet Voice
+PCKG_NAME,Weekly Pakistan
+PCKG_NAME,Weekly Philippine Package
+PCKG_NAME,Weekly Philippines
+PCKG_NAME,weekly Philippines plus
+PCKG_NAME,Weekly SAWA 10 All Net
+PCKG_NAME,Weekly SAWA 15
+PCKG_NAME,Weekly SAWA 20
+PCKG_NAME,Weekly SAWA 25
+PCKG_NAME,Weekly Sawa Flex
+PCKG_NAME,Weekly Sawa Ziyara
+PCKG_NAME,Weekly Smart Flex
+PCKG_NAME,Weekly Star Offer
+PCKG_NAME,Weekly STC Offer
+PCKG_NAME,Yemen Monthly
+PCKG_NAME,Yemen offer
+PCKG_NAME,Yemen Weekly
+PCKG_NAME,Yemen monthly offer
+PCKG_NAME,Yemen weekly offer
+PCKG_NAME,YouTube Package
+PCKG_SERV,Quicknet
+PCKG_SERV,SAWA
+PCKG_SERV,UNK
+PCKG_SUB_,3-Day
+PCKG_SUB_,Annual
+PCKG_SUB_,Bi-Monthly
+PCKG_SUB_,Bi-Weekly
+PCKG_SUB_,Daily
+PCKG_SUB_,Monthly
+PCKG_SUB_,NA
+PCKG_SUB_,Others
+PCKG_SUB_,Quarterly
+PCKG_SUB_,Semi-Annual
+PCKG_SUB_,Weekly
+PCKG_TYPE,ATL
+PCKG_TYPE,BTL
+PRICE_RAN,A. 0
+PRICE_RAN,B. 1 - 25
+PRICE_RAN,C. 26 - 50
+PRICE_RAN,D. 51 - 99
+PRICE_RAN,E. 100 - 149
+PRICE_RAN,F. 150 - 200
+PRICE_RAN,G. 201 - 249
+PRICE_RAN,H. 250+
+PRICE_RAN,NA
+VALIDITY_,D

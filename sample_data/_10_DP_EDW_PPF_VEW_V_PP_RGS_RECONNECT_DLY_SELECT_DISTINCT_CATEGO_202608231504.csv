@@ -1,0 +1,325 @@
+"column_name","unique_value"
+BUNDLE_T,ATL
+BUNDLE_T,BTL
+BUNDLE_T,PayG
+BUNDLE_T,Prorated Bundle Dormant
+CATEGORY,Daily Reconnects
+CORE_SEG,Core Base
+CORE_SEG,New Sales
+CORE_SEG,Non-Core Base
+CUST_NAT,Afghanistan
+CUST_NAT,African contries - Other
+CUST_NAT,Alaska
+CUST_NAT,Albania
+CUST_NAT,Algeria
+CUST_NAT,Alien  KSA Passprt
+CUST_NAT,Alnsi Tribe
+CUST_NAT,American Virgin Islands
+CUST_NAT,Andorra
+CUST_NAT,Angola
+CUST_NAT,Anguilla
+CUST_NAT,Antigua
+CUST_NAT,Argentina
+CUST_NAT,Armenia
+CUST_NAT,Aruba
+CUST_NAT,Australia
+CUST_NAT,Austria
+CUST_NAT,Azerbaijan
+CUST_NAT,Bahamas
+CUST_NAT,Bahrain
+CUST_NAT,Balearic Islands
+CUST_NAT,Baloushi
+CUST_NAT,Baluchistan
+CUST_NAT,Bangladesh
+CUST_NAT,Barbados
+CUST_NAT,Barbuda
+CUST_NAT,Belarus
+CUST_NAT,Belgium
+CUST_NAT,Belize
+CUST_NAT,Benin
+CUST_NAT,Bermuda
+CUST_NAT,Bhutan
+CUST_NAT,Bolivia
+CUST_NAT,Bosnia and Herzegovina
+CUST_NAT,Botswana
+CUST_NAT,Bovthatswana
+CUST_NAT,Brazil
+CUST_NAT,British Guyana
+CUST_NAT,British Virgin Islands
+CUST_NAT,Brunei
+CUST_NAT,Bulgaria
+CUST_NAT,Burkina Faso
+CUST_NAT,Burundi
+CUST_NAT,Caledonia
+CUST_NAT,Cambodia
+CUST_NAT,Cameroon
+CUST_NAT,Canada
+CUST_NAT,Canary Islands
+CUST_NAT,Cape Verde
+CUST_NAT,Cayman Islands
+CUST_NAT,Central African Republic
+CUST_NAT,Chad
+CUST_NAT,Chechnya
+CUST_NAT,Chile
+CUST_NAT,China
+CUST_NAT,Christmas Islands
+CUST_NAT,Cocos Islands
+CUST_NAT,Colombia
+CUST_NAT,Comorian island
+CUST_NAT,Comoros
+CUST_NAT,Comoros Islands
+CUST_NAT,Congo
+CUST_NAT,Cook Islands
+CUST_NAT,Costa Rica
+CUST_NAT,Cote De Voire
+CUST_NAT,Croatia
+CUST_NAT,Cuba
+CUST_NAT,Cyprus
+CUST_NAT,Czech Republic
+CUST_NAT,Czechoslovakia
+CUST_NAT,Dagestan
+CUST_NAT,Denmark
+CUST_NAT,Diego Garcia
+CUST_NAT,Djibouti
+CUST_NAT,Dominica
+CUST_NAT,Dominican Republic
+CUST_NAT,East Timor
+CUST_NAT,Ecuador
+CUST_NAT,Egypt
+CUST_NAT,El Salvador
+CUST_NAT,Equatorial Guinea
+CUST_NAT,Eritrea
+CUST_NAT,Estonia
+CUST_NAT,Ethiopia
+CUST_NAT,Falkland islands
+CUST_NAT,Faroe Islands
+CUST_NAT,Fiji
+CUST_NAT,Finland
+CUST_NAT,France
+CUST_NAT,French Guiana
+CUST_NAT,French Polynesia
+CUST_NAT,Gabon
+CUST_NAT,Gambia
+CUST_NAT,Georgia
+CUST_NAT,Germany
+CUST_NAT,Ghana
+CUST_NAT,Gibraltar
+CUST_NAT,Greece
+CUST_NAT,Greenland
+CUST_NAT,Grenada
+CUST_NAT,Guadeloupe
+CUST_NAT,Guam
+CUST_NAT,Guatemala
+CUST_NAT,Guinea
+CUST_NAT,Guinea Bissau
+CUST_NAT,Haiti
+CUST_NAT,Hawaii
+CUST_NAT,Holland
+CUST_NAT,Honduras
+CUST_NAT,Hong Kong
+CUST_NAT,Hungary
+CUST_NAT,Iceland
+CUST_NAT,India
+CUST_NAT,Indonesia
+CUST_NAT,Iran
+CUST_NAT,Iraq
+CUST_NAT,Ireland
+CUST_NAT,Italy
+CUST_NAT,Jamaica
+CUST_NAT,Japan
+CUST_NAT,Joanna
+CUST_NAT,Jordan
+CUST_NAT,Kazakhstan
+CUST_NAT,Kenya
+CUST_NAT,Kiribati Gilbert Islands
+CUST_NAT,Kosovo
+CUST_NAT,Kuwait
+CUST_NAT,Kuwait - without
+CUST_NAT,Kyrgyzstan
+CUST_NAT,Laos
+CUST_NAT,Latvia
+CUST_NAT,Lebanon
+CUST_NAT,Lesotho
+CUST_NAT,Liberia
+CUST_NAT,Libya
+CUST_NAT,Liechtenstein
+CUST_NAT,Lithuania
+CUST_NAT,Luxembourg
+CUST_NAT,Macau
+CUST_NAT,Macedonia
+CUST_NAT,Madagascar
+CUST_NAT,Madeira Islands
+CUST_NAT,Malawi
+CUST_NAT,Malaysia
+CUST_NAT,Maldives islands
+CUST_NAT,Mali
+CUST_NAT,Malta
+CUST_NAT,Marshall Islands
+CUST_NAT,Mauritania
+CUST_NAT,Mauritius
+CUST_NAT,Member of the tribes
+CUST_NAT,Mexico
+CUST_NAT,Micronesia
+CUST_NAT,Moldova
+CUST_NAT,Monaco
+CUST_NAT,Mongolia
+CUST_NAT,Montenegro
+CUST_NAT,Montserrat
+CUST_NAT,Morocco
+CUST_NAT,Mozambique
+CUST_NAT,Muhrah
+CUST_NAT,Myanmar
+CUST_NAT,Myanmar Bangladesh Passport
+CUST_NAT,Myanmar Pakistan Passport
+CUST_NAT,Myanmar Resident
+CUST_NAT,Namibia
+CUST_NAT,Nauru
+CUST_NAT,Nepal
+CUST_NAT,Netherlands Antilles islands
+CUST_NAT,New Caledonia
+CUST_NAT,New Zealand
+CUST_NAT,Nicaragua
+CUST_NAT,Niger
+CUST_NAT,Nigeria
+CUST_NAT,Niue Islands
+CUST_NAT,Norway
+CUST_NAT,Oman
+CUST_NAT,Other
+CUST_NAT,Pakistan
+CUST_NAT,Palau
+CUST_NAT,Palestine
+CUST_NAT,Palestinian Egyptian
+CUST_NAT,Palestinian Iraqi
+CUST_NAT,Palestinian Jordan
+CUST_NAT,Palestinian Lebanese
+CUST_NAT,Palestinian Syria
+CUST_NAT,Panama
+CUST_NAT,Papua New Guinea
+CUST_NAT,Peru
+CUST_NAT,Philippines
+CUST_NAT,Poland
+CUST_NAT,Portugal
+CUST_NAT,Qatar
+CUST_NAT,Resident
+CUST_NAT,Resident Born
+CUST_NAT,Resident Migration
+CUST_NAT,Resident No Id
+CUST_NAT,Resident Tribes
+CUST_NAT,Resident Unknown
+CUST_NAT,ResidentRequesting Nationality
+CUST_NAT,Restriction D 1
+CUST_NAT,Restriction F 1
+CUST_NAT,Restriction H 1
+CUST_NAT,Restriction J 1
+CUST_NAT,Restriction J 2
+CUST_NAT,Restriction J 3
+CUST_NAT,Restriction L 1
+CUST_NAT,Restriction N 1
+CUST_NAT,Restriction S 1
+CUST_NAT,Restriction SH 1
+CUST_NAT,Restriction Y 1
+CUST_NAT,Romania
+CUST_NAT,Russia Federal
+CUST_NAT,Russian
+CUST_NAT,Rwanda
+CUST_NAT,Saint Helena
+CUST_NAT,Saint Kitts and Nevis
+CUST_NAT,Saint Lucia
+CUST_NAT,Samoa
+CUST_NAT,San Cristovernivz
+CUST_NAT,San Marino
+CUST_NAT,Saudi Arabia
+CUST_NAT,Saudi Citizen
+CUST_NAT,Saudi Citizen_bkp
+CUST_NAT,Senegal
+CUST_NAT,Serbia
+CUST_NAT,Seychelles Islands
+CUST_NAT,Sierra Leone
+CUST_NAT,Singapore
+CUST_NAT,Slovakia
+CUST_NAT,Slovenia
+CUST_NAT,SMBB-NA
+CUST_NAT,Solomon Islands
+CUST_NAT,Somalia
+CUST_NAT,South Africa
+CUST_NAT,South Korea
+CUST_NAT,South Sudan
+CUST_NAT,Southern Yemen
+CUST_NAT,Spain
+CUST_NAT,Sri Lanka
+CUST_NAT,Sudan
+CUST_NAT,Suriname
+CUST_NAT,Svalbard and Jan Mayen Islands
+CUST_NAT,Swaziland
+CUST_NAT,Sweden
+CUST_NAT,Switzerland
+CUST_NAT,Syria
+CUST_NAT,Tahiti
+CUST_NAT,Taiwan
+CUST_NAT,Taiwan China
+CUST_NAT,Tajikistan
+CUST_NAT,Tanzania
+CUST_NAT,Tatarstan
+CUST_NAT,Thailand
+CUST_NAT,Togo
+CUST_NAT,Togolaise
+CUST_NAT,Tonga Islands
+CUST_NAT,Tribes emigrated
+CUST_NAT,Tribes Migration AlHalifah
+CUST_NAT,Tribes Migration Kuwait
+CUST_NAT,Trinidad and Tobago
+CUST_NAT,Tunisia
+CUST_NAT,Turkey
+CUST_NAT,Turkistan
+CUST_NAT,Turkistani Resident
+CUST_NAT,Turkmenistan
+CUST_NAT,Turks and Caicos Islands
+CUST_NAT,U.A.E.
+CUST_NAT,Uganda
+CUST_NAT,Ukraine
+CUST_NAT,United Arab Emirates
+CUST_NAT,United Kingdom
+CUST_NAT,United Nations
+CUST_NAT,United States Of America
+CUST_NAT,UNKNOWN
+CUST_NAT,Uruguay
+CUST_NAT,Uzbekistan
+CUST_NAT,Vanuoto
+CUST_NAT,Vatican City
+CUST_NAT,Venezuela
+CUST_NAT,Vietnam
+CUST_NAT,Yamani
+CUST_NAT,Yemen
+CUST_NAT,Yemen - pilgrimage
+CUST_NAT,Yemeni the sultans
+CUST_NAT,Yugoslavia
+CUST_NAT,Zaire
+CUST_NAT,Zambia
+CUST_NAT,Zimbabwe
+DOMESTIC,Domestic Subscriber
+DOMESTIC,Ziyarah Subscriber
+ID_TYPE,I
+ID_TYPE,Others
+ID_TYPE,P
+ID_TYPE,S
+RATEPLAN,Free Sawa Ziyara
+RATEPLAN,Prepaid Voice Package - SAWA
+RATEPLAN,Prepaid Voice SAWA
+RATEPLAN,Prepaid Voice SAWA - Rebate
+RATEPLAN,Prepaid Voice SAWA 25
+RATEPLAN,Prepaid Voice SAWA Easy Numbers
+RATEPLAN,Prepaid Voice SAWA Rebate 100
+RATEPLAN,Prepaid Voice SAWA Rebate 50
+RATEPLAN,Prepaid Voice SAWA Roaming
+RATEPLAN,Prepaid Voice SAWA Workers
+RATEPLAN,Prepaid Voice SAWA Zero
+RATEPLAN,Prepaid Voice SAWA Zero 30
+RATEPLAN,Prepaid Voice SAWA Zero 5000
+RATEPLAN,Prepaid Voice SAWA Ziyarah 25
+RATEPLAN,Prepaid Voice SAWA Ziyarah 5
+RATEPLAN,SAWA Postpaid
+RATEPLAN,Sawa Zero
+RECONNEC,Ownership
+RECONNEC,PrepaidtoPrepaid
+RECONNEC,RGS - Reconnect
+RECONNEC,Transfer

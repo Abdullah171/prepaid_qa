@@ -1,0 +1,496 @@
+"column_name","unique_value"
+CHURN_FLAG,Churn
+CHURN_FLAG,Transfer
+LINE_TYPE,PP
+LINE_TYPE,PS
+LINE_TYPE,TL
+ORDER_SUBTYP_,CustomerInitiated
+ORDER_SUBTYP_,DowngradetoPrepaid
+ORDER_SUBTYP_,FNPPortOut
+ORDER_SUBTYP_,MNPPortOut
+ORDER_SUBTYP_,Ownership
+ORDER_SUBTYP_,Ownership Across BU
+ORDER_SUBTYP_,PrepaidtoPostpaid
+ORDER_SUBTYP_,PrepaidtoPrepaid
+ORDER_SUBTYP_,Resume
+ORDER_SUBTYP_,Return Device
+ORDER_SUBTYP_,SystemInitiated
+ORDER_SUBTYP_,Termination - Dunning
+ORDER_SUBTYP_,Transfer
+ORDER_SUBTYP_,Transfer Across BU
+ORDER_TYP_NME,Disconnect
+ORDER_TYP_NME,Migrate
+ORDER_TYP_NME,Transfer
+RATE_PLAN_GRP,Afaq Wireless
+RATE_PLAN_GRP,Atheer Shamel Voice Only
+RATE_PLAN_GRP,AtheerPlus
+RATE_PLAN_GRP,Baity Basic
+RATE_PLAN_GRP,Baity Basic Lite
+RATE_PLAN_GRP,Baity basic prime
+RATE_PLAN_GRP,Baity Entertainment
+RATE_PLAN_GRP,Baity Fiber 100 M Pre-paid
+RATE_PLAN_GRP,Baity Fiber 300 M Pre-paid
+RATE_PLAN_GRP,Baity Fiber Entertainment Plus
+RATE_PLAN_GRP,Baity Fiber Max
+RATE_PLAN_GRP,Baity Fiber Play 300
+RATE_PLAN_GRP,Baity Fiber Stream Plus
+RATE_PLAN_GRP,Baity FWA 5G 200Mbps
+RATE_PLAN_GRP,Baity FWA 5G Basic
+RATE_PLAN_GRP,Baity FWA 5G Entertainment
+RATE_PLAN_GRP,Baity FWA 5G Voice and Data
+RATE_PLAN_GRP,Baity Games
+RATE_PLAN_GRP,Baity Max
+RATE_PLAN_GRP,Baity Stream
+RATE_PLAN_GRP,Baity Stream lite
+RATE_PLAN_GRP,Basic Internet
+RATE_PLAN_GRP,Call Cabin
+RATE_PLAN_GRP,Calling Phone
+RATE_PLAN_GRP,Calling Phone Zero Price
+RATE_PLAN_GRP,Data SIM Card
+RATE_PLAN_GRP,DSL
+RATE_PLAN_GRP,DSL TV
+RATE_PLAN_GRP,Fiber 100
+RATE_PLAN_GRP,Fiber 200
+RATE_PLAN_GRP,Fiber TV 100
+RATE_PLAN_GRP,Fiber TV 200
+RATE_PLAN_GRP,Fiber TV 500
+RATE_PLAN_GRP,Hatif 30
+RATE_PLAN_GRP,Hatif 30 Wireless
+RATE_PLAN_GRP,Hatif 30_Afaq
+RATE_PLAN_GRP,Hatif 30_Afaq Shamel
+RATE_PLAN_GRP,Hatif 45_Afaq
+RATE_PLAN_GRP,Hatif 45_Afaq Shamel
+RATE_PLAN_GRP,Home Phone
+RATE_PLAN_GRP,Home Phone Plus
+RATE_PLAN_GRP,Home Phone Plus Legacy
+RATE_PLAN_GRP,Home Phone Plus Wireless
+RATE_PLAN_GRP,Home Phone Plus_Afaq
+RATE_PLAN_GRP,Home Phone Plus_Afaq Shamel
+RATE_PLAN_GRP,Home Phone Wireless
+RATE_PLAN_GRP,Jood 2
+RATE_PLAN_GRP,Jood 2 (Triple Play)
+RATE_PLAN_GRP,Jood 2*
+RATE_PLAN_GRP,Jood 3
+RATE_PLAN_GRP,Jood 4
+RATE_PLAN_GRP,Jood Net
+RATE_PLAN_GRP,Jood Wireless
+RATE_PLAN_GRP,Marhaba Atheer
+RATE_PLAN_GRP,Mobile-Postpaid-Aljawal
+RATE_PLAN_GRP,New Fiber TV 200
+RATE_PLAN_GRP,New Fiber TV 300
+RATE_PLAN_GRP,New Fiber TV 500
+RATE_PLAN_GRP,New Fiber TV 500 2022
+RATE_PLAN_GRP,PIL Baity FWA 5G Entertainment
+RATE_PLAN_GRP,Prepaid Data QuickNet
+RATE_PLAN_GRP,Prepaid Voice SAWA
+RATE_PLAN_GRP,Prepaid Voice SAWA - Rebate
+RATE_PLAN_GRP,UL Fiber 100Mbps - Jawwy TV
+RATE_PLAN_GRP,UL Fiber 300Mbps - Jawwy TV
+RATE_PLAN_GRP,UL Fiber 500Mbps - Jawwy TV
+RATE_PLAN_GRP,UL Fiber 50Mbps - Jawwy TV
+RATE_PLAN_GRP,Unlimited Fiber
+RATE_PLAN_GRP,Unlimited Fiber 200Mbps
+RATE_PLAN_GRP,Unlimited Fiber 50Mbps
+RATE_PLAN_GRP,Unlimited Fiber Plus
+RATE_PLAN_GRP,Unlimited Fiber Plus(Double Play)
+RATE_PLAN_GRP,Unlimited Fiber(Double Play)
+RATE_PLAN_GRP,Unlimited Internet
+RATE_PLAN_GRP,Unlimited Internet - Jawwy TV
+RATE_PLAN_NME,"100 GB + 100 Streaming with Myfi"
+RATE_PLAN_NME,"100GB + 100GB Streaming PS"
+RATE_PLAN_NME,"100GB + 4G MiFi"
+RATE_PLAN_NME,"100GB +19 social +Ipad"
+RATE_PLAN_NME,"100GB Gaming + 35GB"
+RATE_PLAN_NME,"115 GB  for 3 Months"
+RATE_PLAN_NME,"150GB entertainment apps+ 25GB"
+RATE_PLAN_NME,"150GB Streaming"
+RATE_PLAN_NME,"15GB"
+RATE_PLAN_NME,"1GB QuicKnet Postpaid plan"
+RATE_PLAN_NME,"20GB"
+RATE_PLAN_NME,"25 GB  for 1 Month"
+RATE_PLAN_NME,"25GB"
+RATE_PLAN_NME,"25GB + 25GB Streaming PS"
+RATE_PLAN_NME,"25GB for 1 Month with ZTE MyFi"
+RATE_PLAN_NME,"3+1 Quicknet Postpaid Offer"
+RATE_PLAN_NME,"4G Data SIM 100 GB +4G My-fi 12M"
+RATE_PLAN_NME,"4G DATA SIM 150 GB+4G Myfi 12M"
+RATE_PLAN_NME,"4G Quick Net"
+RATE_PLAN_NME,"4G Quicknet Unlimited Data Plan + 4G My-fi 24M"
+RATE_PLAN_NME,"4G Quicknet Unlimited Data Plan+4G My-fi 12M"
+RATE_PLAN_NME,"50 GB + 100 Gaming with Myfi"
+RATE_PLAN_NME,"50GB + 50GB Streaming PS"
+RATE_PLAN_NME,"50GB Huawei MatePad 11"
+RATE_PLAN_NME,"50GB Huawei MatePad SE 32GB"
+RATE_PLAN_NME,"50GB Huawei MatePad SE 64GB"
+RATE_PLAN_NME,"50GB MatePad SE Kids"
+RATE_PLAN_NME,"5G 100GB+5G MyFi"
+RATE_PLAN_NME,"5G 100GB+5G MyFi 12M"
+RATE_PLAN_NME,"5G Baity Pospaid Package"
+RATE_PLAN_NME,"5G QuickNet 200 GB for 2 Months"
+RATE_PLAN_NME,"5G QuickNet 2GB"
+RATE_PLAN_NME,"5G QuickNet 500 GB for 3 Months"
+RATE_PLAN_NME,"5G QuickNet Post-paid 100 GB"
+RATE_PLAN_NME,"5G QuickNet Post-paid 250 GB"
+RATE_PLAN_NME,"5G QuickNet Post-paid Unlimited"
+RATE_PLAN_NME,"5G QuickNet Post-paid Unlimited + 5G MyFi 18M"
+RATE_PLAN_NME,"5G QuickNet Postpaid 300Mbps"
+RATE_PLAN_NME,"5G QuickNet PP 200GB-2M zero SR"
+RATE_PLAN_NME,"5GB QuicKnet Postpaid plan"
+RATE_PLAN_NME,"75 GB  for 2 Months"
+RATE_PLAN_NME,Afaq Wireless
+RATE_PLAN_NME,Aljawal 25
+RATE_PLAN_NME,Aljawal 25(STC Employee)
+RATE_PLAN_NME,Aljawal 35
+RATE_PLAN_NME,Aljawal 45
+RATE_PLAN_NME,Atheer Shamel Voice Only
+RATE_PLAN_NME,AtheerPlus
+RATE_PLAN_NME,Baity 4G 50Mbps
+RATE_PLAN_NME,Baity 4G 70GB
+RATE_PLAN_NME,Baity 5G 100GB
+RATE_PLAN_NME,Baity 5G 100Mbps
+RATE_PLAN_NME,Baity 5G 100Mbps 12M PP
+RATE_PLAN_NME,Baity 5G 100Mbps 6M PP
+RATE_PLAN_NME,Baity 5G 100Mbps Revamped
+RATE_PLAN_NME,Baity 5G 110GB
+RATE_PLAN_NME,Baity 5G 200Mpbs
+RATE_PLAN_NME,Baity 5G 300Mbps 3M PP
+RATE_PLAN_NME,Baity 5G 300Mbps Prepaid 12M
+RATE_PLAN_NME,Baity 5G 300Mbps Prepaid 6M
+RATE_PLAN_NME,Baity 5G Basic
+RATE_PLAN_NME,Baity 5G Basic eSIM
+RATE_PLAN_NME,Baity 5G basic lite 50Mbps
+RATE_PLAN_NME,Baity 5G Basic-Testing
+RATE_PLAN_NME,Baity 5G Entertainment
+RATE_PLAN_NME,Baity 5G Entertainment eSIM
+RATE_PLAN_NME,Baity 5G Entertainment Revamped
+RATE_PLAN_NME,Baity 5G MAX
+RATE_PLAN_NME,Baity 5G MAX Esim
+RATE_PLAN_NME,Baity 5G Stream
+RATE_PLAN_NME,Baity 5G Stream e-SIM
+RATE_PLAN_NME,Baity 5G Stream e-SIM-Testing
+RATE_PLAN_NME,Baity 5G Stream-Testing
+RATE_PLAN_NME,Baity 5G Unlimited
+RATE_PLAN_NME,Baity 5G Unlimited eSIM
+RATE_PLAN_NME,Baity 5G Unlimited Plus
+RATE_PLAN_NME,Baity 5G Unlimited Plus Esim
+RATE_PLAN_NME,Baity Basic
+RATE_PLAN_NME,Baity Basic Lite
+RATE_PLAN_NME,Baity basic prime
+RATE_PLAN_NME,Baity Entertainment
+RATE_PLAN_NME,Baity Fiber 100 M Pre-paid
+RATE_PLAN_NME,Baity Fiber 300 M Pre-paid
+RATE_PLAN_NME,Baity Fiber Entertainment Plus
+RATE_PLAN_NME,Baity Fiber Max
+RATE_PLAN_NME,Baity Fiber Play 300
+RATE_PLAN_NME,Baity Fiber Stream Plus
+RATE_PLAN_NME,Baity FWA 5G 200Mbps
+RATE_PLAN_NME,Baity FWA 5G Basic
+RATE_PLAN_NME,Baity FWA 5G Entertainment
+RATE_PLAN_NME,Baity FWA 5G Voice and Data
+RATE_PLAN_NME,Baity Games
+RATE_PLAN_NME,Baity Max
+RATE_PLAN_NME,Baity Stream
+RATE_PLAN_NME,Baity Stream lite
+RATE_PLAN_NME,Baity5GEnterainmenteSIM
+RATE_PLAN_NME,Basic
+RATE_PLAN_NME,Basic Entry Plan
+RATE_PLAN_NME,Basic Internet
+RATE_PLAN_NME,Business Jawal 25
+RATE_PLAN_NME,Business Jawal 35
+RATE_PLAN_NME,Call Cabin
+RATE_PLAN_NME,Calling Phone
+RATE_PLAN_NME,Calling Phone Zero Price
+RATE_PLAN_NME,Classic
+RATE_PLAN_NME,Data SIM 1 GB
+RATE_PLAN_NME,Data SIM 10 GB
+RATE_PLAN_NME,Data SIM 100 GB
+RATE_PLAN_NME,Data SIM 100GB
+RATE_PLAN_NME,Data SIM 10GB
+RATE_PLAN_NME,DATA SIM 150 GB
+RATE_PLAN_NME,DATA SIM 50 GB
+RATE_PLAN_NME,Data SIM Recurrent Package 4G - 10GB
+RATE_PLAN_NME,Data SIM Unlimited
+RATE_PLAN_NME,DataSIM 100GB
+RATE_PLAN_NME,DataSIM 10GB
+RATE_PLAN_NME,DSL
+RATE_PLAN_NME,DSL TV
+RATE_PLAN_NME,Family 230
+RATE_PLAN_NME,Family 300
+RATE_PLAN_NME,Family Jawal 35
+RATE_PLAN_NME,Family Social 130
+RATE_PLAN_NME,Fiber 100
+RATE_PLAN_NME,Fiber 200
+RATE_PLAN_NME,Fiber TV 100
+RATE_PLAN_NME,Fiber TV 200
+RATE_PLAN_NME,Fiber TV 500
+RATE_PLAN_NME,Free Sawa Ziyara
+RATE_PLAN_NME,Hatif 30
+RATE_PLAN_NME,Hatif 30 Wireless
+RATE_PLAN_NME,Hatif 30_Afaq
+RATE_PLAN_NME,Hatif 30_Afaq Shamel
+RATE_PLAN_NME,Hatif 45_Afaq
+RATE_PLAN_NME,Hatif 45_Afaq Shamel
+RATE_PLAN_NME,Home Phone
+RATE_PLAN_NME,Home Phone Plus
+RATE_PLAN_NME,Home Phone Plus Legacy
+RATE_PLAN_NME,Home Phone Plus Wireless
+RATE_PLAN_NME,Home Phone Plus_Afaq
+RATE_PLAN_NME,Home Phone Plus_Afaq Shamel
+RATE_PLAN_NME,Home Phone Wireless
+RATE_PLAN_NME,Hybrid Data SIM
+RATE_PLAN_NME,Internet 1 GB
+RATE_PLAN_NME,Internet 3 GB
+RATE_PLAN_NME,Internet 6 GB
+RATE_PLAN_NME,Internet Unlimited – Revised Price
+RATE_PLAN_NME,Internet Unlimited
+RATE_PLAN_NME,Internet unlimited - LTE
+RATE_PLAN_NME,Jood 2
+RATE_PLAN_NME,Jood 2 (Triple Play)
+RATE_PLAN_NME,Jood 3
+RATE_PLAN_NME,Jood 4
+RATE_PLAN_NME,Jood Net
+RATE_PLAN_NME,Jood Wireless
+RATE_PLAN_NME,M100 package
+RATE_PLAN_NME,M170 package
+RATE_PLAN_NME,M2+
+RATE_PLAN_NME,M200 package
+RATE_PLAN_NME,M280 package
+RATE_PLAN_NME,Maktabi 5G 200Mbps - IUC
+RATE_PLAN_NME,Marhaba Atheer
+RATE_PLAN_NME,Medium use Plan
+RATE_PLAN_NME,Mofawtar 115
+RATE_PLAN_NME,Mofawtar 2 Extra
+RATE_PLAN_NME,Mofawtar 2 Lite
+RATE_PLAN_NME,Mofawtar 2 Plus
+RATE_PLAN_NME,Mofawtar 3 Plus
+RATE_PLAN_NME,Mofawtar 350
+RATE_PLAN_NME,Mofawtar 370
+RATE_PLAN_NME,Mofawtar 4 Extra
+RATE_PLAN_NME,Mofawtar 4 Family
+RATE_PLAN_NME,Mofawtar 4 Plus
+RATE_PLAN_NME,Mofawtar 600
+RATE_PLAN_NME,Mofawtar 90
+RATE_PLAN_NME,Mofawtar MAX Family
+RATE_PLAN_NME,Mofawtar Super 1
+RATE_PLAN_NME,Mofawtar Super 2
+RATE_PLAN_NME,Mofawtar Super 3
+RATE_PLAN_NME,Mofawtar Super 4
+RATE_PLAN_NME,Mofawtar Super 5
+RATE_PLAN_NME,New Fiber TV 200
+RATE_PLAN_NME,New Fiber TV 300
+RATE_PLAN_NME,New Fiber TV 500
+RATE_PLAN_NME,New Fiber TV 500 2022
+RATE_PLAN_NME,PAYG Plan
+RATE_PLAN_NME,PIL Baity FWA 5G Entertainment
+RATE_PLAN_NME,Postpaid 1000
+RATE_PLAN_NME,Postpaid 100GB
+RATE_PLAN_NME,Postpaid 150GB
+RATE_PLAN_NME,Postpaid 400 Plus
+RATE_PLAN_NME,Postpaid 50
+RATE_PLAN_NME,Postpaid 5G QuickNet Unlimited
+RATE_PLAN_NME,Postpaid 800
+RATE_PLAN_NME,Postpaid Hybrid
+RATE_PLAN_NME,Postpaid L
+RATE_PLAN_NME,Postpaid M
+RATE_PLAN_NME,Postpaid M4
+RATE_PLAN_NME,Postpaid S
+RATE_PLAN_NME,Postpaid UL
+RATE_PLAN_NME,Postpaid XL
+RATE_PLAN_NME,Postpaid XS
+RATE_PLAN_NME,Premium Plan
+RATE_PLAN_NME,Prepaid 500GB
+RATE_PLAN_NME,Prepaid Data QuickNet 1 Tera for 12 Months
+RATE_PLAN_NME,Prepaid Data QuickNet 10GB for 3 Months
+RATE_PLAN_NME,Prepaid Data QuickNet 120GB for 4 Months
+RATE_PLAN_NME,Prepaid Data QuickNet 1GB for 1 Month
+RATE_PLAN_NME,Prepaid Data QuickNet 20GB for 3 Months
+RATE_PLAN_NME,Prepaid Data QuickNet 300GB for 6 Months
+RATE_PLAN_NME,Prepaid Data QuickNet 330GB for 3 Months
+RATE_PLAN_NME,Prepaid Data QuickNet 3GB for 1 Month
+RATE_PLAN_NME,Prepaid Data QuickNet 500GB for 10 Months
+RATE_PLAN_NME,Prepaid Data QuickNet 50GB for 2 Months
+RATE_PLAN_NME,Prepaid Data QuickNet 50GB for 3 Months
+RATE_PLAN_NME,Prepaid Data QuickNet 5GB for 1 Month
+RATE_PLAN_NME,Prepaid Data QuickNet 800GB for 3 Months
+RATE_PLAN_NME,Prepaid Data QuickNet Action
+RATE_PLAN_NME,Prepaid Data QuickNet Express
+RATE_PLAN_NME,Prepaid Data QuickNet Internet Unlimited 7 months
+RATE_PLAN_NME,Prepaid Data QuickNet Light
+RATE_PLAN_NME,Prepaid Data QuickNet Light II
+RATE_PLAN_NME,Prepaid Data QuickNet LTE - Prepaid DATA SIM
+RATE_PLAN_NME,Prepaid Data QuickNet LTE 5GB Initial Package
+RATE_PLAN_NME,Prepaid Data QuickNet SIM 3GB for 3 months
+RATE_PLAN_NME,Prepaid Data QuickNet SIM 6GB for 6 Months
+RATE_PLAN_NME,Prepaid Data QuickNet Style I
+RATE_PLAN_NME,Prepaid Voice Package - SAWA
+RATE_PLAN_NME,Prepaid Voice SAWA 25
+RATE_PLAN_NME,Prepaid Voice SAWA Easy Numbers
+RATE_PLAN_NME,Prepaid Voice SAWA Rebate 100
+RATE_PLAN_NME,Prepaid Voice SAWA Rebate 50
+RATE_PLAN_NME,Prepaid Voice SAWA Roaming
+RATE_PLAN_NME,Prepaid Voice SAWA Workers
+RATE_PLAN_NME,Prepaid Voice SAWA Zero
+RATE_PLAN_NME,Prepaid Voice SAWA Zero 30
+RATE_PLAN_NME,Prepaid Voice SAWA Zero 5000
+RATE_PLAN_NME,Prepaid Voice SAWA Ziyarah
+RATE_PLAN_NME,Prepaid Voice SAWA Ziyarah 25
+RATE_PLAN_NME,Prepaid Voice SAWA Ziyarah 5
+RATE_PLAN_NME,Prepaid Voice SAWA Ziyarah 75
+RATE_PLAN_NME,PS Data SIM UNL 250SAR
+RATE_PLAN_NME,QN 100GB 5G iPad 256GB
+RATE_PLAN_NME,QN 100GB 5G iPad 64GB
+RATE_PLAN_NME,QN 10GB DASHCAM Front interior
+RATE_PLAN_NME,QN 10GB_3 Months ESIM
+RATE_PLAN_NME,QN 15GB Dashcam Blackvue
+RATE_PLAN_NME,QN 15GB Dashcam Jimi3
+RATE_PLAN_NME,QN 300GB_3Months_NEW ESIM
+RATE_PLAN_NME,QN 500 GB_6 Months ESIM
+RATE_PLAN_NME,QN 50GB 5G iPad 256GB
+RATE_PLAN_NME,QN 50GB Galaxy Tab S11 Ultra
+RATE_PLAN_NME,QN 50GB iPad pro 11 M5 256GB
+RATE_PLAN_NME,QN 50GB iPad pro 11 M5 512GB
+RATE_PLAN_NME,QN 50GB iPad pro 13 M5 256GB
+RATE_PLAN_NME,QN 50GB iPad pro 13 M5 512GB
+RATE_PLAN_NME,QN 50GB SamTab s10Plus 256GB
+RATE_PLAN_NME,QN 50GB SamTab s10Plus 512GB
+RATE_PLAN_NME,QN 50GB SamTab s10Ultra 1TB
+RATE_PLAN_NME,QN 50GB SamTab s10Ultra 256GB
+RATE_PLAN_NME,QN 50GB with App Unlimited Streaming
+RATE_PLAN_NME,QN 50GGB 5G iPad 64GB
+RATE_PLAN_NME,QN Dashcam 15GB DDPAI Z60
+RATE_PLAN_NME,QN Dashcam 15GB Hikvision V6 4G
+RATE_PLAN_NME,QN ESIM 50GB iPad Air 11 256GB
+RATE_PLAN_NME,QN ESIM 50GB iPad Air 11 512GB
+RATE_PLAN_NME,QN ESIM 50GB iPad Air 13 256GB
+RATE_PLAN_NME,QN ESIM 50GB iPad Air 13 512GB
+RATE_PLAN_NME,QN eSIM 50GB ipad mini 128GB
+RATE_PLAN_NME,QN eSIM 50GB ipad mini 256GB
+RATE_PLAN_NME,QN eSIM 50GB ipad mini 512GB
+RATE_PLAN_NME,QN ESIM 50GB iPad pro 11 1TB
+RATE_PLAN_NME,QN ESIM 50GB iPad pro 11 256GB
+RATE_PLAN_NME,QN ESIM 50GB iPad pro 11 512GB
+RATE_PLAN_NME,QN eSIM 50GB iPadA13 128GB
+RATE_PLAN_NME,QN eSIM 50GB iPadA13 256GB
+RATE_PLAN_NME,QN eSIM 50GB iPadA13 512GB
+RATE_PLAN_NME,QN esim 50GBYT iPadpro11 1TB
+RATE_PLAN_NME,QN esim 50GBYT iPadpro11 256GB
+RATE_PLAN_NME,QN esim 50GBYT iPadpro11 512GB
+RATE_PLAN_NME,QN esim 50GBYT iPadpro13 1TB
+RATE_PLAN_NME,QN esim 50GBYT iPadpro13 256GB
+RATE_PLAN_NME,QN esim 50GBYT iPadpro13 512GB
+RATE_PLAN_NME,QN esim iPadAir11 128GB 2025
+RATE_PLAN_NME,QN esim iPadAir11 256GB 2025
+RATE_PLAN_NME,QN esim iPadAir11 512GB 2025
+RATE_PLAN_NME,QN PP 100GB+19GB SM 1M ESIM
+RATE_PLAN_NME,QN PP 120GB 1M
+RATE_PLAN_NME,QN PP 250GB 3M
+RATE_PLAN_NME,QN PP 300GB 4M
+RATE_PLAN_NME,QN PP 350GB 3M
+RATE_PLAN_NME,QN PP 400GB 4M
+RATE_PLAN_NME,QN PP 5G UNL_3 Months ESIM
+RATE_PLAN_NME,QN PP 600GB 6M
+RATE_PLAN_NME,QN PP 70GB 1M
+RATE_PLAN_NME,QN PP Max 1M
+RATE_PLAN_NME,QN PP Max 3M
+RATE_PLAN_NME,QN Unlimited 5G iPad 256GB
+RATE_PLAN_NME,QN Unlimited 5G iPad 64GB
+RATE_PLAN_NME,QN unlimited with roaming data
+RATE_PLAN_NME,QuickNet 10 GB for 2 Months
+RATE_PLAN_NME,QuickNet 100 GB for 3 Months
+RATE_PLAN_NME,Quicknet 100GB + 100GB social 5G MiFi
+RATE_PLAN_NME,QuickNet 100GB + 50GB roaming
+RATE_PLAN_NME,QuickNet 100GB for 3Months_NEW
+RATE_PLAN_NME,QUICKNET 10GB Dashcam
+RATE_PLAN_NME,QuickNet 10GB for 1 Month
+RATE_PLAN_NME,Quicknet 12 Months Contract
+RATE_PLAN_NME,Quicknet 15GB EasyFi
+RATE_PLAN_NME,QuickNet 1GB for 1M for MoE
+RATE_PLAN_NME,Quicknet 20GB for 6 months Hikvision DASHCAM
+RATE_PLAN_NME,QUICKNET 20GB SMART CAMERA
+RATE_PLAN_NME,QuickNet 300 GB for 3 Months
+RATE_PLAN_NME,QuickNet 300GB for 3 Months
+RATE_PLAN_NME,QuickNet 300GB for 3Months_NEW
+RATE_PLAN_NME,QuickNet 30GB for 2 Months
+RATE_PLAN_NME,Quicknet 30GB SIM
+RATE_PLAN_NME,QuickNet 50 GB for 2 Months
+RATE_PLAN_NME,QuickNet 500 GB for 6 Months
+RATE_PLAN_NME,Quicknet 50GB + 50GB social 5G MiFi
+RATE_PLAN_NME,Quicknet 50GB 5G MyFi
+RATE_PLAN_NME,Quicknet 50GB iPad mini 256GB
+RATE_PLAN_NME,Quicknet 50GB iPad mini 64GB
+RATE_PLAN_NME,Quicknet 50GBiPadAir 2022 64GB
+RATE_PLAN_NME,Quicknet 50GBiPadAir2022 256GB
+RATE_PLAN_NME,Quicknet 55GB SIM
+RATE_PLAN_NME,Quicknet 5G 10GB
+RATE_PLAN_NME,Quicknet 5G 20GB
+RATE_PLAN_NME,Quicknet 5G 2GB
+RATE_PLAN_NME,Quicknet 5G Unlimited
+RATE_PLAN_NME,Quicknet 5GB Car tracker 4G
+RATE_PLAN_NME,Quicknet DashCam 20GB 6 months Standalone
+RATE_PLAN_NME,Quicknet DashCam 30GB 12 months Standalone
+RATE_PLAN_NME,QuickNet Data SIM 1000GB for 1 Year
+RATE_PLAN_NME,QuickNet Data SIM 1000GB for 1 Year Esim
+RATE_PLAN_NME,QuickNet Data SIM 100GB 3 Months
+RATE_PLAN_NME,QuickNet Data SIM 25GB 1 Month
+RATE_PLAN_NME,QuickNet Data SIM 80GB 2 Months
+RATE_PLAN_NME,Quicknet e-sim 50GB iPad pro 13-inch 1TB 2024
+RATE_PLAN_NME,Quicknet e-sim 50GB iPad pro 13-inch 265GB 2024
+RATE_PLAN_NME,Quicknet e-sim 50GB iPad pro 13-inch 512GB 2024
+RATE_PLAN_NME,QuickNet PP 10 GB+Unlimited Netflix for 1 Month
+RATE_PLAN_NME,QuickNet PP 10 GB+Unlimited YouTube for 1 Month
+RATE_PLAN_NME,QuickNet PP 100GB+19GB social media 1M
+RATE_PLAN_NME,QuickNet PP 1GB for 1 Month
+RATE_PLAN_NME,QuickNet PP 5G UNL for 3 Months
+RATE_PLAN_NME,QuickNet PP 5G Unlimited for 1 Month
+RATE_PLAN_NME,QuickNet PP 5GB for 1 Month
+RATE_PLAN_NME,QuickNet PP Apps+100GB for 1 Month
+RATE_PLAN_NME,QuickNet PS 50GB
+RATE_PLAN_NME,QuickNet Roaming 20 GB for 1 week
+RATE_PLAN_NME,QuickNet Roaming 50 GB for 1 month
+RATE_PLAN_NME,Quicknet Unlimited Data Plan
+RATE_PLAN_NME,Quicknet Unlimited Postpaid 400
+RATE_PLAN_NME,SAWA Postpaid
+RATE_PLAN_NME,Sawa Tourist 150
+RATE_PLAN_NME,Sawa Tourist 300
+RATE_PLAN_NME,Sawa Tourist 65
+RATE_PLAN_NME,Sawa Zero
+RATE_PLAN_NME,UCE Device Data Package 10GB for 18 Months
+RATE_PLAN_NME,UCE Device Data Package 10GB for 24 Months
+RATE_PLAN_NME,UCE Device Data Package Unlimited for 18 Months
+RATE_PLAN_NME,UCE PBU Data Package Unlimited
+RATE_PLAN_NME,UCE PBU Data Package Unlimited for 12 Months
+RATE_PLAN_NME,UCE PBU Data Package-Style-10GB
+RATE_PLAN_NME,UCE PBU Data Package-Style-5GB
+RATE_PLAN_NME,UCE PBU Pro I Data Package Unlimited for 12 Months
+RATE_PLAN_NME,UCE PBU Pro I Data Package Unlimited for 12 Months(LTE)
+RATE_PLAN_NME,UL Fiber 100Mbps - Jawwy TV
+RATE_PLAN_NME,UL Fiber 300Mbps - Jawwy TV
+RATE_PLAN_NME,UL Fiber 500Mbps - Jawwy TV
+RATE_PLAN_NME,UL Fiber 50Mbps - Jawwy TV
+RATE_PLAN_NME,UNL Roaming+4GMyFI 12M
+RATE_PLAN_NME,Unlimited Fiber
+RATE_PLAN_NME,Unlimited Fiber 200Mbps
+RATE_PLAN_NME,Unlimited Fiber 50Mbps
+RATE_PLAN_NME,Unlimited Fiber Plus
+RATE_PLAN_NME,Unlimited Fiber Plus(Double Play)
+RATE_PLAN_NME,Unlimited Fiber(Double Play)
+RATE_PLAN_NME,Unlimited Internet
+RATE_PLAN_NME,Unlimited Internet - Jawwy TV
+RATE_PLAN_NME,Unlimited Mobile Gaming + 10GB
+RATE_PLAN_NME,Unlimited QN_1 Months ESIM
+RATE_PLAN_NME,Unlimited Quicknet for 1 Months
+RATE_PLAN_NME,Unlimited Shahid & Jawwy streaming
+RATE_PLAN_NME,Unlimited Social
+RATE_PLAN_NME,unlimited with MyFi ZTE
+RATE_PLAN_NME,Unlimited YouTube Plus 10GB
+RATE_PLAN_NME,Zero Package
+RATE_PLAN_NME,Zero Package Plus
+SCREEN_TYPE,LS
+SCREEN_TYPE,NA
+SCREEN_TYPE,SS
+SERVICE_TYPE,BROADBAND
+SERVICE_TYPE,FWA
+SERVICE_TYPE,NA
+TECH_SUB_TYPE,FWA Wireless
+TECH_SUB_TYPE,NA
+TECH_SUB_TYPE,SMBB-NA
