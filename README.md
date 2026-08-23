@@ -9,7 +9,7 @@ The app loads:
 - Teradata credentials from `.env`
 - STC LiteLLM OpenAI-compatible endpoint settings from `.env`
 - `prepaid.sql` as the canonical schema and business metadata
-- all raw JSON and CSV files in `sample_data/` as system-level schema/sample context
+- all JSON samples and CSV categorical-value dictionaries in `sample_data/` as system-level context
 
 For each user question it:
 

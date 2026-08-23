@@ -1,0 +1,63 @@
+{
+"select top 5 * from DP_EDW_PPF.D_PP_PACKAGE_SRC_LKP": [
+	{
+		"PCKG_ID" : "20274",
+		"SIM_TYPE" : "NA",
+		"DATA_SOURCE_SYSTEM" : "SDP",
+		"DATA_SOURCE_SUB_SYSTEM" : "Balance Activation",
+		"SRC_SYS_CODE" : "50177",
+		"REV_CAPTURED_FLAG" : "Y",
+		"REC_START_DT" : "1900-01-01",
+		"REC_END_DT" : "9999-12-31",
+		"PRICE" : 10.000000,
+		"OLD_PCKG_NAME" : null
+	},
+	{
+		"PCKG_ID" : "22034",
+		"SIM_TYPE" : "NA",
+		"DATA_SOURCE_SYSTEM" : "SDP",
+		"DATA_SOURCE_SUB_SYSTEM" : "Balance Activation",
+		"SRC_SYS_CODE" : "52036",
+		"REV_CAPTURED_FLAG" : "Y",
+		"REC_START_DT" : "1900-01-01",
+		"REC_END_DT" : "9999-12-31",
+		"PRICE" : 35.000000,
+		"OLD_PCKG_NAME" : null
+	},
+	{
+		"PCKG_ID" : "24042",
+		"SIM_TYPE" : "NA",
+		"DATA_SOURCE_SYSTEM" : "SDP",
+		"DATA_SOURCE_SUB_SYSTEM" : "Balance Activation",
+		"SRC_SYS_CODE" : "24042",
+		"REV_CAPTURED_FLAG" : "Y",
+		"REC_START_DT" : "1900-01-01",
+		"REC_END_DT" : "9999-12-31",
+		"PRICE" : 0.000000,
+		"OLD_PCKG_NAME" : null
+	},
+	{
+		"PCKG_ID" : "24014",
+		"SIM_TYPE" : "NA",
+		"DATA_SOURCE_SYSTEM" : "SDP",
+		"DATA_SOURCE_SUB_SYSTEM" : "Balance Activation",
+		"SRC_SYS_CODE" : "24014",
+		"REV_CAPTURED_FLAG" : "Y",
+		"REC_START_DT" : "1900-01-01",
+		"REC_END_DT" : "9999-12-31",
+		"PRICE" : 0.000000,
+		"OLD_PCKG_NAME" : null
+	},
+	{
+		"PCKG_ID" : "SA00073",
+		"SIM_TYPE" : "Physical SIM",
+		"DATA_SOURCE_SYSTEM" : "IRB",
+		"DATA_SOURCE_SUB_SYSTEM" : "Sponsor",
+		"SRC_SYS_CODE" : "SawaPost",
+		"REV_CAPTURED_FLAG" : "N",
+		"REC_START_DT" : "1900-01-01",
+		"REC_END_DT" : "9999-12-31",
+		"PRICE" : 160.000000,
+		"OLD_PCKG_NAME" : "SAWA_160_NEW_SP"
+	}
+]}
