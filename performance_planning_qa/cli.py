@@ -1,4 +1,4 @@
-"""Command-line interface for the performance planning Q&A pipeline."""
+"""Command-line interface for the Prepaid QA pipeline."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from performance_planning_qa.pipeline import NL2SQLPipeline, PipelineResult
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Ask natural-language analytical questions over the performance planning Teradata tables.",
+        description="Ask natural-language analytical questions over prepaid Teradata tables.",
     )
     parser.add_argument(
         "question",
@@ -89,7 +89,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def run_interactive(pipeline: NL2SQLPipeline, args: argparse.Namespace) -> int:
-    print("Performance Planning Q&A. Type 'exit' or 'quit' to stop.")
+    print("Prepaid QA. Type 'exit' or 'quit' to stop.")
     while True:
         try:
             question = input("\nQuestion> ").strip()

@@ -286,7 +286,7 @@ cell by prefixing it with `!`):
 ```bash
 rsconnect deploy streamlit \
   --name my-connect \
-  --title "Performance Planning Q&A" \
+  --title "Prepaid QA" \
   --entrypoint posit_app.py \
   .
 ```

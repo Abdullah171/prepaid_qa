@@ -1,4 +1,4 @@
-"""Cloudera Machine Learning launcher for Performance Planning Q&A.
+"""Cloudera Machine Learning launcher for Prepaid QA.
 
 Create the CML application with this file as its launch script. Configure the
 ``REPLACE_ME`` values below, or provide them as CML project environment

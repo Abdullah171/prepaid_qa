@@ -1282,6 +1282,6 @@ def _sql_failure_message(error: str | None, *, phase: str) -> tuple[str, bool]:
 
 def _scoped_direct_answer() -> str:
     return (
-        "Hi. I can help with analytical questions about the provided performance planning "
-        "database schema, including postpaid base, sales, churn, and monthly revenue tables."
+        "Hi. I can help with analytical questions about the prepaid database schema, "
+        "including subscriber base, sales, packages, churn, and reconnect trends."
     )

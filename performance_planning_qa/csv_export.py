@@ -274,7 +274,7 @@ def build_ready_csv_export_spec(previous_export: dict[str, Any]) -> CSVExportSpe
     filename = (
         raw_filename
         if raw_filename.lower().endswith(".csv")
-        else "performance-planning-data.csv"
+        else "prepaid-qa-data.csv"
     )
     return CSVExportSpec(
         status="ready",
@@ -379,7 +379,7 @@ def build_csv_filename(question: str) -> str:
     useful_words = [word for word in words if word not in ignored][:8]
     slug = "-".join(useful_words)[:64].strip("-")
     if not slug:
-        slug = "performance-planning-data"
+        slug = "prepaid-qa-data"
     return f"{slug}.csv"
 
 

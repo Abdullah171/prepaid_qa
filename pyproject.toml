@@ -1,7 +1,7 @@
 [project]
 name = "performance-planning-qa"
 version = "0.1.0"
-description = "Natural-language to Teradata SQL and analytical Q&A for performance planning tables"
+description = "Natural-language to Teradata SQL and analytical Q&A for prepaid tables"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

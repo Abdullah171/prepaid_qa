@@ -1,4 +1,4 @@
-"""FastAPI entry point for the performance planning Q&A pipeline."""
+"""FastAPI entry point for the Prepaid QA pipeline."""
 
 from __future__ import annotations
 
@@ -232,8 +232,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Performance Planning Q&A API",
-    description="Natural-language analytics over performance planning Teradata tables.",
+    title="Prepaid QA API",
+    description="Natural-language analytics over prepaid Teradata tables.",
     version="0.1.0",
     lifespan=lifespan,
 )
