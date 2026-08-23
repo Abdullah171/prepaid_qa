@@ -1,0 +1,63 @@
+{
+"select top 5 * from DP_EDW_PPF.F_LINE_SALES_ATTR\n": [
+	{
+		"SERVICE_ORDER_NUM" : "1-1380171625805-1",
+		"CUST_AGE" : 8448,
+		"OLP_PCKG" : null,
+		"MNP_FROM_OPR" : null,
+		"SIM_TYPE" : "SAWA \/ QUICKNET PREPAID",
+		"FIRST_USAGE_DATE" : "2023-07-30",
+		"EVENT_SOURCE_TYPE_NAME" : "eDealer",
+		"CHANNEL" : "Distribution",
+		"SUB_CHANNEL" : "MS",
+		"FIRST_RECHARGE_DATE" : "2023-11-28"
+	},
+	{
+		"SERVICE_ORDER_NUM" : "1-1388767977263-1",
+		"CUST_AGE" : 14250,
+		"OLP_PCKG" : null,
+		"MNP_FROM_OPR" : null,
+		"SIM_TYPE" : "SAWA \/ QUICKNET PREPAID",
+		"FIRST_USAGE_DATE" : "2023-10-18",
+		"EVENT_SOURCE_TYPE_NAME" : "eDealer",
+		"CHANNEL" : "Distribution",
+		"SUB_CHANNEL" : "3rd Party",
+		"FIRST_RECHARGE_DATE" : null
+	},
+	{
+		"SERVICE_ORDER_NUM" : "1-1365742804802-1",
+		"CUST_AGE" : 13092,
+		"OLP_PCKG" : null,
+		"MNP_FROM_OPR" : null,
+		"SIM_TYPE" : "SAWA \/ QUICKNET PREPAID",
+		"FIRST_USAGE_DATE" : "2023-03-13",
+		"EVENT_SOURCE_TYPE_NAME" : "eDealer",
+		"CHANNEL" : "Distribution",
+		"SUB_CHANNEL" : "MS",
+		"FIRST_RECHARGE_DATE" : null
+	},
+	{
+		"SERVICE_ORDER_NUM" : "1-1514155884947-1",
+		"CUST_AGE" : 23909,
+		"OLP_PCKG" : "sawa 150_1 Month",
+		"MNP_FROM_OPR" : null,
+		"SIM_TYPE" : "SAWA \/ QUICKNET PREPAID",
+		"FIRST_USAGE_DATE" : "2026-06-05",
+		"EVENT_SOURCE_TYPE_NAME" : "eDealer",
+		"CHANNEL" : "Distribution",
+		"SUB_CHANNEL" : "MS",
+		"FIRST_RECHARGE_DATE" : "2026-08-02"
+	},
+	{
+		"SERVICE_ORDER_NUM" : "1-1518957279727-1",
+		"CUST_AGE" : 11676,
+		"OLP_PCKG" : "Visitor 35_14 Day",
+		"MNP_FROM_OPR" : null,
+		"SIM_TYPE" : "SAWA \/ QUICKNET PREPAID",
+		"FIRST_USAGE_DATE" : "2026-07-09",
+		"EVENT_SOURCE_TYPE_NAME" : "eDealer",
+		"CHANNEL" : "Field Sales",
+		"SUB_CHANNEL" : "DDP",
+		"FIRST_RECHARGE_DATE" : null
+	}
+]}

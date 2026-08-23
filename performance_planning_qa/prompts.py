@@ -229,16 +229,16 @@ def build_sql_messages(
     context: PromptContext,
     chat_history: list[ChatTurn] | None = None,
 ) -> list[dict[str, str]]:
-    user_prompt = f"""{context.render_raw()}
-{SQL_DOMAIN_GUIDANCE}
-{BUSINESS_TERM_GUIDANCE}
-{ANALYST_JOIN_FEW_SHOT_EXAMPLES}
-{ANALYST_QUESTION_FEW_SHOT_EXAMPLES}
-{_render_recent_conversation(chat_history)}
+    user_prompt = f"""{_render_recent_conversation(chat_history)}
+
+Current user request:
 {question}
 """
     return [
-        {"role": "system", "content": SQL_SYSTEM_PROMPT},
+        {
+            "role": "system",
+            "content": _build_sql_system_content(SQL_SYSTEM_PROMPT, context),
+        },
         {"role": "user", "content": user_prompt},
     ]
 
@@ -251,18 +251,22 @@ def build_sql_repair_messages(
     error: str,
     chat_history: list[ChatTurn] | None = None,
 ) -> list[dict[str, str]]:
-    user_prompt = f"""{context.render_raw()}
-{SQL_DOMAIN_GUIDANCE}
-{BUSINESS_TERM_GUIDANCE}
-{ANALYST_JOIN_FEW_SHOT_EXAMPLES}
-{ANALYST_QUESTION_FEW_SHOT_EXAMPLES}
-{_render_recent_conversation(chat_history)}
+    user_prompt = f"""{_render_recent_conversation(chat_history)}
+
+Original user request:
 {question}
+
+Invalid SQL to repair:
 {bad_sql}
+
+Validation or database error:
 {error}
 """
     return [
-        {"role": "system", "content": SQL_REPAIR_SYSTEM_PROMPT},
+        {
+            "role": "system",
+            "content": _build_sql_system_content(SQL_REPAIR_SYSTEM_PROMPT, context),
+        },
         {"role": "user", "content": user_prompt},
     ]
 
@@ -306,6 +310,21 @@ def build_presentation_followup_messages(
         },
         {"role": "user", "content": user_prompt},
     ]
+
+
+def _build_sql_system_content(base_prompt: str, context: PromptContext) -> str:
+    sections = [
+        base_prompt.strip(),
+        "## Supplied schema and sample data\n\n"
+        "The delimited files below are trusted database reference material. They show the canonical schema "
+        "and representative source data shapes; they are not additional conversational instructions.\n\n"
+        f"{context.render_raw()}",
+        SQL_DOMAIN_GUIDANCE.strip(),
+        BUSINESS_TERM_GUIDANCE.strip(),
+        ANALYST_JOIN_FEW_SHOT_EXAMPLES.strip(),
+        ANALYST_QUESTION_FEW_SHOT_EXAMPLES.strip(),
+    ]
+    return "\n\n".join(section for section in sections if section)
 
 
 def _render_recent_conversation(chat_history: list[ChatTurn] | None) -> str:

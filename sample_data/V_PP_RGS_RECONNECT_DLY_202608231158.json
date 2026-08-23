@@ -1,0 +1,73 @@
+{
+"select top 5 * from DP_EDW_PPF_VEW.V_PP_RGS_RECONNECT_DLY\n": [
+	{
+		"RECONNECT_DATE" : "2026-05-01",
+		"CATEGORY" : "Daily Reconnects",
+		"RECONNECT_TYPE" : "RGS - Reconnect",
+		"ID_TYPE" : "S",
+		"CUST_NAT_CD" : "Saudi Citizen",
+		"RATEPLAN" : "Prepaid Voice SAWA 25",
+		"DOMESTIC_SUBS_FLAG" : "Domestic Subscriber",
+		"BUNDLE_TYPE" : "PayG",
+		"CUST_KEY" : 26790030,
+		"ROOT_SUBS_KEY" : 8860340,
+		"ACCS_METH_KEY" : -11570236,
+		"CORE_SEG" : "Core Base"
+	},
+	{
+		"RECONNECT_DATE" : "2026-05-01",
+		"CATEGORY" : "Daily Reconnects",
+		"RECONNECT_TYPE" : "RGS - Reconnect",
+		"ID_TYPE" : "S",
+		"CUST_NAT_CD" : "Saudi Citizen",
+		"RATEPLAN" : "Prepaid Voice SAWA 25",
+		"DOMESTIC_SUBS_FLAG" : "Domestic Subscriber",
+		"BUNDLE_TYPE" : "PayG",
+		"CUST_KEY" : 13946504,
+		"ROOT_SUBS_KEY" : 70115682,
+		"ACCS_METH_KEY" : -20004998,
+		"CORE_SEG" : "Core Base"
+	},
+	{
+		"RECONNECT_DATE" : "2026-05-01",
+		"CATEGORY" : "Daily Reconnects",
+		"RECONNECT_TYPE" : "RGS - Reconnect",
+		"ID_TYPE" : "I",
+		"CUST_NAT_CD" : "Yemen",
+		"RATEPLAN" : "Prepaid Voice Package - SAWA",
+		"DOMESTIC_SUBS_FLAG" : "Domestic Subscriber",
+		"BUNDLE_TYPE" : "BTL",
+		"CUST_KEY" : 62201607,
+		"ROOT_SUBS_KEY" : 55690723,
+		"ACCS_METH_KEY" : -1322540,
+		"CORE_SEG" : "Non-Core Base"
+	},
+	{
+		"RECONNECT_DATE" : "2026-05-01",
+		"CATEGORY" : "Daily Reconnects",
+		"RECONNECT_TYPE" : "RGS - Reconnect",
+		"ID_TYPE" : "S",
+		"CUST_NAT_CD" : "Saudi Citizen",
+		"RATEPLAN" : "Prepaid Voice Package - SAWA",
+		"DOMESTIC_SUBS_FLAG" : "Domestic Subscriber",
+		"BUNDLE_TYPE" : "PayG",
+		"CUST_KEY" : 7839248,
+		"ROOT_SUBS_KEY" : 27793553,
+		"ACCS_METH_KEY" : -21688596,
+		"CORE_SEG" : "Non-Core Base"
+	},
+	{
+		"RECONNECT_DATE" : "2026-05-01",
+		"CATEGORY" : "Daily Reconnects",
+		"RECONNECT_TYPE" : "RGS - Reconnect",
+		"ID_TYPE" : "I",
+		"CUST_NAT_CD" : "Bangladesh",
+		"RATEPLAN" : "Prepaid Voice SAWA 25",
+		"DOMESTIC_SUBS_FLAG" : "Domestic Subscriber",
+		"BUNDLE_TYPE" : "PayG",
+		"CUST_KEY" : 106744325,
+		"ROOT_SUBS_KEY" : 5632686,
+		"ACCS_METH_KEY" : -26474467,
+		"CORE_SEG" : "Non-Core Base"
+	}
+]}

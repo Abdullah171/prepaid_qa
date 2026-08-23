@@ -9,11 +9,11 @@ The app loads:
 - Teradata credentials from `.env`
 - STC LiteLLM OpenAI-compatible endpoint settings from `.env`
 - `prepaid.sql` as the canonical schema and business metadata
-- all raw JSON and CSV files in `sample_data/` as prompt context
+- all raw JSON and CSV files in `sample_data/` as system-level schema/sample context
 
 For each user question it:
 
-1. Sends the schema and raw samples to GLM through LiteLLM to generate Teradata SQL.
+1. Sends the schema and raw samples in the system message to GLM through LiteLLM to generate Teradata SQL.
 2. Validates the SQL is read-only and references only the allowed tables.
 3. Executes the SQL through `teradataml`.
 4. Sends the query result back to GLM through LiteLLM to produce a concise analytical answer.

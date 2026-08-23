@@ -1,0 +1,73 @@
+{
+"select top 5 * from DP_EDW_PPF.D_PP_PACKAGE\n": [
+	{
+		"PCKG_ID" : "SA00023",
+		"PCKG_TYPE" : "ATL",
+		"PCKG_SERVICE_TYPE" : "SAWA",
+		"PCKG_NAME" : "Egypt Monthly+",
+		"PCKG_DESC" : null,
+		"PCKG_CATEGORY" : "International",
+		"PCKG_SUB_CATEGORY" : "Monthly",
+		"VALIDITY_DUR_TYPE" : "D",
+		"VALIDITY_AMOUNT" : 28.0,
+		"PRICE" : 100.0,
+		"PCKG_GROUP_1" : "28-ATL_IDD",
+		"PRICE_RANGE" : "E. 100 - 149"
+	},
+	{
+		"PCKG_ID" : "20331",
+		"PCKG_TYPE" : "BTL",
+		"PCKG_SERVICE_TYPE" : "SAWA",
+		"PCKG_NAME" : "Monthly Offnet",
+		"PCKG_DESC" : "Special offer for you. Get 200 off net mins. for only 79 SR. Valid for 30 days",
+		"PCKG_CATEGORY" : "Voice",
+		"PCKG_SUB_CATEGORY" : "Monthly",
+		"VALIDITY_DUR_TYPE" : "D",
+		"VALIDITY_AMOUNT" : 30.0,
+		"PRICE" : 79.0,
+		"PCKG_GROUP_1" : null,
+		"PRICE_RANGE" : "D. 51 - 99"
+	},
+	{
+		"PCKG_ID" : "20745",
+		"PCKG_TYPE" : "BTL",
+		"PCKG_SERVICE_TYPE" : "SAWA",
+		"PCKG_NAME" : "Monthly SAWA 45 All Net",
+		"PCKG_DESC" : "Monthly SAWA 45 All Net includes 500 minutes to all networks, and 3GBs plain data, just for 45 SR, valid for 4 weeks.",
+		"PCKG_CATEGORY" : null,
+		"PCKG_SUB_CATEGORY" : "Monthly",
+		"VALIDITY_DUR_TYPE" : "D",
+		"VALIDITY_AMOUNT" : 28.0,
+		"PRICE" : 45.0,
+		"PCKG_GROUP_1" : "22-BTL_36-75",
+		"PRICE_RANGE" : "C. 26 - 50"
+	},
+	{
+		"PCKG_ID" : "20586",
+		"PCKG_TYPE" : "BTL",
+		"PCKG_SERVICE_TYPE" : "SAWA",
+		"PCKG_NAME" : "Special Offer",
+		"PCKG_DESC" : "Special Offer includes unlimited calls within stc network, 500 minutes to all networks, and 10GBs plain data and 15GBs data for Social Media, just for 110 SR, valid for 4 weeks.",
+		"PCKG_CATEGORY" : null,
+		"PCKG_SUB_CATEGORY" : "Monthly",
+		"VALIDITY_DUR_TYPE" : "D",
+		"VALIDITY_AMOUNT" : 28.0,
+		"PRICE" : 110.0,
+		"PCKG_GROUP_1" : "14-BTL_101-115",
+		"PRICE_RANGE" : "E. 100 - 149"
+	},
+	{
+		"PCKG_ID" : "5204",
+		"PCKG_TYPE" : "BTL",
+		"PCKG_SERVICE_TYPE" : "SAWA",
+		"PCKG_NAME" : "Sawa Star Plus",
+		"PCKG_DESC" : "Sawa Star Plus",
+		"PCKG_CATEGORY" : null,
+		"PCKG_SUB_CATEGORY" : "Monthly",
+		"VALIDITY_DUR_TYPE" : "D",
+		"VALIDITY_AMOUNT" : 28.0,
+		"PRICE" : 240.0,
+		"PCKG_GROUP_1" : null,
+		"PRICE_RANGE" : "G. 201 - 249"
+	}
+]}

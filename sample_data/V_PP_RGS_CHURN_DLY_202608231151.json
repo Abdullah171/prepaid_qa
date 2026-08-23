@@ -1,0 +1,73 @@
+{
+"select top 5 * from DP_EDW_PPF_VEW.V_PP_RGS_CHURN_DLY\n": [
+	{
+		"CHURN_DATE" : "2026-08-05",
+		"CATEGORY" : "Daily Churn",
+		"ID_TYPE" : "S",
+		"CUST_NAT_CD" : "Saudi Citizen",
+		"RATEPLAN" : "Sawa Zero",
+		"DOMESTIC_SUBS_FLAG" : "Domestic Subscriber",
+		"BUNDLE_TYPE" : "PayG",
+		"CHURN_TYPE" : "RGS - Soft Churn",
+		"CUST_KEY" : 1630182109,
+		"ROOT_SUBS_KEY" : 1651759389,
+		"ACCS_METH_KEY" : -3386216,
+		"CORE_SEG" : "New Sales"
+	},
+	{
+		"CHURN_DATE" : "2026-08-08",
+		"CATEGORY" : "Daily Churn",
+		"ID_TYPE" : "I",
+		"CUST_NAT_CD" : "Bangladesh",
+		"RATEPLAN" : "Prepaid Voice SAWA 25",
+		"DOMESTIC_SUBS_FLAG" : "Domestic Subscriber",
+		"BUNDLE_TYPE" : "Prorated Bundle Dormant",
+		"CHURN_TYPE" : "RGS - Soft Churn",
+		"CUST_KEY" : 1118200799,
+		"ROOT_SUBS_KEY" : 1069360297,
+		"ACCS_METH_KEY" : -22002377,
+		"CORE_SEG" : "New Sales"
+	},
+	{
+		"CHURN_DATE" : "2026-06-24",
+		"CATEGORY" : "Daily Churn",
+		"ID_TYPE" : "I",
+		"CUST_NAT_CD" : "India",
+		"RATEPLAN" : "Prepaid Voice SAWA 25",
+		"DOMESTIC_SUBS_FLAG" : "Domestic Subscriber",
+		"BUNDLE_TYPE" : "PayG",
+		"CHURN_TYPE" : "RGS - Soft Churn",
+		"CUST_KEY" : 1254794724,
+		"ROOT_SUBS_KEY" : 1237601589,
+		"ACCS_METH_KEY" : -18129209,
+		"CORE_SEG" : "Non-Core Base"
+	},
+	{
+		"CHURN_DATE" : "2026-08-20",
+		"CATEGORY" : "Daily Churn",
+		"ID_TYPE" : "I",
+		"CUST_NAT_CD" : "Egypt",
+		"RATEPLAN" : "Sawa Zero",
+		"DOMESTIC_SUBS_FLAG" : "Domestic Subscriber",
+		"BUNDLE_TYPE" : "Prorated Bundle Dormant",
+		"CHURN_TYPE" : "CustomerInitiated",
+		"CUST_KEY" : 1679933432,
+		"ROOT_SUBS_KEY" : 1772387790,
+		"ACCS_METH_KEY" : -12651523,
+		"CORE_SEG" : "New Sales"
+	},
+	{
+		"CHURN_DATE" : "2026-06-20",
+		"CATEGORY" : "Daily Churn",
+		"ID_TYPE" : "I",
+		"CUST_NAT_CD" : "Pakistan",
+		"RATEPLAN" : "Sawa Zero",
+		"DOMESTIC_SUBS_FLAG" : "Domestic Subscriber",
+		"BUNDLE_TYPE" : "PayG",
+		"CHURN_TYPE" : "RGS - Soft Churn",
+		"CUST_KEY" : 1644190767,
+		"ROOT_SUBS_KEY" : 1569494067,
+		"ACCS_METH_KEY" : -17041515,
+		"CORE_SEG" : "Core Base"
+	}
+]}
