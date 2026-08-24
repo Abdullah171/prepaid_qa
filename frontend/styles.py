@@ -154,17 +154,40 @@ header[data-testid="stHeader"] {
   width: 0.42rem;
 }
 
-/* Style stable accessibility attributes instead of fragile nested divs. */
-[data-testid="stSidebar"] [data-testid="stToggle"] label,
-[data-testid="stSidebar"] [data-testid="stToggle"] p {
+/* Streamlit exposes st.toggle as stCheckbox in the browser. Style both the
+   hidden checkbox state and the separate visual track so host themes cannot
+   turn the off state white-on-white. */
+[data-testid="stSidebar"] [data-testid="stCheckbox"] label,
+[data-testid="stSidebar"] [data-testid="stCheckbox"] p {
   color: var(--ppqa-text) !important;
   font-size: 0.88rem;
   opacity: 1 !important;
 }
 
-[data-testid="stToggle"] [role="switch"] { opacity: 1 !important; }
-[data-testid="stToggle"] [role="switch"][aria-checked="false"] { background-color: #cfc2d6 !important; }
-[data-testid="stToggle"] [role="switch"][aria-checked="true"] { background-color: var(--ppqa-purple) !important; }
+[data-testid="stSidebar"] [data-testid="stCheckbox"] input[type="checkbox"] ~ div:first-of-type,
+[data-testid="stSidebar"] [data-testid="stCheckbox"] label > div:first-of-type {
+  background-color: #b6a6c1 !important;
+  border: 1px solid #a593b2 !important;
+  box-sizing: border-box !important;
+  opacity: 1 !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stCheckbox"] input[type="checkbox"] ~ div:first-of-type > div,
+[data-testid="stSidebar"] [data-testid="stCheckbox"] label > div:first-of-type > div {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(37, 26, 45, 0.28) !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stCheckbox"] input[type="checkbox"]:checked ~ div:first-of-type,
+[data-testid="stSidebar"] [data-testid="stCheckbox"] label[data-selected] > div:first-of-type,
+[data-testid="stSidebar"] [data-testid="stCheckbox"] label:has(input[type="checkbox"]:checked) > div:first-of-type {
+  background-color: var(--ppqa-purple) !important;
+  border-color: var(--ppqa-purple) !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stCheckbox"] label[data-disabled] > div:first-of-type {
+  opacity: 0.55 !important;
+}
 
 [data-testid="stSidebar"] [data-testid="stTooltipIcon"] svg {
   color: var(--ppqa-muted) !important;
