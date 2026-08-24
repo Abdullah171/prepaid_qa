@@ -593,7 +593,21 @@ div[data-testid="stChatInput"] button svg {
 }
 
 [data-testid="stSidebar"] .st-key-new-chat button {
+  background: var(--ppqa-purple) !important;
+  border-color: var(--ppqa-purple) !important;
+  color: #ffffff !important;
   min-height: 2.75rem;
+}
+
+[data-testid="stSidebar"] .st-key-new-chat button:hover {
+  background: var(--ppqa-purple-hover) !important;
+  border-color: var(--ppqa-purple-hover) !important;
+  color: #ffffff !important;
+}
+
+[data-testid="stSidebar"] .st-key-new-chat button p,
+[data-testid="stSidebar"] .st-key-new-chat button span {
+  color: #ffffff !important;
 }
 
 /* Active analysis stop control */
@@ -718,6 +732,14 @@ div[data-testid="stExpander"] svg {
 .stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) pre {
   border: 0 !important;
   margin: 0 !important;
+  overflow-x: hidden !important;
+  white-space: pre-wrap !important;
+}
+
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) pre code {
+  overflow-wrap: anywhere;
+  white-space: inherit !important;
+  word-break: break-word;
 }
 
 .stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) button {
