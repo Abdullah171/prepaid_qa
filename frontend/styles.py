@@ -434,10 +434,10 @@ div[data-testid="stChatInput"] button * { color: #ffffff !important; fill: #ffff
 }
 
 /* Explicit rules prevent a host dark theme from making chat rows black. */
-.stApp .stButton > button,
-.stApp .stDownloadButton > button,
-.stApp [data-testid="stSidebar"] .stButton > button,
-[data-theme="dark"] .stApp .stButton > button {
+.stApp .stButton button,
+.stApp .stDownloadButton button,
+.stApp [data-testid="stSidebar"] .stButton button,
+[data-theme="dark"] .stApp .stButton button {
   background: var(--ppqa-surface) !important;
   border: 1px solid var(--ppqa-border) !important;
   border-radius: 8px;
@@ -445,78 +445,103 @@ div[data-testid="stChatInput"] button * { color: #ffffff !important; fill: #ffff
   font-weight: 600;
 }
 
-.stApp .stButton > button p,
-.stApp .stButton > button span,
-.stApp .stDownloadButton > button p,
-.stApp .stDownloadButton > button span { color: inherit !important; }
+.stApp .stButton button p,
+.stApp .stButton button span,
+.stApp .stDownloadButton button p,
+.stApp .stDownloadButton button span { color: inherit !important; }
 
-.stApp .stButton > button:hover,
-.stApp .stDownloadButton > button:hover {
+.stApp .stButton button:hover,
+.stApp .stDownloadButton button:hover {
   background: #f3edf7 !important;
   border-color: #bca9c8 !important;
   color: var(--ppqa-text) !important;
 }
 
-.stApp .stButton > button[kind="primary"],
-.stApp .stButton > button[data-testid="stBaseButton-primary"] {
+.stApp .stButton button[kind="primary"],
+.stApp .stButton button[data-testid="stBaseButton-primary"] {
   background: var(--ppqa-purple) !important;
   border-color: var(--ppqa-purple) !important;
   color: #ffffff !important;
 }
 
-.stApp .stButton > button[kind="primary"]:hover,
-.stApp .stButton > button[data-testid="stBaseButton-primary"]:hover {
+.stApp .stButton button[kind="primary"]:hover,
+.stApp .stButton button[data-testid="stBaseButton-primary"]:hover {
   background: var(--ppqa-purple-hover) !important;
   border-color: var(--ppqa-purple-hover) !important;
   color: #ffffff !important;
 }
 
-.stApp .stButton > button[kind="tertiary"],
-.stApp .stButton > button[data-testid="stBaseButton-tertiary"] {
+.stApp .stButton button[kind="tertiary"],
+.stApp .stButton button[data-testid="stBaseButton-tertiary"] {
   background: transparent !important;
   border-color: transparent !important;
   color: var(--ppqa-purple) !important;
 }
 
-.stApp .stButton > button:focus-visible,
+.stApp .stButton button:focus-visible,
 .stApp .stTextInput input:focus-visible,
 .stApp .stTextArea textarea:focus-visible {
   outline: 2px solid rgba(79, 0, 140, 0.25) !important;
   outline-offset: 2px;
 }
 
-[data-testid="stSidebar"] .stButton > button { min-height: 2.3rem; }
+[data-testid="stSidebar"] .stButton button { min-height: 2.3rem; }
 [data-testid="stSidebar"] [data-testid="stIconMaterial"] { color: inherit !important; }
+
+/* Hosted Streamlit may insert a tooltip wrapper between stButton and the
+   actual button. Target the stable button test ID directly. */
+[data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"] {
+  background: #ffffff !important;
+  background-image: none !important;
+  border-color: var(--ppqa-border) !important;
+  color: var(--ppqa-text) !important;
+}
+
+[data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"] * {
+  color: var(--ppqa-text) !important;
+  fill: currentColor !important;
+}
 
 /* Active analysis stop control */
 .st-key-active-composer { position: relative; }
 .st-key-active-composer [data-testid="stChatInput"] button { visibility: hidden; }
 .st-key-active-composer .st-key-stop-analysis {
-  bottom: 0.58rem;
+  bottom: 0.52rem;
   position: absolute;
-  right: 0.72rem;
-  width: 2.15rem;
+  right: 0.65rem;
+  width: 8rem;
   z-index: 10;
 }
-.st-key-active-composer .stButton { width: 2.15rem; }
-.st-key-active-composer .stButton > button {
+.st-key-active-composer .stButton { width: 8rem; }
+.st-key-active-composer .stButton button {
   align-items: center;
-  border-radius: 50%;
+  background: #fff5f6 !important;
+  border: 1px solid #d92d55 !important;
+  border-radius: 8px;
+  color: #a7193f !important;
   display: flex;
   height: 2.15rem;
   justify-content: center;
   min-height: 2.15rem;
-  padding: 0;
-  width: 2.15rem;
+  padding: 0 0.7rem;
+  width: 8rem;
 }
-.st-key-active-composer .stButton [data-testid="stMarkdownContainer"] {
-  clip: rect(0 0 0 0);
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  position: absolute;
+
+.st-key-active-composer .stButton button:hover {
+  background: #fde8ed !important;
+  border-color: #b4233d !important;
+  color: #8f1735 !important;
+}
+
+.st-key-active-composer .stButton button *,
+.st-key-active-composer .stButton [data-testid="stIconMaterial"] {
+  color: inherit !important;
+  fill: currentColor !important;
   white-space: nowrap;
-  width: 1px;
+}
+
+.st-key-active-composer .stButton button:disabled {
+  opacity: 0.6 !important;
 }
 
 /* Progress, inputs, and data components */

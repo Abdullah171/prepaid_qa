@@ -1101,11 +1101,11 @@ def _render_active_analysis() -> None:
                 disabled=True,
             )
             if st.button(
-                "Stop",
+                "Stopping…" if snapshot.stopping else "Stop analysis",
                 key="stop-analysis",
                 help="Stop the current analysis",
                 disabled=snapshot.stopping,
-                type="primary",
+                type="secondary",
                 icon=":material/stop:",
             ):
                 if runner.cancel(snapshot.job_id):
@@ -1213,9 +1213,9 @@ def _log_frontend_error(context: str, error: Exception) -> None:
 
 
 def _message_avatar(role: str) -> str:
-    if role == "user":
-        return ":material/account_circle:"
-    return ":material/query_stats:"
+    # Preset avatar names produce stable user/assistant test IDs in Streamlit.
+    # Custom Material icons inherit the host theme and can render black.
+    return "user" if role == "user" else "assistant"
 
 
 def _message_count_label(count: int) -> str:
