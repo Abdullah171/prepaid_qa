@@ -5,12 +5,12 @@ APP_CSS = """
 :root {
   --ppqa-purple: #4f008c;
   --ppqa-purple-hover: #3f0070;
-  --ppqa-text: #251a2d;
-  --ppqa-muted: #6f6475;
-  --ppqa-border: #ded2e6;
-  --ppqa-background: #faf7fc;
-  --ppqa-surface: #ffffff;
-  --ppqa-subtle: #f3edf7;
+  --ppqa-text: #2c1a3b;
+  --ppqa-muted: #796686;
+  --ppqa-border: #e2d1eb;
+  --ppqa-background: #f8f4fc;
+  --ppqa-surface: #fdfafc;
+  --ppqa-subtle: #f3ebf6;
   --ppqa-success: #087b5b;
   --ppqa-danger: #b4233d;
 }
@@ -170,12 +170,14 @@ header[data-testid="stHeader"] {
   border: 1px solid #a593b2 !important;
   box-sizing: border-box !important;
   opacity: 1 !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease !important;
 }
 
 [data-testid="stSidebar"] [data-testid="stCheckbox"] input[type="checkbox"] ~ div:first-of-type > div,
 [data-testid="stSidebar"] [data-testid="stCheckbox"] label > div:first-of-type > div {
-  background-color: #ffffff !important;
+  background-color: var(--ppqa-surface) !important;
   box-shadow: 0 1px 2px rgba(37, 26, 45, 0.28) !important;
+  transition: transform 0.2s ease !important;
 }
 
 [data-testid="stSidebar"] [data-testid="stCheckbox"] input[type="checkbox"]:checked ~ div:first-of-type,
@@ -467,7 +469,7 @@ div[data-testid="stChatMessage"] li { color: var(--ppqa-text) !important; }
 }
 
 div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
-  background: #f6f0f9 !important;
+  background: #f2ebf7 !important;
 }
 
 [data-testid="stChatMessageAvatarUser"] {
@@ -478,11 +480,12 @@ div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
 [data-testid="stChatMessageAvatarUser"] * { color: #ffffff !important; }
 
 [data-testid="stChatMessageAvatarAssistant"] {
-  background: #e8f4f4 !important;
+  background: #f8f4fc !important;
   border-radius: 8px !important;
+  border: 1px solid var(--ppqa-border) !important;
 }
 
-[data-testid="stChatMessageAvatarAssistant"] * { color: #08777d !important; }
+[data-testid="stChatMessageAvatarAssistant"] * { color: var(--ppqa-purple) !important; }
 
 div[data-testid="stChatInput"],
 div[data-testid="stChatInput"] > div { background: var(--ppqa-surface) !important; }
@@ -521,7 +524,7 @@ div[data-testid="stChatInput"] button svg {
 }
 
 [data-testid="stBottom"] > div {
-  background: linear-gradient(180deg, transparent, #faf7fc 32%) !important;
+  background: linear-gradient(180deg, transparent, var(--ppqa-background) 32%) !important;
   padding-top: 1.25rem;
 }
 
@@ -535,6 +538,7 @@ div[data-testid="stChatInput"] button svg {
   border-radius: 8px;
   color: var(--ppqa-text) !important;
   font-weight: 600;
+  transition: all 0.2s ease-in-out !important;
 }
 
 .stApp .stButton button p,
@@ -590,7 +594,7 @@ div[data-testid="stChatInput"] button svg {
 /* Hosted Streamlit may insert a tooltip wrapper between stButton and the
    actual button. Target the stable button test ID directly. */
 [data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"] {
-  background: #ffffff !important;
+  background: var(--ppqa-surface) !important;
   background-image: none !important;
   border-color: var(--ppqa-border) !important;
   color: var(--ppqa-text) !important;
