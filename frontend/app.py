@@ -351,7 +351,7 @@ def _sidebar(client: ApiClient, *, analysis_running: bool) -> None:
         st.button(
             "New analysis",
             width="stretch",
-            type="primary",
+            type="secondary",
             icon=":material/add:",
             disabled=analysis_running,
             on_click=_start_new_chat,
@@ -602,12 +602,52 @@ def _render_assistant_artifacts(
     if rows:
         with st.expander("Result rows", expanded=False):
             preview_rows = rows[:MAX_RENDERED_RESULT_ROWS]
-            st.dataframe(preview_rows, width="stretch", hide_index=True)
+            st.markdown(
+                _result_rows_html(columns, preview_rows),
+                unsafe_allow_html=True,
+            )
             if len(rows) > len(preview_rows):
                 st.caption(
                     f"Showing {len(preview_rows):,} of {len(rows):,} returned rows "
                     "to keep the browser responsive."
                 )
+
+
+def _result_rows_html(columns: list[Any], rows: list[Any]) -> str:
+    """Render query rows without inheriting Streamlit's canvas color theme."""
+
+    ordered_columns = list(columns)
+    if not ordered_columns and rows and isinstance(rows[0], dict):
+        ordered_columns = list(rows[0])
+    if not ordered_columns:
+        ordered_columns = ["Result"]
+
+    header = "".join(
+        f'<th scope="col">{_html_escape(column)}</th>'
+        for column in ordered_columns
+    )
+    body_rows = []
+    for row in rows:
+        if isinstance(row, dict):
+            values = [row.get(column) for column in ordered_columns]
+        elif isinstance(row, (list, tuple)):
+            values = [
+                row[index] if index < len(row) else None
+                for index in range(len(ordered_columns))
+            ]
+        else:
+            values = [row]
+        cells = "".join(f"<td>{_html_escape(value)}</td>" for value in values)
+        body_rows.append(f"<tr>{cells}</tr>")
+
+    return (
+        '<div class="ppqa-result-table-wrap">'
+        '<table class="ppqa-result-table">'
+        f"<thead><tr>{header}</tr></thead>"
+        f"<tbody>{''.join(body_rows)}</tbody>"
+        "</table>"
+        "</div>"
+    )
 
 
 def _render_csv_download(
@@ -1224,14 +1264,8 @@ def _message_count_label(count: int) -> str:
     return f"{count} saved messages"
 
 
-def _html_escape(value: str) -> str:
-    return (
-        value.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-        .replace("'", "&#x27;")
-    )
+def _html_escape(value: Any) -> str:
+    return html.escape("" if value is None else str(value), quote=True)
 
 
 if __name__ == "__main__":

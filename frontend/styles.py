@@ -191,7 +191,6 @@ header[data-testid="stHeader"] {
 
 [data-testid="stSidebar"] [data-testid="stTooltipIcon"] svg {
   color: var(--ppqa-muted) !important;
-  fill: var(--ppqa-muted) !important;
 }
 
 /* Page header */
@@ -379,6 +378,94 @@ div[data-testid="stChatMessage"] {
 div[data-testid="stChatMessage"] p,
 div[data-testid="stChatMessage"] li { color: var(--ppqa-text) !important; }
 
+/* Markdown content has its own table and code defaults. Pin every layer to the
+   app palette so a dark host theme cannot leave white text on a transparent
+   table (or a dark SQL block inside an otherwise light message). */
+.stApp [data-testid="stMarkdownContainer"] {
+  color: var(--ppqa-text) !important;
+}
+
+.stApp [data-testid="stMarkdownContainer"] h1,
+.stApp [data-testid="stMarkdownContainer"] h2,
+.stApp [data-testid="stMarkdownContainer"] h3,
+.stApp [data-testid="stMarkdownContainer"] h4,
+.stApp [data-testid="stMarkdownContainer"] h5,
+.stApp [data-testid="stMarkdownContainer"] h6,
+.stApp [data-testid="stMarkdownContainer"] strong {
+  color: var(--ppqa-text) !important;
+}
+
+.stApp [data-testid="stMarkdownContainer"] a {
+  color: var(--ppqa-purple) !important;
+}
+
+.stApp [data-testid="stMarkdownContainer"] blockquote {
+  background: var(--ppqa-subtle) !important;
+  border-left-color: var(--ppqa-purple) !important;
+  color: var(--ppqa-text) !important;
+}
+
+.stApp [data-testid="stMarkdownContainer"] table {
+  background: var(--ppqa-surface) !important;
+  border: 1px solid var(--ppqa-border) !important;
+  border-collapse: separate !important;
+  border-radius: 8px;
+  border-spacing: 0 !important;
+  color: var(--ppqa-text) !important;
+  display: block;
+  margin: 0.75rem 0 1rem;
+  max-width: 100%;
+  overflow-x: auto;
+  width: max-content;
+}
+
+.stApp [data-testid="stMarkdownContainer"] thead,
+.stApp [data-testid="stMarkdownContainer"] thead tr,
+.stApp [data-testid="stMarkdownContainer"] th {
+  background: var(--ppqa-subtle) !important;
+  color: var(--ppqa-text) !important;
+}
+
+.stApp [data-testid="stMarkdownContainer"] tbody,
+.stApp [data-testid="stMarkdownContainer"] tbody tr,
+.stApp [data-testid="stMarkdownContainer"] td {
+  background: var(--ppqa-surface) !important;
+  color: var(--ppqa-text) !important;
+}
+
+.stApp [data-testid="stMarkdownContainer"] tbody tr:nth-child(even),
+.stApp [data-testid="stMarkdownContainer"] tbody tr:nth-child(even) td {
+  background: #fcfafc !important;
+}
+
+.stApp [data-testid="stMarkdownContainer"] th,
+.stApp [data-testid="stMarkdownContainer"] td {
+  border-bottom: 1px solid var(--ppqa-border) !important;
+  border-right: 1px solid var(--ppqa-border) !important;
+  min-width: 7rem;
+  padding: 0.55rem 0.7rem !important;
+  text-align: left;
+  vertical-align: top;
+  white-space: normal;
+}
+
+.stApp [data-testid="stMarkdownContainer"] th:last-child,
+.stApp [data-testid="stMarkdownContainer"] td:last-child {
+  border-right: 0 !important;
+}
+
+.stApp [data-testid="stMarkdownContainer"] tbody tr:last-child td {
+  border-bottom: 0 !important;
+}
+
+.stApp [data-testid="stMarkdownContainer"] code:not([data-testid="stCode"] code):not([data-testid="stCodeBlock"] code) {
+  background: var(--ppqa-subtle) !important;
+  border: 1px solid var(--ppqa-border);
+  border-radius: 4px;
+  color: var(--ppqa-purple-hover) !important;
+  padding: 0.08em 0.3em;
+}
+
 div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
   background: #f6f0f9 !important;
 }
@@ -388,14 +475,14 @@ div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
   border-radius: 8px !important;
 }
 
-[data-testid="stChatMessageAvatarUser"] * { color: #ffffff !important; fill: #ffffff !important; }
+[data-testid="stChatMessageAvatarUser"] * { color: #ffffff !important; }
 
 [data-testid="stChatMessageAvatarAssistant"] {
   background: #e8f4f4 !important;
   border-radius: 8px !important;
 }
 
-[data-testid="stChatMessageAvatarAssistant"] * { color: #08777d !important; fill: #08777d !important; }
+[data-testid="stChatMessageAvatarAssistant"] * { color: #08777d !important; }
 
 div[data-testid="stChatInput"],
 div[data-testid="stChatInput"] > div { background: var(--ppqa-surface) !important; }
@@ -426,7 +513,12 @@ div[data-testid="stChatInput"] button {
   color: #ffffff !important;
 }
 
-div[data-testid="stChatInput"] button * { color: #ffffff !important; fill: #ffffff !important; }
+div[data-testid="stChatInput"] button * { color: #ffffff !important; }
+
+div[data-testid="stChatInput"] button svg {
+  height: 1.25rem !important;
+  width: 1.25rem !important;
+}
 
 [data-testid="stBottom"] > div {
   background: linear-gradient(180deg, transparent, #faf7fc 32%) !important;
@@ -449,6 +541,13 @@ div[data-testid="stChatInput"] button * { color: #ffffff !important; fill: #ffff
 .stApp .stButton button span,
 .stApp .stDownloadButton button p,
 .stApp .stDownloadButton button span { color: inherit !important; }
+
+/* Streamlit SVGs use transparent paths for their view-box background. Keep
+   those paths transparent or icons such as send and copy become solid boxes. */
+.stApp button svg[fill="none"],
+.stApp button svg [fill="none"] {
+  fill: none !important;
+}
 
 .stApp .stButton button:hover,
 .stApp .stDownloadButton button:hover {
@@ -499,7 +598,26 @@ div[data-testid="stChatInput"] button * { color: #ffffff !important; fill: #ffff
 
 [data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"] * {
   color: var(--ppqa-text) !important;
-  fill: currentColor !important;
+}
+
+/* The main sidebar action should be prominent without becoming a large solid
+   purple slab. Its explicit key keeps this from changing history buttons. */
+[data-testid="stSidebar"] .st-key-new-analysis button {
+  background: var(--ppqa-surface) !important;
+  border-color: var(--ppqa-purple) !important;
+  color: var(--ppqa-purple) !important;
+}
+
+[data-testid="stSidebar"] .st-key-new-analysis button:hover {
+  background: var(--ppqa-subtle) !important;
+  border-color: var(--ppqa-purple-hover) !important;
+  color: var(--ppqa-purple-hover) !important;
+}
+
+[data-testid="stSidebar"] .st-key-new-analysis button [data-testid="stMarkdownContainer"],
+[data-testid="stSidebar"] .st-key-new-analysis button p,
+[data-testid="stSidebar"] .st-key-new-analysis button span {
+  color: inherit !important;
 }
 
 /* Active analysis stop control */
@@ -536,7 +654,6 @@ div[data-testid="stChatInput"] button * { color: #ffffff !important; fill: #ffff
 .st-key-active-composer .stButton button *,
 .st-key-active-composer .stButton [data-testid="stIconMaterial"] {
   color: inherit !important;
-  fill: currentColor !important;
   white-space: nowrap;
 }
 
@@ -586,7 +703,118 @@ div[data-testid="stExpander"] {
 [data-testid="stMetric"] { padding: 0.7rem 0.8rem; }
 [data-testid="stMetricLabel"] p { color: var(--ppqa-muted) !important; }
 [data-testid="stMetricValue"] div { color: var(--ppqa-text) !important; }
-div[data-testid="stExpander"] p { color: var(--ppqa-text) !important; }
+div[data-testid="stExpander"] details,
+div[data-testid="stExpander"] summary,
+div[data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+  background: var(--ppqa-surface) !important;
+  color: var(--ppqa-text) !important;
+}
+
+div[data-testid="stExpander"] summary:hover {
+  background: var(--ppqa-subtle) !important;
+}
+
+div[data-testid="stExpander"] p,
+div[data-testid="stExpander"] span,
+div[data-testid="stExpander"] svg {
+  color: var(--ppqa-text) !important;
+}
+
+/* st.code is rendered by a syntax highlighter outside the regular Markdown
+   element. Override both its wrapper and nested inline styles. */
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]),
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) > div,
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) pre,
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) code {
+  background: #f7f3f9 !important;
+  background-color: #f7f3f9 !important;
+  color: var(--ppqa-text) !important;
+  text-shadow: none !important;
+}
+
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) {
+  border: 1px solid var(--ppqa-border) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) pre {
+  border: 0 !important;
+  margin: 0 !important;
+}
+
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) button {
+  background: var(--ppqa-surface) !important;
+  border: 1px solid var(--ppqa-border) !important;
+  color: var(--ppqa-text) !important;
+}
+
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) button:hover {
+  background: var(--ppqa-subtle) !important;
+}
+
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) button *,
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) button svg {
+  color: inherit !important;
+}
+
+/* Query-result previews use regular HTML instead of Streamlit's canvas grid.
+   Canvas colors follow the host theme and cannot be corrected reliably with
+   CSS; this table remains readable on every deployment host. */
+.ppqa-result-table-wrap {
+  background: var(--ppqa-surface) !important;
+  border: 1px solid var(--ppqa-border);
+  border-radius: 8px;
+  max-height: 24rem;
+  overflow: auto;
+  width: 100%;
+}
+
+.stApp [data-testid="stMarkdownContainer"] .ppqa-result-table {
+  border: 0 !important;
+  border-radius: 0;
+  display: table;
+  margin: 0;
+  min-width: 100%;
+  overflow: visible;
+  width: max-content;
+}
+
+.stApp [data-testid="stMarkdownContainer"] .ppqa-result-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.comment,
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.prolog,
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.doctype,
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.cdata {
+  color: var(--ppqa-muted) !important;
+}
+
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.keyword,
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.boolean,
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.constant {
+  color: var(--ppqa-purple) !important;
+}
+
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.string,
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.char,
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.attr-value {
+  color: var(--ppqa-success) !important;
+}
+
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.number,
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.function,
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.builtin {
+  color: #9a3f00 !important;
+}
+
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.operator,
+.stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) .token.punctuation {
+  color: #514858 !important;
+}
 
 @media (max-width: 720px) {
   .block-container { padding-top: 0.65rem; }
