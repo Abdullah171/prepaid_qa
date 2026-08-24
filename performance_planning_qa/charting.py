@@ -248,7 +248,7 @@ _NAMED_ROW_IDENTIFIER_ALIAS_RE = re.compile(
     re.IGNORECASE,
 )
 _SAFE_PERIOD_ALIAS_RE = re.compile(
-    r"^(?:(?:calendar|fiscal|reporting|sales|churn|ref)_)?"
+    r"^(?:(?:calendar|fiscal|reporting|sales|churn|ref|cbu)_)?"
     r"(?:month|week|quarter|day|year)_(?:num|number)$",
     re.IGNORECASE,
 )
@@ -262,6 +262,16 @@ _SAFE_ENTITY_AGGREGATE_RE = re.compile(
     r"deactivated|cancelled|terminated|total)_"
     r"(?:lines|mobiles|subscribers|subscriptions|customers|parties)"
     r")$",
+    re.IGNORECASE,
+)
+_ADDITIVE_MEASURE_RE = re.compile(
+    r"(?:^|_)(?:count|cnt|total|sum|lines?|customers?|subscribers?|subscriptions?|"
+    r"revenue|amount|sales|orders?|volume|qty|quantity)(?:$|_)",
+    re.IGNORECASE,
+)
+_NON_ADDITIVE_MEASURE_RE = re.compile(
+    r"(?:^|_)(?:avg|average|mean|median|min|max|rate|ratio|pct|percent|percentage|"
+    r"share|index)(?:$|_)",
     re.IGNORECASE,
 )
 _CONTROL_RE = re.compile(r"[\x00-\x1f\x7f]+")
@@ -553,7 +563,17 @@ def is_chart_only_followup(question: str) -> bool:
             re.IGNORECASE,
         )
     )
-    if not has_reference:
+    bare_type_request = bool(
+        intent.requested_type is not None
+        and re.fullmatch(
+            r"\s*(?:an?\s+|the\s+)?"
+            r"(?:line|bar|column|area|scatter(?:\s+plot)?|pie|donut|doughnut|ring)"
+            r"(?:\s+(?:chart|graph|plot))?\s*(?:please|now)?[?.!\\]*\s*",
+            text,
+            re.IGNORECASE,
+        )
+    )
+    if not has_reference and not bare_type_request:
         return False
 
     if _FOLLOWUP_TRANSFORM_RE.search(text):
@@ -564,7 +584,9 @@ def is_chart_only_followup(question: str) -> bool:
             r"\b(?:"
             r"(?:i\s+)?(?:need|want|would\s+like|can\s+i\s+(?:see|have))|"
             r"(?:show|give|display|draw|make|create|generate|render)(?:\s+me)?"
-            r")\s+(?:an?\s*)?(?:chart|graph|plot|visualization)\s+"
+            r")\s+(?:an?\s*)?"
+            r"(?:(?:line|bar|column|area|scatter|pie|donut|doughnut|ring)\s+)?"
+            r"(?:chart|graph|plot|visualization)\s+"
             r"(?:of|for)\s+(?:it|that|this|those|these)\b",
             text,
             re.IGNORECASE,
@@ -579,8 +601,9 @@ def is_chart_only_followup(question: str) -> bool:
 
     presentation_action = bool(
         re.search(
-            r"\b(?:show|make|draw|plot|graph|chart|visuali[sz]e|change|switch|"
-            r"convert|redo|redraw|replot|restyle|use|turn)\b|"
+            r"\b(?:show|give|display|draw|make|create|generate|render|plot|graph|"
+            r"chart|visuali[sz]e|change|switch|convert|redo|redraw|replot|restyle|"
+            r"use|turn)\b|"
             r"\b(?:as|into)\s+(?:a\s+)?(?:line|bar|area|scatter|pie|donut|doughnut)?"
             r"\s*(?:chart|graph|plot)\b",
             text,
@@ -649,8 +672,37 @@ def build_chart_spec(
     desired_type = intent.requested_type or candidate_type
 
     candidate_x = _resolve_field(plan.get("x"), columns)
+    candidate_series_hint = _resolve_field(plan.get("series"), columns)
     if candidate_x is not None and not _is_usable_chart_field(candidate_x):
         return None
+    if desired_type in {"pie", "donut"} and (
+        candidate_x is None or profiles[candidate_x].kind != "nominal"
+    ):
+        if (
+            candidate_series_hint is not None
+            and _is_usable_chart_field(candidate_series_hint)
+            and profiles[candidate_series_hint].kind == "nominal"
+        ):
+            candidate_x = candidate_series_hint
+        else:
+            candidate_x = None
+        fallback_notes.append(
+            "The category field was selected for the requested composition chart."
+        )
+    elif desired_type in {"line", "area"} and (
+        candidate_x is not None and profiles[candidate_x].kind == "nominal"
+    ):
+        candidate_x = None
+        fallback_notes.append(
+            "The previous category axis was replaced with a trend-compatible axis."
+        )
+    elif desired_type == "scatter" and (
+        candidate_x is not None and profiles[candidate_x].kind != "quantitative"
+    ):
+        candidate_x = None
+        fallback_notes.append(
+            "The previous x field was replaced with a numeric axis for scatter."
+        )
     if (
         candidate_x is not None
         and intent.trigger == "trend"
@@ -683,7 +735,7 @@ def build_chart_spec(
     if not y:
         return None
 
-    candidate_series = _resolve_field(plan.get("series"), columns)
+    candidate_series = candidate_series_hint
     if candidate_series is not None and not _is_usable_chart_field(candidate_series):
         return None
     if candidate_series in {x, *y}:
@@ -693,9 +745,13 @@ def build_chart_spec(
         or not _is_usable_chart_field(candidate_series)
     ):
         candidate_series = None
-    if plan.get("series") and candidate_series is None:
+    if (
+        plan.get("series")
+        and candidate_series is None
+        and desired_type not in {"pie", "donut"}
+    ):
         fallback_notes.append("The suggested series field was unavailable or incompatible.")
-    series = candidate_series
+    series = None if desired_type in {"pie", "donut"} else candidate_series
     if series is None and desired_type not in {"pie", "donut"}:
         series = _infer_series_field(
             columns,
@@ -714,8 +770,23 @@ def build_chart_spec(
         return None
     if x_kind == "temporal":
         sorted_rows.sort(key=lambda row: _temporal_sort_key(_row_value(row, x), name=x))
-
     data = _materialize_data(sorted_rows, x=x, y=y, series=series)
+    if (
+        desired_type in {"bar", "pie", "donut"}
+        and x_kind == "nominal"
+        and len(y) == 1
+        and series is None
+        and _has_duplicate_coordinates(data, x=x, y=y, series=None)
+        and _is_additive_measure_field(y[0])
+    ):
+        # Category and composition charts require one value per category when
+        # there is no series. Sum only conservatively identified additive
+        # measures; never aggregate averages, rates, shares, or other
+        # non-additive values.
+        data = _sum_measure_by_category(sorted_rows, category=x, measure=y[0])
+        fallback_notes.append(
+            f"{y[0]} was summed by {x} across the returned periods."
+        )
     if (
         series is not None
         and desired_type not in {"pie", "donut"}
@@ -744,7 +815,10 @@ def build_chart_spec(
             fallback_notes.append(
                 "Multiple grouping fields were combined into one chart series."
             )
-    if _useful_mark_count(data, x=x, y=y) < 2:
+    # A single category still supports a useful bar. Types that require more
+    # than one point (line/area/scatter/pie/donut) are rejected below and fall
+    # back to that bar instead of dropping the visualization altogether.
+    if _useful_mark_count(data, x=x, y=y) < 1:
         return None
 
     default_type: ChartType = "line" if (
@@ -930,7 +1004,7 @@ def _infer_x_field(
     by_kind: dict[XKind, list[str]] = {"temporal": [], "quantitative": [], "nominal": []}
     for column in columns:
         profile = profiles[column]
-        if profile.non_null_count >= 2:
+        if profile.non_null_count >= 1:
             by_kind[profile.kind].append(column)
 
     if desired_type in {"pie", "donut"}:
@@ -1022,6 +1096,42 @@ def _materialize_data(
             item[field_name] = _finite_number(_row_value(row, field_name))
         data.append(item)
     return data
+
+
+def _is_additive_measure_field(name: str) -> bool:
+    key = _identifier_key(name)
+    return bool(
+        _ADDITIVE_MEASURE_RE.search(key)
+        and not _NON_ADDITIVE_MEASURE_RE.search(key)
+    )
+
+
+def _sum_measure_by_category(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    category: str,
+    measure: str,
+) -> list[dict[str, Any]]:
+    """Roll additive query-result values up without trusting model calculations."""
+
+    ordered_keys: list[Any] = []
+    labels: dict[Any, Any] = {}
+    totals: dict[Any, int | float] = {}
+    for row in rows:
+        label = _json_safe_value(_row_value(row, category))
+        value = _finite_number(_row_value(row, measure))
+        if label is None or value is None:
+            continue
+        key = _hashable_value(label)
+        if key not in totals:
+            ordered_keys.append(key)
+            labels[key] = label
+            totals[key] = 0
+        totals[key] += value
+    return [
+        {category: labels[key], measure: totals[key]}
+        for key in ordered_keys
+    ]
 
 
 def _composite_series_name(

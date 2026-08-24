@@ -907,17 +907,17 @@ def _render_chart(chart: Any, *, chart_key: str | None = None) -> None:
     notes = []
     fallback_reason = chart.get("fallback_reason")
     requested_type = chart.get("requested_type")
-    if isinstance(fallback_reason, str) and fallback_reason.strip():
-        notes.append(" ".join(fallback_reason.split())[:500])
-    elif (
+    requested_type_changed = (
         isinstance(requested_type, str)
         and requested_type in {"line", "bar", "area", "scatter", "pie", "donut"}
         and requested_type != chart_type
+    )
+    if (
+        isinstance(fallback_reason, str)
+        and fallback_reason.strip()
+        and not requested_type_changed
     ):
-        notes.append(
-            f"Shown as a {chart_type} chart because these values do not support "
-            f"a {requested_type} chart."
-        )
+        notes.append(" ".join(fallback_reason.split())[:500])
     if notes:
         st.caption(" ".join(notes))
 

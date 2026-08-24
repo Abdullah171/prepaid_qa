@@ -335,16 +335,23 @@ Arabic text and Excel. CSV state is stored in the assistant message metadata, so
 the download remains available after reopening a chat.
 
 The language model may select returned column names, but it cannot provide chart
-values. The backend validates those fields and copies every plotted value from
-the returned data into a versioned chart payload. The payload is saved in the
-assistant message's existing JSONB metadata, so charts render again when a chat
-is reopened without a database migration. A follow-up such as “make that a bar
-chart” reuses the preceding result instead of running the analysis again.
+values. The backend validates those fields and materializes plotted values from
+the returned data into a versioned chart payload. For a pie/donut restyle of a
+time series, the backend may conservatively sum a count-like additive measure by
+the existing categorical series; averages, rates, shares, and other non-additive
+measures are never rolled up this way. The payload is saved in the assistant
+message's existing JSONB metadata, so charts render again when a chat is reopened
+without a database migration. A follow-up such as “make that a bar chart” reuses
+the preceding trusted result rows instead of running the analysis again.
 A presentation-intent layer also handles typos, missing spaces, slang, and
 indirect requests such as “i need agraph for it” or “picture those numbers”.
-High-confidence phrases use a fast local path; other wording is classified
-semantically as a chart of the previous result, CSV of the displayed table, a
-combined chart-and-CSV request, a CSV decline, or a genuinely new analysis. A
+Presentation-capable follow-ups are classified semantically first using the
+current message, previous chart shape, and result columns. Deterministic phrase
+handling is retained only as an outage fallback. The semantic intents include a
+chart of the previous result, CSV of the displayed table, a combined
+chart-and-CSV request, a question about compatible chart options, a CSV decline,
+or a genuinely new analysis. Chart-option questions return guidance and do not
+render another chart until the user selects one. A
 message such as “yes, CSV and also graph it” returns both artifacts without
 rerunning the analysis. Requests that introduce a new metric, period, filter,
 grouping, or comparison never reuse stale rows.

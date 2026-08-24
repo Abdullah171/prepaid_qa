@@ -357,7 +357,11 @@ class NL2SQLPipeline:
             question,
             table=extract_displayed_table(raw_answer),
         )
-        answer = append_csv_message(raw_answer, csv_export)
+        answer_with_chart_notice = _prepend_chart_type_fallback_notice(
+            raw_answer,
+            chart,
+        )
+        answer = append_csv_message(answer_with_chart_notice, csv_export)
         diagnostic_event(
             component="pipeline",
             stage="final_answer",
@@ -471,23 +475,6 @@ class NL2SQLPipeline:
             return None
 
         csv_was_offered = has_offered_csv(previous_result)
-        chart_result = self._chart_followup_result(question, previous_result)
-        if chart_result is not None:
-            if csv_was_offered and (
-                is_csv_followup(question, previous_result)
-                or has_explicit_csv_request(question)
-            ):
-                return self._add_ready_csv(
-                    chart_result,
-                    previous_result,
-                )
-            return chart_result
-        if csv_was_offered and is_csv_followup(
-            question,
-            previous_result,
-        ):
-            return self._ready_csv_followup_result(question, previous_result)
-
         has_rows = _query_result_from_payload(previous_result.get("query_result")) is not None
         if not has_rows and not csv_was_offered:
             return None
@@ -515,6 +502,8 @@ class NL2SQLPipeline:
             ):
                 return self._add_ready_csv(chart_result, previous_result)
             return chart_result
+        if intent == "chart_options_previous_result" and has_rows:
+            return self._chart_options_followup_result(question, previous_result)
         if intent == "csv_previous_table" and csv_was_offered:
             return self._ready_csv_followup_result(question, previous_result)
         if intent == "decline_csv" and csv_was_offered:
@@ -525,6 +514,19 @@ class NL2SQLPipeline:
                 prompt_log_paths=tuple(self._current_prompt_logs),
                 dry_run=False,
             )
+        if intent == "classification_unavailable":
+            # Preserve basic chart/CSV handling during an LLM outage. This path
+            # is deliberately secondary: ordinary operation is semantic-first.
+            chart_result = self._chart_followup_result(question, previous_result)
+            if chart_result is not None:
+                if csv_was_offered and (
+                    is_csv_followup(question, previous_result)
+                    or has_explicit_csv_request(question)
+                ):
+                    return self._add_ready_csv(chart_result, previous_result)
+                return chart_result
+            if csv_was_offered and is_csv_followup(question, previous_result):
+                return self._ready_csv_followup_result(question, previous_result)
         return None
 
     def _add_ready_csv(
@@ -588,10 +590,23 @@ class NL2SQLPipeline:
         if not self._enable_thinking:
             completion_options["enable_thinking"] = False
         try:
+            query_payload = previous_result.get("query_result")
+            raw_columns = (
+                query_payload.get("columns")
+                if isinstance(query_payload, dict)
+                else None
+            )
+            result_columns = (
+                [str(column) for column in raw_columns]
+                if isinstance(raw_columns, list)
+                else []
+            )
             payload = self.llm.complete_json(
                 build_presentation_followup_messages(
                     question=question,
                     previous_answer=str(previous_result.get("answer") or ""),
+                    previous_chart=previous_result.get("chart"),
+                    result_columns=result_columns,
                 ),
                 temperature=0.0,
                 log_empty_response=False,
@@ -608,20 +623,82 @@ class NL2SQLPipeline:
                 "Presentation follow-up classification was unavailable: %s",
                 exc,
             )
-            return "new_request", None
+            return "classification_unavailable", None
 
         intent = str(payload.get("intent") or "").strip().lower()
         if intent not in {
             "chart_previous_result",
             "chart_and_csv_previous_result",
+            "chart_options_previous_result",
             "csv_previous_table",
             "decline_csv",
             "new_request",
         }:
-            return "new_request", None
+            return "classification_unavailable", None
         raw_chart_type = str(payload.get("chart_type") or "").strip().lower()
         chart_type = raw_chart_type if raw_chart_type in ALLOWED_CHART_TYPES else None
         return intent, chart_type
+
+    def _chart_options_followup_result(
+        self,
+        question: str,
+        previous_result: dict[str, Any],
+    ) -> PipelineResult | None:
+        """Describe chart types compatible with the preceding trusted rows."""
+
+        query_result = _query_result_from_payload(previous_result.get("query_result"))
+        if query_result is None:
+            return None
+        previous_chart = previous_result.get("chart")
+        candidate = dict(previous_chart) if isinstance(previous_chart, dict) else {}
+        current_type = str(candidate.get("type") or "").strip().lower()
+        compatible: list[str] = []
+        for chart_type in ("bar", "line", "area", "pie", "donut", "scatter"):
+            chart_candidate = dict(candidate)
+            chart_candidate["type"] = chart_type
+            chart_candidate.pop("title", None)
+            chart = self._build_chart(
+                f"Show the previous result as a {chart_type} chart.",
+                query_result,
+                candidate=chart_candidate,
+                inherited_intent=ChartIntent(
+                    trigger="explicit",
+                    requested_type=chart_type,  # type: ignore[arg-type]
+                ),
+            )
+            if chart is not None and chart.type == chart_type:
+                compatible.append(chart_type)
+
+        if not compatible:
+            answer = (
+                "The previous result does not currently have a field layout that "
+                "supports the available chart types accurately. Ask for a new "
+                "breakdown or time grain and I can prepare a suitable visualization."
+            )
+        else:
+            others = [chart_type for chart_type in compatible if chart_type != current_type]
+            compatible_text = _human_join_chart_types(others or compatible)
+            if current_type in compatible and others:
+                answer = (
+                    f"The current chart is **{current_type}**. Other compatible chart "
+                    f"types for these result rows are {compatible_text}. Tell me which "
+                    "one you want and I’ll render it."
+                )
+            else:
+                answer = (
+                    f"The compatible chart types for these result rows are "
+                    f"{compatible_text}. Tell me which one you want and I’ll render it."
+                )
+
+        return PipelineResult(
+            question=question,
+            generated_sql=GeneratedSQL(sql=_optional_str(previous_result.get("sql"))),
+            validation_tables=_validation_tables_from_payload(previous_result),
+            query_result=query_result,
+            answer=answer,
+            prompt_log_paths=tuple(self._current_prompt_logs),
+            dry_run=False,
+        )
 
     def _chart_followup_result(
         self,
@@ -645,9 +722,22 @@ class NL2SQLPipeline:
         candidate: dict[str, Any] | None = (
             dict(previous_chart) if isinstance(previous_chart, dict) else None
         )
-        if forced_intent is not None and forced_intent.requested_type is not None:
+        detected_intent = detect_chart_intent(question)
+        requested_type = (
+            forced_intent.requested_type
+            if forced_intent is not None and forced_intent.requested_type is not None
+            else detected_intent.requested_type
+            if detected_intent is not None
+            else None
+        )
+        if requested_type is not None:
             candidate = candidate or {}
-            candidate["type"] = forced_intent.requested_type
+            previous_type = str(candidate.get("type") or "").strip().lower()
+            candidate["type"] = requested_type
+            if previous_type and previous_type != requested_type:
+                # Preserve data-field selections for a restyle, but let the
+                # builder generate a title that describes the new layout.
+                candidate.pop("title", None)
         chart = self._build_chart(
             question,
             query_result,
@@ -664,7 +754,7 @@ class NL2SQLPipeline:
             generated_sql=generated,
             validation_tables=_validation_tables_from_payload(previous_result),
             query_result=query_result,
-            answer=f"Here’s the previous result as a {chart.type} chart.",
+            answer=_chart_followup_answer(chart),
             chart=chart,
             prompt_log_paths=tuple(self._current_prompt_logs),
             dry_run=False,
@@ -1155,6 +1245,50 @@ def _optional_str(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _chart_type_fallback_notice(chart: ChartSpec | None) -> str | None:
+    """Explain an incompatible explicit chart type before any rendered artifact."""
+
+    if (
+        chart is None
+        or chart.requested_type is None
+        or chart.requested_type == chart.type
+    ):
+        return None
+    return (
+        f"The requested {chart.requested_type} chart cannot be produced accurately "
+        f"from the returned field layout, so a {chart.type} chart is shown instead."
+    )
+
+
+def _prepend_chart_type_fallback_notice(
+    answer: str | None,
+    chart: ChartSpec | None,
+) -> str:
+    notice = _chart_type_fallback_notice(chart)
+    body = str(answer or "").strip()
+    if notice is None:
+        return body
+    return f"{notice}\n\n{body}" if body else notice
+
+
+def _chart_followup_answer(chart: ChartSpec) -> str:
+    notice = _chart_type_fallback_notice(chart)
+    if notice is not None:
+        return notice
+    return f"Here’s the previous result as a {chart.type} chart."
+
+
+def _human_join_chart_types(chart_types: list[str]) -> str:
+    labels = [f"**{chart_type}**" for chart_type in chart_types]
+    if not labels:
+        return "none"
+    if len(labels) == 1:
+        return labels[0]
+    if len(labels) == 2:
+        return f"{labels[0]} and {labels[1]}"
+    return f"{', '.join(labels[:-1])}, and {labels[-1]}"
 
 
 def _query_result_from_payload(value: Any) -> QueryResult | None:
