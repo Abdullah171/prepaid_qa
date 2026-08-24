@@ -343,14 +343,6 @@ def _sidebar(client: ApiClient, *, analysis_running: bool) -> None:
                 unsafe_allow_html=True,
             )
             st.caption(SERVICE_UNAVAILABLE_MESSAGE)
-        else:
-            st.markdown(
-                (
-                    '<div class="ppqa-health ppqa-health-ok">'
-                    '<span></span>Data service online</div>'
-                ),
-                unsafe_allow_html=True,
-            )
         if st.session_state.get("sidebar_action_error"):
             st.warning(SERVICE_UNAVAILABLE_MESSAGE)
 
@@ -421,7 +413,9 @@ def _render_session_row(
         key=f"select-{session_id}",
         help=title,
         width="stretch",
-        type="primary" if is_active else "secondary",
+        # Keep history rows neutral. Some hosted Streamlit themes render primary
+        # buttons with a dark background before custom CSS is applied.
+        type="secondary",
         icon=":material/chat_bubble:" if is_active else ":material/chat_bubble_outline:",
         disabled=disabled,
         on_click=_select_session,
@@ -459,8 +453,16 @@ def _render_header(
         )
     else:
         title = "New analysis"
-        subtitle = "Analysis in progress" if analysis_running else "Ready for your question"
-    status_label = "Working" if analysis_running else "Ready"
+        subtitle = (
+            "Analysis in progress"
+            if analysis_running
+            else "Ask a question about prepaid performance"
+        )
+    status = (
+        '<div class="ppqa-header-status"><span></span>Working</div>'
+        if analysis_running
+        else ""
+    )
     st.markdown(
         f"""
         <div class="ppqa-header">
@@ -469,7 +471,7 @@ def _render_header(
             <div class="ppqa-title">{_html_escape(title)}</div>
             <div class="ppqa-subtitle">{_html_escape(subtitle)}</div>
           </div>
-          <div class="ppqa-header-status"><span></span>{status_label}</div>
+          {status}
         </div>
         """,
         unsafe_allow_html=True,
@@ -483,7 +485,7 @@ def _render_empty_state() -> None:
           <div class="ppqa-empty-lead">
             <div class="ppqa-empty-icon" aria-hidden="true"><span></span></div>
             <div>
-              <div class="ppqa-empty-kicker">Your prepaid data, ready to explore</div>
+              <div class="ppqa-empty-kicker">Explore your prepaid data</div>
               <div class="ppqa-empty-title">What would you like to understand?</div>
               <div class="ppqa-empty-copy">
                 Ask a plain-language question and get a concise answer grounded in your data.
