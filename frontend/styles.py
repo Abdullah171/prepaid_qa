@@ -5,14 +5,17 @@ APP_CSS = """
 :root {
   --ppqa-purple: #4f008c;
   --ppqa-purple-hover: #3f0070;
-  --ppqa-text: #2c1a3b;
-  --ppqa-muted: #796686;
-  --ppqa-border: #e2d1eb;
-  --ppqa-background: #f8f4fc;
-  --ppqa-surface: #fdfafc;
-  --ppqa-subtle: #f3ebf6;
+  --ppqa-text: #1d2939;
+  --ppqa-muted: #667085;
+  --ppqa-border: #e4e7ec;
+  --ppqa-background: #ffffff;
+  --ppqa-surface: #ffffff;
+  --ppqa-subtle: #f6f7f9;
   --ppqa-success: #087b5b;
   --ppqa-danger: #b4233d;
+  --ppqa-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --ppqa-shadow-md: 0 8px 28px rgba(16, 24, 40, 0.05);
+  --ppqa-transition: 180ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* Keep the app predictable even when the host or browser prefers dark mode. */
@@ -32,6 +35,27 @@ html[data-theme="dark"],
   color: var(--ppqa-text) !important;
 }
 
+.stMain,
+[data-testid="stMain"] { background: #f7f8fb !important; }
+
+html { scroll-behavior: smooth; }
+
+* {
+  scrollbar-color: #cfd4dc transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar { height: 8px; width: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: #cfd4dc;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover { background-color: #98a2b3; }
+
 .stApp,
 .stApp button,
 .stApp input,
@@ -40,14 +64,14 @@ html[data-theme="dark"],
 }
 
 header[data-testid="stHeader"] {
-  background: var(--ppqa-background) !important;
-  border-bottom: 1px solid #eee7f2;
+  background: #ffffff !important;
+  border-bottom: 0;
 }
 
 .block-container {
-  max-width: 960px;
-  padding-bottom: 6rem;
-  padding-top: 1rem;
+  max-width: 1320px;
+  padding-bottom: 7rem;
+  padding-top: 1.25rem;
 }
 
 .stMain [data-testid="stElementContainer"][data-stale="true"] {
@@ -58,15 +82,17 @@ header[data-testid="stHeader"] {
 /* Sidebar */
 [data-testid="stSidebar"],
 [data-testid="stSidebar"] > div {
-  background: #f1eaf5 !important;
+  background: #ffffff !important;
 }
 
 [data-testid="stSidebar"] {
   border-right: 1px solid var(--ppqa-border) !important;
+  min-width: 20rem !important;
+  width: 20rem !important;
 }
 
-[data-testid="stSidebar"] > div:first-child { padding-top: 1rem; }
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: 0.65rem; }
+[data-testid="stSidebar"] > div:first-child { padding: 1.5rem 1.35rem 1rem; }
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: 0.85rem; }
 
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] label,
@@ -81,49 +107,50 @@ header[data-testid="stHeader"] {
 
 .ppqa-brand {
   align-items: center;
-  background: var(--ppqa-surface);
-  border: 1px solid var(--ppqa-border);
-  border-radius: 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   display: flex;
-  gap: 0.75rem;
-  margin: 0 0 0.55rem;
-  padding: 0.8rem;
+  gap: 0.9rem;
+  margin: 0.75rem 0 0.8rem;
+  padding: 0;
 }
 
 .ppqa-brand-mark {
   align-items: center;
   background: var(--ppqa-purple);
-  border-radius: 8px;
+  border-radius: 9px;
   color: #ffffff !important;
   display: flex;
   flex: 0 0 auto;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   font-weight: 750;
-  height: 38px;
+  height: 50px;
   justify-content: center;
-  width: 38px;
+  width: 50px;
 }
 
 .ppqa-brand-title {
   color: var(--ppqa-text) !important;
-  font-size: 0.98rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1.25;
 }
 
 .ppqa-brand-subtitle {
   color: var(--ppqa-muted) !important;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   margin-top: 0.12rem;
 }
 
 .ppqa-section-label {
   color: var(--ppqa-muted) !important;
-  font-size: 0.71rem;
-  font-weight: 700;
-  letter-spacing: 0.045em;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0;
   padding-top: 0.3rem;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .ppqa-session-meta {
@@ -135,15 +162,15 @@ header[data-testid="stHeader"] {
 
 .ppqa-health {
   align-items: center;
-  background: #fff5f5;
-  border: 1px solid #f2c8cf;
-  border-radius: 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   color: var(--ppqa-danger) !important;
   display: inline-flex;
   font-size: 0.76rem;
   font-weight: 650;
   gap: 0.4rem;
-  padding: 0.35rem 0.55rem;
+  padding: 0.25rem 0;
 }
 
 .ppqa-health span {
@@ -153,6 +180,11 @@ header[data-testid="stHeader"] {
   height: 0.42rem;
   width: 0.42rem;
 }
+
+.ppqa-health-ok { color: var(--ppqa-success) !important; }
+.ppqa-health-ok span { background: var(--ppqa-success) !important; }
+.ppqa-health-bad { color: var(--ppqa-danger) !important; }
+.ppqa-health-bad span { background: var(--ppqa-danger) !important; }
 
 /* Streamlit exposes st.toggle as stCheckbox in the browser. Style both the
    hidden checkbox state and the separate visual track so host themes cannot
@@ -166,8 +198,8 @@ header[data-testid="stHeader"] {
 
 [data-testid="stSidebar"] [data-testid="stCheckbox"] input[type="checkbox"] ~ div:first-of-type,
 [data-testid="stSidebar"] [data-testid="stCheckbox"] label > div:first-of-type {
-  background-color: #b6a6c1 !important;
-  border: 1px solid #a593b2 !important;
+  background-color: #d0d5dd !important;
+  border: 1px solid #c5cad3 !important;
   box-sizing: border-box !important;
   opacity: 1 !important;
   transition: background-color 0.2s ease, border-color 0.2s ease !important;
@@ -198,34 +230,37 @@ header[data-testid="stHeader"] {
 /* Page header */
 .ppqa-header {
   align-items: center;
-  border-bottom: 1px solid var(--ppqa-border);
+  border-bottom: 0;
   display: flex;
   justify-content: space-between;
-  margin-bottom: 1.25rem;
-  min-height: 72px;
-  padding: 0 0 0.9rem;
-}
-
-.ppqa-eyebrow {
-  color: var(--ppqa-muted) !important;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  margin-bottom: 0.2rem;
-  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  min-height: 32px;
+  padding: 0;
 }
 
 .ppqa-title {
-  color: var(--ppqa-text) !important;
-  font-size: 1.3rem;
-  font-weight: 720;
+  color: var(--ppqa-muted) !important;
+  font-size: 0.95rem;
+  font-weight: 600;
   line-height: 1.25;
 }
 
-.ppqa-subtitle {
-  color: var(--ppqa-muted) !important;
-  font-size: 0.82rem;
-  margin-top: 0.16rem;
+.ppqa-header-rule {
+  background: #dfe3ea;
+  height: 1px;
+  margin-bottom: 1.25rem;
+  position: relative;
+  width: 100%;
+}
+
+.ppqa-header-rule span {
+  background: linear-gradient(90deg, var(--ppqa-purple) 0 38%, #00aeb3 60%, #e9345a 100%);
+  display: block;
+  height: 3px;
+  left: 0;
+  position: absolute;
+  top: -1px;
+  width: 9rem;
 }
 
 .ppqa-header-status {
@@ -255,124 +290,56 @@ header[data-testid="stHeader"] {
   background: var(--ppqa-surface) !important;
   border: 1px solid var(--ppqa-border);
   border-radius: 12px;
-  padding: 1.4rem;
+  box-shadow: var(--ppqa-shadow-md);
+  display: flex;
+  min-height: 420px;
+  padding: 3rem;
 }
 
 .ppqa-empty-lead {
   align-items: center;
   display: flex;
-  gap: 0.85rem;
+  gap: 1.5rem;
+  margin-left: 0.5rem;
 }
 
-.ppqa-empty-icon {
-  align-items: center;
-  background: #f1eaf6;
-  border-radius: 9px;
-  display: flex;
-  flex: 0 0 auto;
-  height: 44px;
-  justify-content: center;
-  position: relative;
-  width: 44px;
-}
-
-.ppqa-empty-icon::before,
-.ppqa-empty-icon::after {
+.ppqa-empty-accent {
+  align-self: stretch;
   background: var(--ppqa-purple);
-  border-radius: 4px;
-  content: "";
-  position: absolute;
+  border-radius: 2px;
+  flex: 0 0 4px;
+  min-height: 112px;
 }
-
-.ppqa-empty-icon::before { height: 18px; width: 4px; }
-.ppqa-empty-icon::after { height: 4px; width: 18px; }
-.ppqa-empty-icon span { display: none; }
 
 .ppqa-empty-kicker {
   color: var(--ppqa-purple) !important;
-  font-size: 0.71rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.03em;
-  margin-bottom: 0.15rem;
+  margin-bottom: 1rem;
   text-transform: uppercase;
 }
 
 .ppqa-empty-title {
   color: var(--ppqa-text) !important;
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 1.65rem;
+  font-weight: 750;
   line-height: 1.3;
 }
 
 .ppqa-empty-copy {
   color: var(--ppqa-muted) !important;
-  font-size: 0.86rem;
+  font-size: 1rem;
   line-height: 1.5;
-  margin-top: 0.15rem;
-}
-
-.ppqa-topics {
-  display: grid;
-  gap: 0.65rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 1rem;
-}
-
-.ppqa-topic {
-  align-items: center;
-  background: var(--ppqa-subtle) !important;
-  border: 1px solid #e5e7eb;
-  border-radius: 9px;
-  display: flex;
-  gap: 0.6rem;
-  min-width: 0;
-  padding: 0.7rem;
-}
-
-.ppqa-topic-dot {
-  background: var(--ppqa-purple) !important;
-  border-radius: 50%;
-  flex: 0 0 auto;
-  height: 0.45rem;
-  width: 0.45rem;
-}
-
-.ppqa-topic-cyan { background: #008c95 !important; }
-.ppqa-topic-magenta { background: #d92d55 !important; }
-
-.ppqa-topic strong,
-.ppqa-topic small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ppqa-topic strong { color: var(--ppqa-text) !important; font-size: 0.79rem; }
-.ppqa-topic small { color: var(--ppqa-muted) !important; font-size: 0.69rem; margin-top: 0.1rem; }
-
-.ppqa-empty-hint {
-  border-top: 1px solid var(--ppqa-border);
-  color: var(--ppqa-muted) !important;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  margin-top: 1rem;
-  padding-top: 0.8rem;
-}
-
-.ppqa-empty-hint span {
-  color: var(--ppqa-purple) !important;
-  font-size: 0.7rem;
-  font-weight: 700;
-  margin-right: 0.35rem;
-  text-transform: uppercase;
+  margin-top: 0.9rem;
 }
 
 /* Chat */
 div[data-testid="stChatMessage"] {
   background: var(--ppqa-surface) !important;
   border: 1px solid var(--ppqa-border) !important;
-  border-radius: 10px;
+  border-radius: 14px;
+  box-shadow: var(--ppqa-shadow-sm);
   margin-bottom: 0.7rem;
   padding: 0.6rem 0.75rem;
 }
@@ -437,7 +404,7 @@ div[data-testid="stChatMessage"] li { color: var(--ppqa-text) !important; }
 
 .stApp [data-testid="stMarkdownContainer"] tbody tr:nth-child(even),
 .stApp [data-testid="stMarkdownContainer"] tbody tr:nth-child(even) td {
-  background: #fcfafc !important;
+  background: #fafbfc !important;
 }
 
 .stApp [data-testid="stMarkdownContainer"] th,
@@ -469,7 +436,7 @@ div[data-testid="stChatMessage"] li { color: var(--ppqa-text) !important; }
 }
 
 div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
-  background: #f2ebf7 !important;
+  background: #f8f9fb !important;
 }
 
 [data-testid="stChatMessageAvatarUser"] {
@@ -480,7 +447,7 @@ div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
 [data-testid="stChatMessageAvatarUser"] * { color: #ffffff !important; }
 
 [data-testid="stChatMessageAvatarAssistant"] {
-  background: #f8f4fc !important;
+  background: #ffffff !important;
   border-radius: 8px !important;
   border: 1px solid var(--ppqa-border) !important;
 }
@@ -488,22 +455,24 @@ div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
 [data-testid="stChatMessageAvatarAssistant"] * { color: var(--ppqa-purple) !important; }
 
 div[data-testid="stChatInput"],
-div[data-testid="stChatInput"] > div { background: var(--ppqa-surface) !important; }
+div[data-testid="stChatInput"] > div { background: #f0f2f6 !important; }
 
 div[data-testid="stChatInput"] {
-  border: 1px solid #bbaac6 !important;
+  background: #f0f2f6 !important;
+  border: 1px solid transparent !important;
   border-radius: 12px !important;
-  box-shadow: 0 4px 14px rgba(16, 24, 40, 0.08);
+  box-shadow: none;
   overflow: hidden;
+  transition: border-color var(--ppqa-transition), box-shadow var(--ppqa-transition);
 }
 
 div[data-testid="stChatInput"]:focus-within {
   border-color: var(--ppqa-purple) !important;
-  box-shadow: 0 0 0 2px rgba(79, 0, 140, 0.12);
+  box-shadow: 0 0 0 3px rgba(79, 0, 140, 0.08);
 }
 
 div[data-testid="stChatInput"] textarea {
-  background: var(--ppqa-surface) !important;
+  background: #f0f2f6 !important;
   color: var(--ppqa-text) !important;
   caret-color: var(--ppqa-purple) !important;
 }
@@ -518,14 +487,24 @@ div[data-testid="stChatInput"] button {
 
 div[data-testid="stChatInput"] button * { color: #ffffff !important; }
 
+div[data-testid="stChatInput"] button:disabled {
+  background: #e1e5ed !important;
+  color: #98a2b3 !important;
+  opacity: 1 !important;
+}
+
+div[data-testid="stChatInput"] button:disabled * { color: #98a2b3 !important; }
+
 div[data-testid="stChatInput"] button svg {
   height: 1.25rem !important;
   width: 1.25rem !important;
 }
 
 [data-testid="stBottom"] > div {
-  background: linear-gradient(180deg, transparent, var(--ppqa-background) 32%) !important;
-  padding-top: 1.25rem;
+  background: #ffffff !important;
+  border-top: 1px solid #f2f4f7;
+  padding-bottom: 1rem;
+  padding-top: 1rem;
 }
 
 /* Explicit rules prevent a host dark theme from making chat rows black. */
@@ -535,10 +514,11 @@ div[data-testid="stChatInput"] button svg {
 [data-theme="dark"] .stApp .stButton button {
   background: var(--ppqa-surface) !important;
   border: 1px solid var(--ppqa-border) !important;
-  border-radius: 8px;
+  border-radius: 10px;
+  box-shadow: var(--ppqa-shadow-sm);
   color: var(--ppqa-text) !important;
   font-weight: 600;
-  transition: all 0.2s ease-in-out !important;
+  transition: background-color var(--ppqa-transition), border-color var(--ppqa-transition), color var(--ppqa-transition), box-shadow var(--ppqa-transition), transform var(--ppqa-transition) !important;
 }
 
 .stApp .stButton button p,
@@ -555,9 +535,17 @@ div[data-testid="stChatInput"] button svg {
 
 .stApp .stButton button:hover,
 .stApp .stDownloadButton button:hover {
-  background: #f3edf7 !important;
-  border-color: #bca9c8 !important;
+  background: var(--ppqa-subtle) !important;
+  border-color: #cfd4dc !important;
+  box-shadow: 0 3px 8px rgba(16, 24, 40, 0.08);
   color: var(--ppqa-text) !important;
+  transform: none;
+}
+
+.stApp .stButton button:active,
+.stApp .stDownloadButton button:active {
+  box-shadow: var(--ppqa-shadow-sm);
+  transform: translateY(0);
 }
 
 .stApp .stButton button[kind="primary"],
@@ -604,24 +592,8 @@ div[data-testid="stChatInput"] button svg {
   color: var(--ppqa-text) !important;
 }
 
-/* The main sidebar action should be prominent without becoming a large solid
-   purple slab. Its explicit key keeps this from changing history buttons. */
-[data-testid="stSidebar"] .st-key-new-analysis button {
-  background: var(--ppqa-surface) !important;
-  border-color: var(--ppqa-purple) !important;
-  color: var(--ppqa-purple) !important;
-}
-
-[data-testid="stSidebar"] .st-key-new-analysis button:hover {
-  background: var(--ppqa-subtle) !important;
-  border-color: var(--ppqa-purple-hover) !important;
-  color: var(--ppqa-purple-hover) !important;
-}
-
-[data-testid="stSidebar"] .st-key-new-analysis button [data-testid="stMarkdownContainer"],
-[data-testid="stSidebar"] .st-key-new-analysis button p,
-[data-testid="stSidebar"] .st-key-new-analysis button span {
-  color: inherit !important;
+[data-testid="stSidebar"] .st-key-new-chat button {
+  min-height: 2.75rem;
 }
 
 /* Active analysis stop control */
@@ -701,7 +673,8 @@ div[data-testid="stChatInput"] button svg {
 div[data-testid="stExpander"] {
   background: var(--ppqa-surface) !important;
   border: 1px solid var(--ppqa-border) !important;
-  border-radius: 8px;
+  border-radius: 12px;
+  box-shadow: var(--ppqa-shadow-sm);
 }
 
 [data-testid="stMetric"] { padding: 0.7rem 0.8rem; }
@@ -730,8 +703,8 @@ div[data-testid="stExpander"] svg {
 .stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) > div,
 .stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) pre,
 .stApp :is([data-testid="stCode"], [data-testid="stCodeBlock"]) code {
-  background: #f7f3f9 !important;
-  background-color: #f7f3f9 !important;
+  background: #f7f8fa !important;
+  background-color: #f7f8fa !important;
   color: var(--ppqa-text) !important;
   text-shadow: none !important;
 }
@@ -768,7 +741,8 @@ div[data-testid="stExpander"] svg {
 .ppqa-result-table-wrap {
   background: var(--ppqa-surface) !important;
   border: 1px solid var(--ppqa-border);
-  border-radius: 8px;
+  border-radius: 12px;
+  box-shadow: var(--ppqa-shadow-sm);
   max-height: 24rem;
   overflow: auto;
   width: 100%;
@@ -824,13 +798,14 @@ div[data-testid="stExpander"] svg {
   .block-container { padding-top: 0.65rem; }
   .ppqa-header { min-height: 64px; }
   .ppqa-header-status { display: none; }
-  .ppqa-topics { grid-template-columns: 1fr; }
-  .ppqa-empty { padding: 1rem; }
+  .ppqa-empty { min-height: 280px; padding: 1.5rem; }
   .ppqa-empty-lead { align-items: flex-start; }
+  .ppqa-empty-title { font-size: 1.35rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; }
+  html { scroll-behavior: auto; }
   .ppqa-progress-spinner,
   .st-key-live-thinking [data-testid="stIconMaterial"] { animation-duration: 1.4s !important; }
 }

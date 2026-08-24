@@ -303,10 +303,10 @@ def _sidebar(client: ApiClient, *, analysis_running: bool) -> None:
         st.markdown(
             """
             <div class="ppqa-brand">
-              <div class="ppqa-brand-mark" aria-hidden="true">PQ</div>
+              <div class="ppqa-brand-mark" aria-hidden="true">stc</div>
               <div class="ppqa-brand-copy">
                 <div class="ppqa-brand-title">Prepaid QA</div>
-                <div class="ppqa-brand-subtitle">Analytics workspace</div>
+                <div class="ppqa-brand-subtitle">Analytics Q&amp;A</div>
               </div>
             </div>
             """,
@@ -321,13 +321,13 @@ def _sidebar(client: ApiClient, *, analysis_running: bool) -> None:
                 help="Development override. Configure PPQA_API_BASE_URL in production.",
             )
         st.toggle(
-            "Deep analysis",
+            "Thinking",
             key="enable_thinking",
             disabled=analysis_running,
             help="Give the assistant more time to reason through complex questions.",
         )
         st.toggle(
-            "Show query details",
+            "See source",
             key="show_source",
             help="Include generated SQL, query metrics, and returned rows.",
         )
@@ -343,23 +343,31 @@ def _sidebar(client: ApiClient, *, analysis_running: bool) -> None:
                 unsafe_allow_html=True,
             )
             st.caption(SERVICE_UNAVAILABLE_MESSAGE)
+        else:
+            st.markdown(
+                (
+                    '<div class="ppqa-health ppqa-health-ok">'
+                    '<span></span>API connected</div>'
+                ),
+                unsafe_allow_html=True,
+            )
         if st.session_state.get("sidebar_action_error"):
             st.warning(SERVICE_UNAVAILABLE_MESSAGE)
 
         st.divider()
 
         st.button(
-            "New analysis",
+            "New chat",
+            key="new-chat",
             width="stretch",
-            type="secondary",
-            icon=":material/add:",
+            type="primary",
             disabled=analysis_running,
             on_click=_start_new_chat,
         )
 
         history_cols = st.columns([0.65, 0.35], vertical_alignment="center")
         history_cols[0].markdown(
-            '<div class="ppqa-section-label">Recent conversations</div>',
+            '<div class="ppqa-section-label">Chat history</div>',
             unsafe_allow_html=True,
         )
         history_cols[1].button(
@@ -446,18 +454,8 @@ def _render_header(
     if session_detail:
         session = session_detail["session"]
         title = session.get("title") or "New analysis"
-        subtitle = (
-            "Analysis in progress"
-            if analysis_running
-            else _message_count_label(session.get("message_count", 0))
-        )
     else:
-        title = "New analysis"
-        subtitle = (
-            "Analysis in progress"
-            if analysis_running
-            else "Ask a question about prepaid performance"
-        )
+        title = "Draft session"
     status = (
         '<div class="ppqa-header-status"><span></span>Working</div>'
         if analysis_running
@@ -466,13 +464,10 @@ def _render_header(
     st.markdown(
         f"""
         <div class="ppqa-header">
-          <div>
-            <div class="ppqa-eyebrow">Prepaid intelligence</div>
-            <div class="ppqa-title">{_html_escape(title)}</div>
-            <div class="ppqa-subtitle">{_html_escape(subtitle)}</div>
-          </div>
+          <div class="ppqa-title">{_html_escape(title)}</div>
           {status}
         </div>
+        <div class="ppqa-header-rule" aria-hidden="true"><span></span></div>
         """,
         unsafe_allow_html=True,
     )
@@ -483,34 +478,14 @@ def _render_empty_state() -> None:
         """
         <div class="ppqa-empty">
           <div class="ppqa-empty-lead">
-            <div class="ppqa-empty-icon" aria-hidden="true"><span></span></div>
+            <div class="ppqa-empty-accent" aria-hidden="true"></div>
             <div>
-              <div class="ppqa-empty-kicker">Explore your prepaid data</div>
-              <div class="ppqa-empty-title">What would you like to understand?</div>
+              <div class="ppqa-empty-kicker">Prepaid QA</div>
+              <div class="ppqa-empty-title">Start a new analysis</div>
               <div class="ppqa-empty-copy">
-                Ask a plain-language question and get a concise answer grounded in your data.
+                Prepaid base, sales, churn, and package performance are ready for review.
               </div>
             </div>
-          </div>
-          <div class="ppqa-topics" aria-label="Available prepaid topics">
-            <div class="ppqa-topic">
-              <span class="ppqa-topic-dot ppqa-topic-purple"></span>
-              <div><strong>Subscriber base</strong><small>Active lines and movement</small></div>
-            </div>
-            <div class="ppqa-topic">
-              <span class="ppqa-topic-dot ppqa-topic-cyan"></span>
-              <div><strong>Sales & packages</strong><small>Acquisition and product mix</small></div>
-            </div>
-            <div class="ppqa-topic">
-              <span class="ppqa-topic-dot ppqa-topic-magenta"></span>
-              <div>
-                <strong>Churn & reconnects</strong><small>Retention signals and trends</small>
-              </div>
-            </div>
-          </div>
-          <div class="ppqa-empty-hint">
-            <span>Try asking</span>
-            “Compare prepaid churn by package over the last six months.”
           </div>
         </div>
         """,
@@ -1000,7 +975,7 @@ def _render_question_composer() -> None:
 
     with st.bottom:
         submission = st.chat_input(
-            "Ask about prepaid sales, churn, packages, or subscribers…",
+            "Ask a prepaid question",
             key="question-composer",
             max_chars=MAX_QUESTION_CHARS,
             submit_mode="disable",
@@ -1256,12 +1231,6 @@ def _message_avatar(role: str) -> str:
     # Preset avatar names produce stable user/assistant test IDs in Streamlit.
     # Custom Material icons inherit the host theme and can render black.
     return "user" if role == "user" else "assistant"
-
-
-def _message_count_label(count: int) -> str:
-    if count == 1:
-        return "1 saved message"
-    return f"{count} saved messages"
 
 
 def _html_escape(value: Any) -> str:
