@@ -28,6 +28,7 @@ CML_ENV = {
     "LLM_PROVIDER": "litellm",
     "LITELLM_ENDPOINT": "https://litellm.apps.coherecls02.stc.corp/chat/completions",
     "LITELLM_MODEL": "glm-5.3-flash",
+    "LITELLM_API_KEY": "sk-QE1ND38qFf2W0BjnJGShCQ",
     "LITELLM_STREAM": "true",
     "LITELLM_TIMEOUT_SECONDS": "1800",
     "LITELLM_MAX_RETRIES": "2",
