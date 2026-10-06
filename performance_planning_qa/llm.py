@@ -1,4 +1,4 @@
-"""Direct HTTP client for OpenAI-compatible GLM and MiniMax endpoints."""
+"""Direct HTTP client for OpenAI-compatible LiteLLM and MiniMax endpoints."""
 
 from __future__ import annotations
 
@@ -162,7 +162,7 @@ class LiteLLMClient:
                                 diagnostics=stream_diagnostics,
                                 reasoning_char_limit=(
                                     GLM_REASONING_CHAR_LIMIT
-                                    if self.settings.provider == "glm"
+                                    if self.settings.provider == "litellm"
                                     else None
                                 ),
                             )

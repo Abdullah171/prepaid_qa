@@ -1112,7 +1112,7 @@ class NL2SQLPipeline:
             completion_options["enable_thinking"] = False
         if (
             is_answer_generation
-            and self.settings.llm.provider == "glm"
+            and self.settings.llm.provider == "litellm"
             and self._enable_thinking
         ):
             completion_options["reasoning_effort"] = "low"

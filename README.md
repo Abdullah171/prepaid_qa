@@ -63,11 +63,11 @@ to the deployment should be treated as part of the same trusted workspace.
 Expected `.env` keys:
 
 ```env
-LLM_PROVIDER="glm" # Choose "glm" or "minmax"
+LLM_PROVIDER="litellm" # Choose "litellm" or "minmax"
 
-GLM_ENDPOINT="https://litellm.example/chat/completions"
-GLM_MODEL="GLM-5.2"
-GLM_API_KEY="..."
+LITELLM_ENDPOINT="https://litellm.example/chat/completions"
+LITELLM_MODEL="glm-5.3-flash"
+LITELLM_API_KEY="..."
 
 MINIMAX_ENDPOINT="https://minimax.example/v1"
 MINIMAX_MODEL="MiniMaxAI/MiniMax-M2.7"
@@ -111,10 +111,10 @@ LLM_TIMEOUT_SECONDS=1200
 LLM_MAX_RETRIES=0
 LLM_RETRY_BACKOFF_SECONDS=2
 # Provider-specific values take precedence over the LLM_* defaults:
-GLM_TIMEOUT_SECONDS=1800
-GLM_STREAM=true
-GLM_MAX_RETRIES=2
-GLM_RETRY_BACKOFF_SECONDS=2
+LITELLM_TIMEOUT_SECONDS=1800
+LITELLM_STREAM=true
+LITELLM_MAX_RETRIES=2
+LITELLM_RETRY_BACKOFF_SECONDS=2
 MINIMAX_STREAM=true
 TERADATA_DATABASE="DP_EDW_PPF"
 TERADATA_LOGMECH="LDAP"

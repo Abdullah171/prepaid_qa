@@ -97,7 +97,7 @@ class LLMSettings:
         return endpoint
 
     def validate(self) -> None:
-        env_prefix = {"glm": "GLM", "minmax": "MINIMAX"}.get(
+        env_prefix = {"litellm": "LITELLM", "minmax": "MINIMAX"}.get(
             self.provider, self.provider.upper()
         )
         missing = []
@@ -216,10 +216,10 @@ def load_settings(env_path: Path | None = None) -> AppSettings:
     schema_path = Path(_get_any("SCHEMA_PATH", default=str(root / "prepaid.sql")) or "")
     sample_dir = Path(_get_any("SAMPLE_DATA_DIR", default=str(root / "sample_data")) or "")
 
-    llm_provider = (_get_any("LLM_PROVIDER", default="glm") or "").lower()
-    if llm_provider not in {"glm", "minmax"}:
-        raise ValueError("LLM_PROVIDER must be either 'glm' or 'minmax'")
-    llm_prefix = {"glm": "GLM", "minmax": "MINIMAX"}[llm_provider]
+    llm_provider = (_get_any("LLM_PROVIDER", default="litellm") or "").lower()
+    if llm_provider not in {"litellm", "minmax"}:
+        raise ValueError("LLM_PROVIDER must be either 'litellm' or 'minmax'")
+    llm_prefix = {"litellm": "LITELLM", "minmax": "MINIMAX"}[llm_provider]
 
     llm = LLMSettings(
         provider=llm_provider,

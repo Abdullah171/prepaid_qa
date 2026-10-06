@@ -1,8 +1,8 @@
 """Cloudera Machine Learning launcher for Prepaid QA.
 
 Create the CML application with this file as its launch script. Configure the
-``REPLACE_ME`` values below, or provide them as CML project environment
-variables. CML injects ``CDSW_APP_PORT`` automatically.
+deployment values below, and provide the LLM API key in ``.env`` or
+CML project environment variables. CML injects ``CDSW_APP_PORT`` automatically.
 """
 
 from __future__ import annotations
@@ -24,15 +24,14 @@ PROJECT_ROOT = (
 # These values are deployment defaults. Existing CML project environment
 # variables take precedence, which keeps credentials out of source control.
 CML_ENV = {
-    # LLM provider
-    "LLM_PROVIDER": "glm",
-    "GLM_ENDPOINT": "https://litellm.apps.coherecls02.stc.corp/chat/completions",
-    "GLM_MODEL": "GLM-5.2",
-    "GLM_API_KEY": "sk-H2PyHg9YjjX4B5LuMUnIoQ",
-    "GLM_STREAM": "true",
-    "GLM_TIMEOUT_SECONDS": "1800",
-    "GLM_MAX_RETRIES": "2",
-    "GLM_RETRY_BACKOFF_SECONDS": "2",
+    # LLM provider (LITELLM_API_KEY comes from .env or CML environment)
+    "LLM_PROVIDER": "litellm",
+    "LITELLM_ENDPOINT": "https://litellm.apps.coherecls02.stc.corp/chat/completions",
+    "LITELLM_MODEL": "glm-5.3-flash",
+    "LITELLM_STREAM": "true",
+    "LITELLM_TIMEOUT_SECONDS": "1800",
+    "LITELLM_MAX_RETRIES": "2",
+    "LITELLM_RETRY_BACKOFF_SECONDS": "2",
     "LLM_VERIFY_SSL": "false",
 
     # Teradata (use a SELECT-only account)
@@ -92,12 +91,12 @@ def _validate_configuration(environment: Mapping[str, str]) -> None:
     }
 
     provider = environment.get("LLM_PROVIDER", "").strip().lower()
-    if provider == "glm":
+    if provider == "litellm":
         required.update(
             {
-                "GLM_ENDPOINT": ("GLM_ENDPOINT",),
-                "GLM_API_KEY": ("GLM_API_KEY",),
-                "GLM_MODEL": ("GLM_MODEL",),
+                "LITELLM_ENDPOINT": ("LITELLM_ENDPOINT",),
+                "LITELLM_API_KEY": ("LITELLM_API_KEY",),
+                "LITELLM_MODEL": ("LITELLM_MODEL",),
             }
         )
     elif provider == "minmax":
@@ -109,7 +108,7 @@ def _validate_configuration(environment: Mapping[str, str]) -> None:
             }
         )
     else:
-        raise RuntimeError("LLM_PROVIDER must be either 'glm' or 'minmax'.")
+        raise RuntimeError("LLM_PROVIDER must be either 'litellm' or 'minmax'.")
 
     chat_backend = environment.get("chat_db", environment.get("CHAT_DB", "local"))
     chat_backend = chat_backend.strip().lower()
