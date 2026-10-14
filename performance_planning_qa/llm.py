@@ -21,6 +21,12 @@ logger = logging.getLogger(__name__)
 
 RETRYABLE_STATUS_CODES = frozenset({502, 503, 504})
 GLM_REASONING_CHAR_LIMIT = 40_000
+JSON_ONLY_RETRY_PROMPT = (
+    "Your previous reply was not a valid JSON object. Reply again with exactly one "
+    "JSON object that follows the original output contract. Do not include "
+    "reasoning, markdown fences, or any text outside the JSON object."
+)
+_THINK_BLOCK_RE = re.compile(r"<think>.*?</think>", flags=re.DOTALL | re.IGNORECASE)
 
 _CONTEXT_WINDOW_ERROR_MARKERS = (
     "contextwindowexceeded",
@@ -400,6 +406,31 @@ class LiteLLMClient:
             reasoning_fallback_instruction=reasoning_fallback_instruction,
             **completion_options,
         )
+        try:
+            return extract_json_object(text, fallback_key=fallback_key)
+        except ValueError:
+            # Some models (notably GLM flash with thinking disabled) occasionally
+            # answer in prose. Ask once more for the JSON contract only.
+            logger.warning(
+                "LLM response was not a JSON object; retrying once with a "
+                "JSON-only reminder; model=%s content_chars=%d",
+                self.settings.model,
+                len(text),
+            )
+        retry_messages = [
+            *messages,
+            {"role": "assistant", "content": text},
+            {"role": "user", "content": JSON_ONLY_RETRY_PROMPT},
+        ]
+        text = self.complete(
+            retry_messages,
+            temperature=temperature,
+            reasoning_effort=reasoning_effort,
+            log_empty_response=log_empty_response,
+            cancellation_token=cancellation_token,
+            reasoning_fallback_instruction=reasoning_fallback_instruction,
+            **completion_options,
+        )
         return extract_json_object(text, fallback_key=fallback_key)
 
     def close(self) -> None:
@@ -663,10 +694,14 @@ def _is_retryable_error(exc: Exception) -> bool:
 def extract_json_object(text: str, fallback_key: str | None = None) -> dict[str, Any]:
     """Extract an object, repairing common LLM JSON mistakes when necessary."""
 
-    stripped = text.strip()
-    fenced = re.search(r"```(?:json)?\s*(.*?)\s*```", stripped, flags=re.DOTALL | re.IGNORECASE)
+    # Models that think inline emit <think>...</think> before the answer.
+    stripped = _THINK_BLOCK_RE.sub("", text)
+    if "</think>" in stripped.lower():
+        stripped = stripped[stripped.lower().rfind("</think>") + len("</think>") :]
+    stripped = stripped.strip()
+    fenced = re.findall(r"```(?:json)?\s*(.*?)\s*```", stripped, flags=re.DOTALL | re.IGNORECASE)
     if fenced:
-        stripped = fenced.group(1).strip()
+        stripped = fenced[-1].strip()
 
     candidates = [stripped]
     try:
@@ -685,6 +720,19 @@ def extract_json_object(text: str, fallback_key: str | None = None) -> dict[str,
             continue
         parsed_found = True
         break
+
+    if not parsed_found or not isinstance(parsed, dict):
+        # Prose before the answer can contain stray braces; the final JSON
+        # object is usually the last one in the response.
+        for fragment in reversed(_balanced_objects(stripped)):
+            try:
+                candidate_parsed = json.loads(fragment)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(candidate_parsed, dict):
+                parsed = candidate_parsed
+                parsed_found = True
+                break
 
     repair_error: Exception | None = None
     if not parsed_found:
@@ -713,6 +761,22 @@ def extract_json_object(text: str, fallback_key: str | None = None) -> dict[str,
             f"Expected a JSON object from the LLM. Got {type(parsed).__name__}."
         )
     return parsed
+
+
+def _balanced_objects(text: str) -> list[str]:
+    """Return every top-level balanced ``{...}`` fragment in order."""
+
+    fragments: list[str] = []
+    start = text.find("{")
+    while start >= 0:
+        try:
+            fragment = _first_balanced_object(text[start:])
+        except ValueError:
+            start = text.find("{", start + 1)
+            continue
+        fragments.append(fragment)
+        start = text.find("{", start + len(fragment))
+    return fragments
 
 
 def _first_balanced_object(text: str) -> str:
